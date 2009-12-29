@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="com.mp3tunes.android.player" android:versionName="1.0.7" android:versionCode="7">
+    <uses-sdk android:minSdkVersion="3" />
+    <uses-permission android:name="android.permission.INTERNET"></uses-permission>
+	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" ></uses-permission>
+    <application android:icon="@drawable/icon" android:label="@string/app_name" 
+    	android:name="MP3tunesApplication">
+        <activity android:name=".activity.Login"
+                  android:label="MP3tunes">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    	<activity android:name=".activity.LockerList" android:label="MP3tunes Music Locker" android:configChanges="keyboardHidden">
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW"/>
+				<category android:name="android.intent.category.DEFAULT"/>
+			</intent-filter>
+            <meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser"
+             />
+		</activity>
+		<activity android:name=".activity.Player" android:label="MP3tunes Locker Player" 
+        android:configChanges="keyboardHidden"
+        android:taskAffinity=""
+        android:launchMode="singleTask"
+        android:clearTaskOnLaunch="true"
+        android:excludeFromRecents="true" >
+			<intent-filter>
+				<action android:name="com.mp3tunes.android.player.PLAYER" />
+				<category android:name="android.intent.category.DEFAULT"/>
+			</intent-filter>
+		</activity>
+        <activity android:name=".activity.Preferences">
+              <intent-filter>
+                  <action android:name="android.intent.action.VIEW"/>
+                  <category android:name="android.intent.category.DEFAULT"/>
+              </intent-filter>
+          </activity>
+          <activity android:name=".activity.ArtistBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.mp3tunes.android.dir/artist"/>
+            </intent-filter>
+        </activity>
+        <activity android:name=".activity.AlbumBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.mp3tunes.android.dir/album"/>
+            </intent-filter>
+        </activity>
+          <activity android:name=".activity.QueueBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.EDIT" />
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.mp3tunes.android.dir/track"/>
+            </intent-filter>
+        </activity>
+        <activity android:name=".activity.PlaylistBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.mp3tunes.android.dir/playlist"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.mp3tunes.android.dir/playlist"/>
+            </intent-filter>
+        </activity>
+                <activity android:name=".activity.QueryBrowser"
+                android:theme="@android:style/Theme.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.searchable"
+                android:resource="@xml/searchable"
+            />
+        </activity>
+        <activity android:name=".activity.UpdateActivity" android:label="@string/update_confirm_title">
+        </activity>
+        <receiver android:name=".util.UpdateReceiver">
+            <intent-filter>
+                <action
+                    android:name="com.mp3tunes.android.player.VEECHECK_RESCHEDULE_CHECKS">
+                </action>
+            </intent-filter>
+            <intent-filter>
+                <action
+                    android:name="com.mp3tunes.android.player.VEECHECK_CONSIDER_CHECK">
+                </action>
+            </intent-filter>
+        </receiver>
+        
+		<service android:name=".service.Mp3tunesService"  />
+        <service android:name=".util.UpdateService">
+            <intent-filter>
+                <action
+                    android:name="com.mp3tunes.android.player.VEECHECK_PERFORM_CHECK">
+                </action>
+                <data android:scheme="http"></data>
+            </intent-filter>
+        </service>
+    </application>
+</manifest> 
