@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -388,6 +389,7 @@ public class Player extends Activity
                     mProgressDialog.dismiss();
                     mProgressDialog = null;
                 }
+                
             } else {
                 mCurrentTime.setText("--:--");
                 mTotalTime.setText("--:--");
@@ -405,6 +407,7 @@ public class Player extends Activity
             // the counter can be updated at just the right time
             return remaining;
         } catch (RemoteException ex) {
+            Log.e("Mp3Tunes", Log.getStackTraceString(ex));
         }
         return 500;
     }

@@ -19,6 +19,12 @@ public class CurrentPlaylist {
         }
 	}
 	
+	public void close()
+    {
+        if (mDb != null)
+            mDb.close();
+    }
+	
 	/**
      * return the song at pos in the queue
      * 

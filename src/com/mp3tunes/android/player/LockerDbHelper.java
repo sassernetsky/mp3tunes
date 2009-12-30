@@ -10,10 +10,10 @@ class LockerDbHelper extends SQLiteOpenHelper
 {
 
     private static final String DB_NAME = "locker.dat";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     
     private static final String CREATE_TRACK = "CREATE TABLE " + LockerDb.TABLE_TRACK + "(" +
-                                                    LockerDb.KEY_ID           + " INTEGER PRIMARY LockerDb.KEY," +
+                                                    LockerDb.KEY_ID           + " INTEGER PRIMARY KEY," +
                                                     LockerDb.KEY_PLAY_URL     + " VARCHAR," +
                                                     LockerDb.KEY_DOWNLOAD_URL + " VARCHAR," +
                                                     LockerDb.KEY_TITLE        + " VARCHAR," + 
@@ -26,13 +26,13 @@ class LockerDbHelper extends SQLiteOpenHelper
                                                     LockerDb.KEY_COVER_URL    + " VARCHAR DEFAULT NULL" + 
                                                 ")";
     private static final String CREATE_ARTIST = "CREATE TABLE " + LockerDb.TABLE_ARTIST + "(" +
-    	                                            LockerDb.KEY_ID          + " INTEGER PRIMARY LockerDb.KEY," +
+    	                                            LockerDb.KEY_ID          + " INTEGER PRIMARY KEY," +
     	                                            LockerDb.KEY_ARTIST_NAME + " VARCHAR," + 
     	                                            LockerDb.KEY_ALBUM_COUNT + " INTEGER," + 
     	                                            LockerDb.KEY_TRACK_COUNT + " INTEGER" +
                                                 ")";
-    private static final String CREATE_ALBUM = "CREATE LockerDb.TABLE " + LockerDb.TABLE_ALBUM + "(" +
-    	                                            LockerDb.KEY_ID          + " INTEGER PRIMARY LockerDb.KEY," + 
+    private static final String CREATE_ALBUM = "CREATE TABLE " + LockerDb.TABLE_ALBUM + "(" +
+    	                                            LockerDb.KEY_ID          + " INTEGER PRIMARY KEY," + 
     	                                            LockerDb.KEY_ALBUM_NAME  + " VARCHAR, " +
     	                                            LockerDb.KEY_ARTIST_ID   + " INTEGER, " + 
     	                                            LockerDb.KEY_ARTIST_NAME + " VARCHAR, " + 
@@ -41,13 +41,13 @@ class LockerDbHelper extends SQLiteOpenHelper
     	                                            LockerDb.KEY_COVER_URL   + " VARCHAR DEFAULT NULL" + 
     	                                        ")";
     private static final String CREATE_PLAYLIST = "CREATE TABLE " + LockerDb.TABLE_PLAYLIST + "(" + 
-                                                       LockerDb.KEY_ID             + " VARCHAR PRIMARY LockerDb.KEY," + 
+                                                       LockerDb.KEY_ID             + " VARCHAR PRIMARY KEY," + 
                                                        LockerDb.KEY_PLAYLIST_NAME  + " VARCHAR, " + 
                                                        LockerDb.KEY_FILE_COUNT     + " INTEGER," + 
                                                        LockerDb.KEY_FILE_NAME      + " VARCHAR," + 
                                                        LockerDb.KEY_PLAYLIST_ORDER + " INTEGER" +
                                                    ")";
-    private static final String CREATE_PLAYLIST_TRACKS  = "CREATE LockerDb.TABLE " + LockerDb.TABLE_PLAYLIST_TRACKS + "(" + 
+    private static final String CREATE_PLAYLIST_TRACKS  = "CREATE TABLE " + LockerDb.TABLE_PLAYLIST_TRACKS + "(" + 
                                                                LockerDb.KEY_PLAYLIST_ID    + " VARCHAR," + 
                                                                LockerDb.KEY_TRACK_ID       + " INTEGER," + 
                                                                LockerDb.KEY_PLAYLIST_INDEX + " INTEGER" + 
@@ -58,7 +58,7 @@ class LockerDbHelper extends SQLiteOpenHelper
                                                     LockerDb.KEY_COUNT + " INTEGER" + 
                                                ")";
     private static final String CREATE_CURRENT_PLAYLIST = "CREATE TABLE " + LockerDb.TABLE_CURRENT_PLAYLIST + "(" + 
-                                                               LockerDb.KEY_POS      + " INTEGER PRIMARY LockerDb.KEY," +
+                                                               LockerDb.KEY_POS      + " INTEGER PRIMARY KEY," +
                                                                LockerDb.KEY_TRACK_ID + " INTEGER" + 
                                                            ")";
     
