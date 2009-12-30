@@ -1024,27 +1024,27 @@ public class LockerDb
 
     private Cursor queryPlaylists(String playlist_id)
     {
-        StringBuilder query = new StringBuilder("SELECT DISTINCT ").append(
-                TABLE_TRACK).append(".").append(KEY_ID).append(", ").append(
-                KEY_ID).append(", ").append(KEY_TITLE).append(", ").append(
-                KEY_ARTIST_NAME).append(", ").append(KEY_ARTIST_ID)
-                .append(", ").append(KEY_ALBUM_NAME).append(", ").append(
-                        KEY_ALBUM_ID).append(", ").append(KEY_TRACK).append(
-                        ", ").append(KEY_PLAY_URL).append(", ").append(
-                        KEY_DOWNLOAD_URL).append(", ").append(KEY_TRACK_LENGTH)
-                .append(", ").append(KEY_COVER_URL).append(", ").append(
-                        KEY_PLAYLIST_INDEX).append(" ")
-                .append("FROM playlist ").append("JOIN ").append(
-                        TABLE_PLAYLIST_TRACKS).append(" ").append("ON ")
-                .append(TABLE_PLAYLIST).append(".").append(KEY_ID)
-                .append(" = ").append(TABLE_PLAYLIST_TRACKS).append(".")
-                .append(KEY_PLAYLIST_ID).append(" ").append("JOIN ").append(
-                        TABLE_TRACK).append(" ").append("ON ").append(
-                        TABLE_PLAYLIST_TRACKS).append(".").append(KEY_TRACK_ID)
-                .append(" = ").append(TABLE_TRACK).append(".").append(KEY_ID)
-                .append(" ").append("WHERE ").append(KEY_PLAYLIST_ID).append(
-                        "='").append(playlist_id).append(" ").append(
-                        "ORDER BY ").append(KEY_PLAYLIST_INDEX);
+        StringBuilder query = new StringBuilder("SELECT DISTINCT ")
+            .append(TABLE_TRACK).append(".").append(KEY_ID).append(" ")
+            .append(KEY_ID).append(", ").append(KEY_TITLE).append(", ")
+            .append(KEY_ARTIST_NAME).append(", ").append(KEY_ARTIST_ID)
+            .append(", ").append(KEY_ALBUM_NAME).append(", ")
+            .append(KEY_ALBUM_ID).append(", ").append(KEY_TRACK)
+            .append(", ").append(KEY_PLAY_URL).append(", ")
+            .append(KEY_DOWNLOAD_URL).append(", ").append(KEY_TRACK_LENGTH)
+            .append(", ").append(KEY_COVER_URL).append(", ")
+            .append(KEY_PLAYLIST_INDEX).append(" ").append("FROM ")
+            .append(TABLE_PLAYLIST).append(" JOIN ")
+            .append(TABLE_PLAYLIST_TRACKS).append(" ").append("ON ")
+            .append(TABLE_PLAYLIST).append(".").append(KEY_ID)
+            .append(" = ").append(TABLE_PLAYLIST_TRACKS).append(".")
+            .append(KEY_PLAYLIST_ID).append(" ").append("JOIN ")
+            .append(TABLE_TRACK).append(" ").append("ON ")
+            .append(TABLE_PLAYLIST_TRACKS).append(".").append(KEY_TRACK_ID)
+            .append(" = ").append(TABLE_TRACK).append(".").append(KEY_ID)
+            .append(" ").append("WHERE ").append(KEY_PLAYLIST_ID).append("='")
+            .append(playlist_id).append("' ").append("ORDER BY ")
+            .append(KEY_PLAYLIST_INDEX);
         return mDb.rawQuery(query.toString(), null);
 
     }
