@@ -93,8 +93,10 @@ public class AlbumBrowser extends ListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-        if(! Music.connectToDb( this ) )
-            finish(); //TODO show error
+        if(! Music.connectToDb( this ) ) {
+            //TODO show error
+            finish();
+        }
 
         AlertDialog.Builder builder;
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
@@ -230,12 +232,10 @@ public class AlbumBrowser extends ListActivity
         mAdapter.changeCursor(c); // also sets mAlbumCursor
 
         if (mAlbumCursor == null) {
-//            Music.displayDatabaseError(this); //TODO display error
             closeContextMenu();
             return;
         }
         
-//        Music.hideDatabaseError(this);//TODO display error
         setTitle();
     }
 
@@ -259,17 +259,13 @@ public class AlbumBrowser extends ListActivity
         menu.add(0, QUEUE, 0, R.string.menu_play_selection);
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
         
-//        SubMenu sub = menu.addSubMenu(0, ADD_TO_PLAYLIST, 0, R.string.menu_add_to_playlist);
-//        Music.makePlaylistMenu(this, sub); // TODO make menu
-//        menu.add(0, DELETE_ITEM, 0, R.string.delete_item);
         menu.add(0, SEARCH, 0, R.string.search);
 
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
         mAlbumCursor.moveToPosition(mi.position);
         mCurrentAlbumId = mAlbumCursor.getString(mAlbumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums._ID));
         mCurrentAlbumName = mAlbumCursor.getString(mAlbumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM));
-//        mCurrentArtistNameForAlbum = mAlbumCursor.getString(
-//                mAlbumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST));
+
         menu.setHeaderTitle(mCurrentAlbumName);
     }
 
@@ -289,7 +285,6 @@ public class AlbumBrowser extends ListActivity
             }
 
             case NEW_PLAYLIST: {
-             // TODO  new playlist?
                 Intent intent = new Intent();
 //                intent.setClass(this, CreatePlaylist.class);
                 startActivityForResult(intent, NEW_PLAYLIST);
@@ -297,29 +292,12 @@ public class AlbumBrowser extends ListActivity
             }
 
             case PLAYLIST_SELECTED: {
-             // TODO playlist selected
-//                int [] list = Music.getSongListForAlbum(this, Integer.parseInt(mCurrentAlbumId));
-                item.getIntent().getIntExtra("playlist", 0);
-//                Music.addToPlaylist(this, list, playlist);
                 return true;
             }
             case DELETE_ITEM: {
-                // TODO Delete
-//                int [] list = Music.getSongListForAlbum(this, Integer.parseInt(mCurrentAlbumId));
-//                String f = getString(R.string.delete_album_desc); 
-//                String desc = String.format(f, mCurrentAlbumName);
-//                Bundle b = new Bundle();
-//                b.putString("description", desc);
-////                b.putIntArray("items", list);
-//                Intent intent = new Intent();
-////                intent.setClass(this, DeleteItems.class);
-//                intent.putExtras(b);
-//                startActivityForResult(intent, -1);
                 return true;
             }
             case SEARCH:
-             // TODO search
-//                doSearch();
                 return true;
 
         }
@@ -412,77 +390,10 @@ public class AlbumBrowser extends ListActivity
                 return true;
 
             case SHUFFLE_ALL:
-                //TODO shuffle all
-//                cursor = Music.query(this, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-//                        new String [] { MediaStore.Audio.Media._ID},
-//                        MediaStore.Audio.Media.IS_MUSIC + "=1", null,
-//                        MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
-//                if (cursor != null) {
-//                    Music.shuffleAll(this, cursor);
-//                    cursor.close();
-//                }
                 return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-//    private Cursor getArtistCursor(AsyncQueryHandler async, String filter) {
-//        StringBuilder where = new StringBuilder();
-//        where.append(MediaStore.Audio.Albums.ALBUM + " != ''");
-//        
-//        // Add in the filtering constraints
-//        String [] keywords = null;
-//        if (filter != null) {
-//            String [] searchWords = filter.split(" ");
-//            keywords = new String[searchWords.length];
-//            Collator col = Collator.getInstance();
-//            col.setStrength(Collator.PRIMARY);
-//            for (int i = 0; i < searchWords.length; i++) {
-//                keywords[i] = '%' + MediaStore.Audio.keyFor(searchWords[i]) + '%';
-//            }
-//            for (int i = 0; i < searchWords.length; i++) {
-//                where.append(" AND ");
-//                where.append(MediaStore.Audio.Media.ARTIST_KEY + "||");
-//                where.append(MediaStore.Audio.Media.ALBUM_KEY + " LIKE ?");
-//            }
-//        }
-//
-//        String whereclause = where.toString();  
-//            
-//        String[] cols = new String[] {
-//                MediaStore.Audio.Albums._ID,
-//                MediaStore.Audio.Albums.ALBUM,
-//                MediaStore.Audio.Albums.ALBUM_KEY,
-//                MediaStore.Audio.Albums.ARTIST,
-//                MediaStore.Audio.Albums.NUMBER_OF_SONGS,
-//                MediaStore.Audio.Albums.ALBUM_ART
-//        };
-//        Cursor ret = null;
-//        if (mArtistId != null) {
-//            if (async != null) {
-//                async.startQuery(0, null,
-//                        MediaStore.Audio.Artists.Albums.getContentUri("external",
-//                                Long.valueOf(mArtistId)),
-//                        cols, whereclause, keywords, MediaStore.Audio.Albums.DEFAULT_SORT_ORDER);
-//            } else {
-////                ret = Music.query(this,
-////                        MediaStore.Audio.Artists.Albums.getContentUri("external",
-////                                Long.valueOf(mArtistId)),
-////                        cols, whereclause, keywords, MediaStore.Audio.Albums.DEFAULT_SORT_ORDER);
-//            }
-//        } else {
-//            if (async != null) {
-//                async.startQuery(0, null,
-//                        MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
-//                        cols, whereclause, keywords, MediaStore.Audio.Albums.DEFAULT_SORT_ORDER);
-//            } else {
-////                ret = Music.query(this, MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
-////                        cols, whereclause, keywords, MediaStore.Audio.Albums.DEFAULT_SORT_ORDER);
-//            }
-//        }
-//        return ret;
-//    }
-    
+    }    
     static class AlbumListAdapter extends SimpleCursorAdapter implements SectionIndexer, ImageDownloaderListener{
         
         private final Drawable mNowPlayingOverlay;
@@ -490,21 +401,12 @@ public class AlbumBrowser extends ListActivity
         private int mAlbumNameIdx;
         private int mAlbumIdIdx;
         private int mArtistNameIdx;
-        //private int mArtistIdIdx;
-        //private int mNumAlbumsIdx;
-        //private int mNumSongsIdx;
-//        private int mAlbumArtIndex;
         private final Resources mResources;
-        //private final StringBuilder mStringBuilder = new StringBuilder();
         private final String mUnknownArtist;
         private final String mUnknownAlbum;
-//        private final String mAlbumSongSeparator;
-        //private final Object[] mFormatArgs = new Object[1];
         private AlphabetIndexer mIndexer;
         private AlbumBrowser mActivity;
         private AsyncQueryHandler mQueryHandler;
-        //private String mConstraint = null;
-        //private boolean mConstraintIsValid = false;
         
         class ViewHolder {
             TextView line1;
@@ -642,6 +544,7 @@ public class AlbumBrowser extends ListActivity
         }
         
         public int getPositionForSection(int section) {
+            //TODO This is ocasionally causing the gui to freeze
             return mIndexer.getPositionForSection(section);
         }
         

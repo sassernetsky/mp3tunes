@@ -99,6 +99,15 @@ public class Music
         							LockerDb.KEY_DOWNLOAD_URL, 
         							LockerDb.KEY_TRACK_LENGTH, 
         							LockerDb.KEY_COVER_URL};
+    
+    public static String[] TRACK_FOR_BROWSER = {
+        LockerDb.KEY_ID, 
+        LockerDb.KEY_TITLE, 
+        LockerDb.KEY_ARTIST_NAME, 
+        LockerDb.KEY_ALBUM_NAME,  
+        LockerDb.KEY_TRACK_LENGTH
+    };
+    
 
     public static String[] TRACKP = {LockerDb.TABLE_TRACK + "." + LockerDb.KEY_ID, 
 		 							 LockerDb.KEY_TITLE,  
@@ -143,6 +152,16 @@ public class Music
     }
     
     public static int[] TRACKP_MAPPING = { 0,1,2,3,4,5,6,7,8,9,10};
+    
+    
+    public static final class TRACK_FOR_BROWSER_MAPPING 
+    {
+        public static final int ID = 0;
+        public static final int TITLE = 1;
+        public static final int ARTIST_NAME = 2;
+        public static final int ALBUM_NAME = 3;
+        public static final int TRACK_LENGTH = 4;
+    }
 
     //This mapping corresponds to the field indexes above
     public static final class TRACK_MAPPING 
@@ -196,7 +215,7 @@ public class Music
     public static boolean connectToDb( Context context )
     {
         if( sDb == null ) {
-            Locker locker = ( Locker ) MP3tunesApplication.getInstance().map.get( "mp3tunes_locker" );
+            Locker locker = MP3tunesApplication.getInstance().getLocker();
             if(locker == null)
                 return false;
             try
@@ -227,6 +246,10 @@ public class Music
             if (sDb != null) {
                 sDb.close();
                 sDb = null;
+            }
+            if (sCp != null) {
+                sCp.close();
+                sCp = null;
             }
         }
         return res;

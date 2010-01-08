@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import android.os.Debug;
 import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.results.DataResult;
@@ -43,7 +44,7 @@ public class Locker
         locker, playlist, preferences
     };
 
-    public Locker(String partnerToken, Session session)
+    public Locker(String partnerToken, Session session) throws LockerException
     {
 
         if (mSession == null)
@@ -65,7 +66,7 @@ public class Locker
         return mSession;
     }
 
-    public void refreshSession(String username, String password)
+    public void refreshSession(String username, String password) throws LockerException
     {
         try {
             mSession = Authenticator.getSession(mPartnerToken, username,
@@ -120,7 +121,7 @@ public class Locker
         return 0;
     }
 
-    public Artist getArtist(int id) throws NoSuchEntryException
+    public Artist getArtist(int id) throws LockerException
     {
         DataResult<Artist> res = fetchArtists(Integer.toString(id), null);
         if (res.getData().length == 1)
@@ -219,7 +220,7 @@ public class Locker
 
     }
 
-    public Album getAlbum(int id) throws NoSuchEntryException
+    public Album getAlbum(int id) throws LockerException
     {
 
         Album[] list = fetchAlbums("", "", Integer.toString(id), null)
@@ -302,6 +303,7 @@ public class Locker
             boolean loop = true;
             while (loop && event != XmlPullParser.END_DOCUMENT) {
                 String name = restResult.getParser().getName();
+                Log.w("Mp3Tunes", "tag: " + name);
                 switch (event) {
                     case XmlPullParser.START_TAG:
                         if (name.equals("item")) {
@@ -358,7 +360,7 @@ public class Locker
         return fetchTracks("", "", "", playlistId, mDefaultQuery);
     }
 
-    public SetResult<Track> getTracksSet(int count, int set)
+    public SetResult<Track> getTracksSet(int count, int set) throws LockerException
     {
         return (SetResult<Track>) fetchTracks("", "", "", "", new SetQuery(
                 count, set));
@@ -394,6 +396,7 @@ public class Locker
             long t2 = java.lang.System.currentTimeMillis();
             Log.w("Mp3Tunes", "API call took " + Long.toString(t2 - t1));
 
+            //Debug.startAllocCounting();
             // NOTE: when set and type=track are passed the tracklist comes
             // BEFORE the set summary
             // Hence why this parseTracks call is before the parseSetSummary
@@ -402,7 +405,8 @@ public class Locker
             Track[] tracks = parseTracks(restResult);
             t2 = java.lang.System.currentTimeMillis();
             Log.w("Mp3Tunes", "parse tracks took " + Long.toString(t2 - t1));
-
+            //Debug.stopAllocCounting();
+            //Log.w("Mp3Tunes", "Thread alloc count: " + Integer.toString(Debug.getThreadAllocCount()) + " size: " + Integer.toString(Debug.getThreadAllocSize()));
             Log.w("Mp3Tunes", "Starting parse set summary");
             t1 = java.lang.System.currentTimeMillis();
             DataResult<Track> results = null;
@@ -420,6 +424,8 @@ public class Locker
             t2 = java.lang.System.currentTimeMillis();
             Log.w("Mp3Tunes", "setData took " + Long.toString(t2 - t1));
 
+            //Debug.stopAllocCounting();
+            //Log.w("Mp3Tunes", "Thread alloc count: " + Integer.toString(Debug.getThreadAllocCount()) + " size: " + Integer.toString(Debug.getThreadAllocSize()));
             return results;
         } catch (IOException e) {
             throw (new LockerException("connection issue"));
@@ -431,6 +437,15 @@ public class Locker
             throws LockerException
     {
         // Debug.startMethodTracing();
+        
+        int trackFromResultAllocs = 0;
+        int tracksAddAllocs       = 0;
+        int parseNextAllocs       = 0;
+        int tracksToArrayAllocs   = 0;
+        int trackFromResultAllocsSize = 0;
+        int tracksAddAllocsSize       = 0;
+        int parseNextAllocsSize       = 0;
+        int tracksToArrayAllocsSize   = 0;
         try {
             List<Track> tracks = new ArrayList<Track>();
             int event = restResult.getParser().nextTag();
@@ -440,10 +455,19 @@ public class Locker
                 switch (event) {
                     case XmlPullParser.START_TAG:
                         if (name.equals("item")) {
+                            //Debug.startAllocCounting();
                             Track t = Track.trackFromResult(restResult,
                                     mPartnerToken);
-                            if (t != null)
+                            //Debug.stopAllocCounting();
+                            //trackFromResultAllocs     += Debug.getThreadAllocCount();
+                            //trackFromResultAllocsSize += Debug.getThreadAllocSize();
+                            if (t != null) {
+                                Debug.startAllocCounting();
                                 tracks.add(t);
+                                Debug.stopAllocCounting();
+                                tracksAddAllocs     += Debug.getThreadAllocCount();
+                                tracksAddAllocsSize += Debug.getThreadAllocSize();
+                            }
                         }
                         break;
                     case XmlPullParser.END_TAG:
@@ -451,10 +475,33 @@ public class Locker
                             loop = false;
                         break;
                 }
+                Debug.startAllocCounting();
                 event = restResult.getParser().next();
+                Debug.stopAllocCounting();
+                parseNextAllocs     += Debug.getThreadAllocCount();
+                parseNextAllocsSize += Debug.getThreadAllocSize();
             }
             // Debug.stopMethodTracing();
-            return tracks.toArray(new Track[tracks.size()]);
+            Debug.startAllocCounting();
+            Track[] tracksA = tracks.toArray(new Track[tracks.size()]);
+            Debug.stopAllocCounting();
+            tracksToArrayAllocs     += Debug.getThreadAllocCount();
+            tracksToArrayAllocsSize += Debug.getThreadAllocSize();
+            
+            Log.w("Mp3Tunes", "Creating Track caused: " + Integer.toString(trackFromResultAllocs) + " allocs for : " + Integer.toString(trackFromResultAllocsSize) + " bytes");
+
+            Log.w("Mp3Tunes", Integer.toString(Track.trackFromResultCalls) + " calls to parse track");
+            
+            Log.w("Mp3Tunes", "Creating Track caused:        " + Integer.toString(Track.trackAllocs) + " allocs for : " + Integer.toString(Track.trackAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "Setting Track caused:         " + Integer.toString(Track.setDataAllocs) + " allocs for : " + Integer.toString(Track.setDataAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "Getting Name caused:          " + Integer.toString(Track.getNameAllocs) + " allocs for : " + Integer.toString(Track.getNameAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "Getting Next caused:          " + Integer.toString(Track.nextAllocs) + " allocs for : " + Integer.toString(Track.nextAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "Getting Next Text caused:     " + Integer.toString(Track.nextTextAllocs) + " allocs for : " + Integer.toString(Track.nextTextAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "Adding Track caused:          " + Integer.toString(tracksAddAllocs) + " allocs for : " + Integer.toString(tracksAddAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "getting next token caused:    " + Integer.toString(parseNextAllocs) + " allocs for : " + Integer.toString(parseNextAllocsSize) + " bytes");
+            Log.w("Mp3Tunes", "creating tracks array caused: " + Integer.toString(tracksToArrayAllocs) + " allocs for : " + Integer.toString(tracksToArrayAllocsSize) + " bytes");
+            
+            return tracksA;
         } catch (Exception e) {
             // Debug.stopMethodTracing();
             throw (new LockerException("Getting albums failed: "
@@ -574,7 +621,7 @@ public class Locker
         }
     }
 
-    private static <E> SetResult<E> parseSetSummary(RestResult restResult)
+    private static <E> SetResult<E> parseSetSummary(RestResult restResult) throws LockerException
     {
         try {
             SetResult<E> result = new SetResult<E>();
@@ -630,7 +677,7 @@ public class Locker
     }
 
     public SearchResult search(String query, boolean artist, boolean album,
-            boolean track, int count, int set)
+            boolean track, int count, int set) throws LockerException
     {
         if (!artist && !album && !track)
             return null;
@@ -674,7 +721,7 @@ public class Locker
         }
     }
 
-    private static SearchResult parseSearchSummary(RestResult restResult)
+    private static SearchResult parseSearchSummary(RestResult restResult) throws LockerException
     {
         try {
             SearchResult result = new SearchResult();

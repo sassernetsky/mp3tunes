@@ -277,7 +277,9 @@ public class QueueBrowser extends ListActivity implements
 
     public void init(Cursor newCursor)
     {
-
+        if (newCursor != null) {
+            Log.w("Mp3Tunes", "cursor count: " + Integer.toString(newCursor.getCount()));
+        }
         mAdapter.changeCursor(newCursor); // also sets mTrackCursor
 
         if (mTrackCursor == null) {
@@ -895,6 +897,7 @@ public class QueueBrowser extends ListActivity implements
     {
         if (mTrackCursor.getCount() == 0)
             return;
+        
         Music.playAll(this, mTrackCursor, position);
     }
 
@@ -1155,11 +1158,11 @@ public class QueueBrowser extends ListActivity implements
         private void getColumnIndices(Cursor cursor)
         {
             if (cursor != null) {
-                mTitleIdx = Music.TRACK_MAPPING.TITLE;
-                mArtistIdx = Music.TRACK_MAPPING.ARTIST_NAME;
-                mAlbumIdx = Music.TRACK_MAPPING.ALBUM_NAME;
-                mDurationIdx = Music.TRACK_MAPPING.TRACK_LENGTH;
-                mAudioIdIdx = Music.TRACK_MAPPING.ID;
+                mTitleIdx = Music.TRACK_FOR_BROWSER_MAPPING.TITLE;
+                mArtistIdx = Music.TRACK_FOR_BROWSER_MAPPING.ARTIST_NAME;
+                mAlbumIdx = Music.TRACK_FOR_BROWSER_MAPPING.ALBUM_NAME;
+                mDurationIdx = Music.TRACK_FOR_BROWSER_MAPPING.TRACK_LENGTH;
+                mAudioIdIdx = Music.TRACK_FOR_BROWSER_MAPPING.ID;
 
                 if (mIndexer != null) {
                     mIndexer.setCursor(cursor);
@@ -1373,10 +1376,14 @@ public class QueueBrowser extends ListActivity implements
         {
             dismissDialog(PROGRESS);
             Music.setSpinnerState(QueueBrowser.this, false);
-            if (cursor != null)
-                QueueBrowser.this.init(cursor);
-            else
-                System.out.println("CURSOR NULL");
+            if (result) {
+                if (cursor != null)
+                    QueueBrowser.this.init(cursor);
+                else
+                    System.out.println("CURSOR NULL");
+            } else {
+                System.out.println("QUERY FAILED");
+            }
         }
     }
 }

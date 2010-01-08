@@ -20,7 +20,7 @@
 package com.binaryelysium.mp3tunes.api;
 
 @SuppressWarnings("serial")
-public class LockerException extends RuntimeException {
+public class LockerException extends Exception {
 
 	public LockerException() {
 	}

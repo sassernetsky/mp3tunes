@@ -165,7 +165,7 @@ public class Caller {
     			outputStream = urlConnection.getOutputStream();
 			}
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-					outputStream));
+					outputStream), 4196);
 
 			writer.write(get);
 			writer.close();
@@ -183,7 +183,7 @@ public class Caller {
 				return RestResult.createRestErrorResult(Integer.parseInt(errorHeader), errorMsg);
 			} else {
 				httpInput = urlConnection.getInputStream();
-			}
+			} 
 			XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
 			factory.setNamespaceAware(true);
 			XmlPullParser xpp = factory.newPullParser();

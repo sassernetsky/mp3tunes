@@ -216,7 +216,7 @@ public class Login extends Activity
             
             if( result.equals( "" )  )
             {
-                MP3tunesApplication.getInstance().map.put( "mp3tunes_locker", locker );
+                MP3tunesApplication.getInstance().setLocker(locker);
                 SharedPreferences settings = getSharedPreferences( PREFS, 0 );
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putString( "mp3tunes_user", user );

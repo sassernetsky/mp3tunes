@@ -21,8 +21,22 @@ package com.binaryelysium.mp3tunes.api;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import android.os.Debug;
+
 public class Track
 {
+
+    public static int trackFromResultCalls = 0;
+    public static int trackAllocs = 0;
+    public static int setDataAllocs = 0;
+    public static int trackAllocsSize = 0;
+    public static int setDataAllocsSize = 0;
+    public static int nextAllocs = 0;
+    public static int nextAllocsSize = 0;
+    public static int nextTextAllocs = 0;
+    public static int nextTextAllocsSize = 0;
+    public static int getNameAllocs = 0;
+    public static int getNameAllocsSize = 0;
 
     private int mId;
     private String mTitle;
@@ -44,10 +58,12 @@ public class Track
     String mAlbumArt;
 
     private Track()
-    {}
+    {
+    }
 
-    public Track( int id, String play_url, String download_url, String title, int track,
-            int artist_id, String artist_name, int album_id, String album_name, String cover_url )
+    public Track(int id, String play_url, String download_url, String title,
+            int track, int artist_id, String artist_name, int album_id,
+            String album_name, String cover_url)
     {
         mId = id;
         mPlayUrl = play_url;
@@ -57,97 +73,91 @@ public class Track
         mArtistId = artist_id;
         mArtistName = artist_name;
         mAlbumId = album_id;
-        mAlbumTitle  = album_name;
+        mAlbumTitle = album_name;
         mAlbumArt = cover_url;
     }
 
-    public static Track trackFromResult( RestResult restResult, String partner_token )
+    public static Track trackFromResult(RestResult restResult,
+            String partner_token)
     {
-        try
-        {
+        trackFromResultCalls++;
+        try {
+            Debug.startAllocCounting();
             Track t = new Track();
+            Debug.stopAllocCounting();
+            trackAllocs += Debug.getThreadAllocCount();
+            trackAllocsSize += Debug.getThreadAllocSize();
+
             int event = restResult.getParser().nextTag();
             boolean loop = true;
-            while ( loop )
-            {
+            while (loop) {
+                Debug.startAllocCounting();
                 String name = restResult.getParser().getName();
-                switch ( event )
-                {
-                case XmlPullParser.START_TAG:
-                    if ( name.equals( "trackId" ) )
-                    {
-                        t.mId = Integer.parseInt( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "trackFileSize" ) )
-                    {
-                        t.mFileSize = Integer.parseInt( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "trackTitle" ) )
-                    {
-                        t.mTitle = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "trackFileName" ) )
-                    {
-                        t.mFileName = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "trackFileKey" ) )
-                    {
-                        t.mFileKey = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "trackNumber" ) )
-                    {
-                        t.mNumber = Integer.parseInt( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "trackLength" ) )
-                    {
-                        t.mDuration = Double.parseDouble( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "albumTitle" ) )
-                    {
-                        t.mAlbumTitle = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "albumYear" ) )
-                    {
-                        t.mAlbumYear = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "albumId" ) )
-                    {
-                        t.mAlbumId = Integer.parseInt( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "artistId" ) )
-                    {
-                        t.mArtistId = Integer.parseInt( restResult.getParser().nextText() );
-                    }
-                    else if ( name.equals( "artistName" ) )
-                    {
-                        t.mArtistName = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "albumArtURL" ) )
-                    {
-                        t.mAlbumArt = restResult.getParser().nextText();
-                    }
-                    else if ( name.equals( "downloadURL" ) )
-                    {
-                        t.mDownloadUrl = restResult.getParser().nextText();
-                        t.mDownloadUrl += partner_token;
-                    }
-                    else if ( name.equals( "playURL" ) )
-                    {
-                        t.mPlayUrl = restResult.getParser().nextText();
-                        t.mPlayUrl += partner_token;
-                    }
-                    break;
-                case XmlPullParser.END_TAG:
-                    if ( name.equals( "item" ) )
-                        loop = false;
-                    break;
+                Debug.stopAllocCounting();
+                getNameAllocs     += Debug.getThreadAllocCount();
+                getNameAllocsSize += Debug.getThreadAllocSize();
+                switch (event) {
+                    case XmlPullParser.START_TAG:
+                        
+                        Debug.startAllocCounting();
+                        String text = restResult.getParser().nextText();
+                        Debug.stopAllocCounting();
+                        nextTextAllocs     += Debug.getThreadAllocCount();
+                        nextTextAllocsSize += Debug.getThreadAllocSize();
+                        
+                        Debug.startAllocCounting();
+                        if (name.equals("trackId")) {
+                            t.mId = Integer.parseInt(text);
+                        } else if (name.equals("trackFileSize")) {
+                            t.mFileSize = Integer.parseInt(text);
+                        } else if (name.equals("trackTitle")) {
+                            t.mTitle = text;
+                        } else if (name.equals("trackFileName")) {
+                            t.mFileName = text;
+                        } else if (name.equals("trackFileKey")) {
+                            t.mFileKey = text;
+                        } else if (name.equals("trackNumber")) {
+                            t.mNumber = Integer.parseInt(text);
+                        } else if (name.equals("trackLength")) {
+                            t.mDuration = Double.parseDouble(text);
+                        } else if (name.equals("albumTitle")) {
+                            t.mAlbumTitle = text;
+                        } else if (name.equals("albumYear")) {
+                            t.mAlbumYear = text;
+                        } else if (name.equals("albumId")) {
+                            t.mAlbumId = Integer.parseInt(text);
+                        } else if (name.equals("artistId")) {
+                            t.mArtistId = Integer.parseInt(text);
+                        } else if (name.equals("artistName")) {
+                            t.mArtistName = text;
+                        } else if (name.equals("albumArtURL")) {
+                            t.mAlbumArt = text;
+                        } else if (name.equals("downloadURL")) {
+                            t.mDownloadUrl = text;
+                            t.mDownloadUrl += partner_token;
+                        } else if (name.equals("playURL")) {
+                            t.mPlayUrl = text;
+                            t.mPlayUrl += partner_token;
+                        }
+                        Debug.stopAllocCounting();
+                        setDataAllocs     += Debug.getThreadAllocCount();
+                        setDataAllocsSize += Debug.getThreadAllocSize();
+                        break;
+                    case XmlPullParser.END_TAG:
+                        if (name.equals("item"))
+                            loop = false;
+                        break;
                 }
+                Debug.startAllocCounting();
                 event = restResult.getParser().next();
+                Debug.stopAllocCounting();
+                nextAllocs     += Debug.getThreadAllocCount();
+                nextAllocsSize += Debug.getThreadAllocSize();
             }
             return t;
+        } catch (Exception e) {
+            Debug.stopAllocCounting();
         }
-        catch ( Exception e )
-        {}
         return null;
     }
 

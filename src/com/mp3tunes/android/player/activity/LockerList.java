@@ -59,15 +59,15 @@ public class LockerList extends ListActivity
     private Cursor mCursor = null;
 
     // id List for main menu
-    private static final int[] mMainOpts = { R.string.artists, R.string.albums, R.string.tracks,
+    private static final int[] mMainOpts = { R.string.artists, R.string.albums, /*R.string.tracks,*/
             R.string.playlists, R.string.search };
 
     // icon list for the main menu
     private static final int[] mMainOptsIcon = { R.drawable.artist_icon, R.drawable.album_icon,
-            R.drawable.song_icon, R.drawable.playlist_icon, R.drawable.search_icon };
+            /*R.drawable.song_icon,*/ R.drawable.playlist_icon, R.drawable.search_icon };
 
     // number of main menu options
-    private static final int mMainOptsNum = 5;
+    private static final int mMainOptsNum = 4;
 
     // C++ style enum of the possible states of the LockerList
     private static final class STATE

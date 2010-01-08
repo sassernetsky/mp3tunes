@@ -91,7 +91,7 @@ public class RemoteImageHandler extends Handler
         }
         catch ( IOException e )
         {
-            Log.d( "RemoteImageHandler", "RemoteImageWorker IO exception: " + e );
+            //Log.d( "RemoteImageHandler", "RemoteImageWorker IO exception: " + e );
         }
         return null;
     }

@@ -24,9 +24,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.Locker;
-import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.Music;
+import com.mp3tunes.android.player.PrivateAPIKey;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteImageHandler;
 import com.mp3tunes.android.player.RemoteImageView;
@@ -66,7 +66,7 @@ public class Player extends Activity
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.audio_player);
         
-        mLocker = ( Locker ) MP3tunesApplication.getInstance().map.get( "mp3tunes_locker" );
+        mLocker = MP3tunesApplication.getInstance().getLocker();
 //        if ( mLocker == null )
 //            logout();
         
@@ -185,7 +185,15 @@ public class Player extends Activity
 
             if (Music.sService == null)
                 return;
-            // TODO Prev
+            try
+            {
+                Music.sService.prev();
+            }
+            catch ( RemoteException e )
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
     };
     
@@ -453,20 +461,11 @@ public class Player extends Activity
         {
             try {
                 if (Music.sService!= null) {
-                    artUrl = Music.sService.getArtUrl();
-                    String[] metadata = Music.sService.getMetadata();
-                    int track_id = Integer.parseInt( metadata[1] );
-                    Track[] tracks = mLocker.getTracksForAlbum( Integer.parseInt( metadata[5] ) ).getData();
-                    // TODO maybe a better way to do this. probably cache it in the database
-                    for( Track t : tracks)
-                    {
-                        if( t.getId() == track_id ) {
-                            artUrl = t.getAlbumArt();
-                            if (artUrl == null) break;
-                            return true;
-                        }
-                    }
-                    artUrl = Mp3tunesService.UNKNOWN;
+                    String albumId = Music.sService.getMetadata()[5];
+                    artUrl = "http://content.mp3tunes.com/storage/albumartget/" + 
+                             albumId + "?sid=" + mLocker.getCurrentSession().getSessionId() + 
+                             "&partner_token=" + PrivateAPIKey.KEY;
+                    return true;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -477,13 +476,17 @@ public class Player extends Activity
 
         @Override
         public void onPostExecute(Boolean result) {
-            System.out.println("Art url: " + artUrl);
-            if (artUrl != Mp3tunesService.UNKNOWN) {
-                mAlbumArtHandler
+            if (result) {
+                System.out.println("Art url: " + artUrl);
+                if (artUrl != Mp3tunesService.UNKNOWN) {
+                    mAlbumArtHandler
                         .removeMessages(RemoteImageHandler.GET_REMOTE_IMAGE);
-                mAlbumArtHandler.obtainMessage(
+                    mAlbumArtHandler.obtainMessage(
                         RemoteImageHandler.GET_REMOTE_IMAGE, artUrl)
                         .sendToTarget();
+                }
+            } else {
+                System.out.println("Art url: unknown"); 
             }
         }
     }

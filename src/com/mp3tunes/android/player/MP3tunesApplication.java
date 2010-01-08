@@ -23,6 +23,7 @@ package com.mp3tunes.android.player;
 
 import java.util.WeakHashMap;
 
+import com.binaryelysium.mp3tunes.api.Locker;
 import com.tomgibara.android.veecheck.Veecheck;
 import com.tomgibara.android.veecheck.util.PrefSettings;
 
@@ -38,7 +39,7 @@ import android.content.SharedPreferences.Editor;
 public class MP3tunesApplication extends Application
 {
 
-	public WeakHashMap<String, Object> map; // used to store global instance specific data
+	private WeakHashMap<String, Object> map; // used to store global instance specific data
     public static final String LAST_UPDATE = "LastUpdate"; // for SharedPreferences
 //    public com.mp3tunes.android.service.ITunesService player = null;
 
@@ -107,5 +108,15 @@ public class MP3tunesApplication extends Application
         d.show();
     }    
     
-
+    public void setLocker(Locker l)
+    {
+        map.put("mp3tunes_locker", l);
+    }
+    
+    public Locker getLocker()
+    {
+        Locker l = (Locker)map.get("mp3tunes_locker");
+        
+        return l;
+    }
 }
