@@ -48,7 +48,7 @@ public class Player extends Activity
     private TextView mArtistName;
     private TextView mTrackName;
     private ProgressBar mProgress;
-    private ProgressDialog mProgressDialog;
+    static private ProgressDialog mProgressDialog;
     
     private long mDuration;
     private boolean paused;
@@ -67,8 +67,6 @@ public class Player extends Activity
         setContentView(R.layout.audio_player);
         
         mLocker = MP3tunesApplication.getInstance().getLocker();
-//        if ( mLocker == null )
-//            logout();
         
         mCurrentTime = (TextView) findViewById(R.id.currenttime);
         mTotalTime = (TextView) findViewById(R.id.totaltime);
@@ -83,9 +81,7 @@ public class Player extends Activity
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
         mPlayButton.setOnClickListener(mPlayListener);
         mPlayButton.requestFocus();
-//        mStopButton = (ImageButton) findViewById(R.id.stop);
-//        mStopButton.requestFocus();
-//        mStopButton.setOnClickListener(mStopListener);
+
         mNextButton = ( ImageButton ) findViewById( R.id.fwd );
         mNextButton.setOnClickListener(mNextListener);
         
@@ -130,7 +126,6 @@ public class Player extends Activity
 
     @Override
     protected void onPause() {
-//        Music.unbindFromService( this );
         unregisterReceiver(mStatusListener);
         super.onPause();
     }
@@ -138,7 +133,6 @@ public class Player extends Activity
     @Override
     public void onResume() {
         registerReceiver(mStatusListener, mIntentFilter);
-//        Music.bindToService(this);
         updateTrackInfo();
         setPauseButtonImage();
 
@@ -244,25 +238,6 @@ public class Player extends Activity
         {
         }
     }
-
-    
-//    private View.OnClickListener mStopListener = new View.OnClickListener() {
-//
-//        public void onClick(View v) {
-//
-//            if (Music.sService== null)
-//                return;
-//            try
-//            {
-//                Music.sService.stop();
-//            }
-//            catch ( RemoteException e )
-//            {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
-//        }
-//    };
     
     private View.OnClickListener mNextListener = new View.OnClickListener() {
 
@@ -292,6 +267,11 @@ public class Player extends Activity
                 // set new max for progress bar
                 updateTrackInfo();
             } else if (action.equals(Mp3tunesService.PLAYBACK_FINISHED)) {
+                if (mProgressDialog != null) {
+                    Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
+                    mProgressDialog.dismiss();
+                    mProgressDialog = null;
+                }
                 finish();
             } else if (action.equals(Mp3tunesService.PLAYBACK_ERROR)) {
                 MP3tunesApplication.getInstance().presentError(
@@ -394,6 +374,7 @@ public class Player extends Activity
                 mProgress.setProgress( (int) ( 1000 * pos / mDuration ) );
                 mProgress.setSecondaryProgress( buffpercent * 10 );
                 if (mProgressDialog != null) {
+                    Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
                     mProgressDialog.dismiss();
                     mProgressDialog = null;
                 }
@@ -402,12 +383,10 @@ public class Player extends Activity
                 mCurrentTime.setText("--:--");
                 mTotalTime.setText("--:--");
                 mProgress.setProgress(0);
-                if (mProgressDialog == null
-                        && Music.sService.isPlaying()) {
-                    mProgressDialog = ProgressDialog.show(this, "",
-                            "Buffering", true, false);
-                    mProgressDialog
-                            .setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
+                if (mProgressDialog == null && Music.sService.isPlaying()) {
+                    mProgressDialog = ProgressDialog.show(this, "", "Buffering", true, false);
+                    Log.w("Mp3Tunes", "created progress dialog: " + mProgressDialog.toString());
+                    mProgressDialog.setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
                     mProgressDialog.setCancelable(true);
                 }
             }

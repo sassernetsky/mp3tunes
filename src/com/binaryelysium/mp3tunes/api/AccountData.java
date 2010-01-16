@@ -183,7 +183,7 @@ public class AccountData
         return null;
     }
 
-    public static AccountData getAccountData( Session session ) throws LockerException
+    public static AccountData getAccountData( Session session ) throws LockerException, InvalidSessionException
     {
 
         String m = "accountData";

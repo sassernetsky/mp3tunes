@@ -34,17 +34,39 @@ public class Authenticator {
 	 * @param user the username
 	 * @param the user's password
 	 * @return a Session instance
+	 * @throws LoginException 
 	 * @see Session
 	 */
-	public static Session getSession(String token, String user, String password) throws LockerException, IOException {
+	public static Session getSession(String token, String user, String password) throws LockerException, IOException, LoginException {
 		String m = "login";
 		Map<String, String> params = new HashMap<String, String>();
 		params.put("username", user);
 		params.put("partner_token", token);
 		params.put("password", password);
 		Caller.getInstance().setApiRootUrl(Caller.API_LOGIN);
-		RestResult restResult = Caller.getInstance().call(m, params);
+		
+		RestResult restResult;
+        try {
+            restResult = Caller.getInstance().call(m, params);
+        } catch (InvalidSessionException e) {
+            //As I understand things this should not be possible
+            e.printStackTrace();
+            throw new LockerException();
+        }
+		String errorMessage = restResult.getErrorMessage();
+		if (errorMessage != null && errorMessage.equals("Login failed")) 
+		    throw new LoginException();
 		Caller.getInstance().setApiRootUrl(Caller.API_GENERAL);
 		return Session.sessionFromResult(restResult);
+	}
+	
+	public static class LoginException extends Exception
+	{
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = -3731217232625893463L;
+	    
 	}
 }

@@ -492,7 +492,10 @@ public class ArtistBrowser extends ListActivity
             
             int numalbums = cursor.getInt(mNumAlbumsIdx);
             int numsongs = cursor.getInt(mNumAlbumsIdx);
-            displayname = Music.makeAlbumsLabel( context, numalbums, numsongs, unknown );
+            if (numalbums > 0)
+                displayname = Music.makeAlbumsLabel( context, numalbums, numsongs, unknown );
+            else
+                displayname = "";
             vh.line2.setText(displayname);
 
             ImageView iv = vh.icon;

@@ -39,6 +39,8 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import android.util.Log;
+
 import com.binaryelysium.util.StringUtilities;
 
 public class Caller {
@@ -107,7 +109,7 @@ public class Caller {
 		mSession = session;
 	}
 
-	public RestResult call(String method, String... params) throws IOException {
+	public RestResult call(String method, String... params) throws IOException, InvalidSessionException {
 		return call(method, StringUtilities.map(params));
 	}
 
@@ -125,10 +127,12 @@ public class Caller {
 	 * @param session
 	 *            A Session instance or <code>null</code>
 	 * @return the result of the operation
+	 * @throws InvalidSessionException 
 	 * @throws XmlPullParserException
 	 */
-	public RestResult call(String method, Map<String, String> params) throws IOException {
-
+	public RestResult call(String method, Map<String, String> params) throws IOException, InvalidSessionException 
+	{
+	    try {
 		// create new Map in case params is an immutable Map
 		params = new HashMap<String, String>(params);
 		params.put(PARAM_OUTPUT_METHOD, PARAM_OUTPUT_TYPE);
@@ -194,6 +198,15 @@ public class Caller {
 		} catch (XmlPullParserException e) {
 			return RestResult.createRestErrorResult(RestResult.FAILURE, e.getMessage());
 		}
+	    } catch (IOException e) {
+	        Log.w("Mp3Tunes", Log.getStackTraceString(e));
+	        //FIXME there should be a way to not have to do a string compare here
+	        //But I do not have time to figure it out right now
+	        if (e.getMessage().equals("Received authentication challenge is null")) {
+	            throw new InvalidSessionException();
+	        }
+	        throw e;
+	    }
 	}
 
 	/**

@@ -76,6 +76,17 @@ public class Track
         mAlbumTitle = album_name;
         mAlbumArt = cover_url;
     }
+    
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Title: ");
+        builder.append(mTitle);
+        builder.append(" by: ");
+        builder.append(mArtistName);
+        return builder.toString();
+    }
 
     public static Track trackFromResult(RestResult restResult,
             String partner_token)
@@ -236,4 +247,29 @@ public class Track
         return mAlbumArt;
     }
 
+    public boolean sameRemoteFile(Track t)
+    {
+        String myFileKey = null, otherFileKey = null;
+        
+        if (mFileKey == null || mFileKey.equals("")) {
+            if (mPlayUrl == null || mPlayUrl.equals("")) {
+                return false;
+            }
+            myFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
+        } else {
+            myFileKey = mFileKey;
+        }
+        
+        if (t.getFileKey() == null || t.getFileKey().equals("")) {
+            if (t.getPlayUrl() == null || t.getPlayUrl().equals("")) {
+                return false;
+            }
+            otherFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
+            
+        } else {
+            otherFileKey = mFileKey;
+        }
+        
+        return myFileKey.equals(otherFileKey);
+    }
 }

@@ -30,6 +30,7 @@ import org.xmlpull.v1.XmlPullParser;
 import android.os.Debug;
 import android.util.Log;
 
+import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
 import com.binaryelysium.mp3tunes.api.results.DataResult;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.binaryelysium.mp3tunes.api.results.SetResult;
@@ -54,11 +55,16 @@ public class Locker
     }
 
     public Locker(String partnerToken, String username, String password)
-            throws LockerException
+            throws LockerException, LoginException
     {
         mPartnerToken = partnerToken;
         refreshSession(username, password);
 
+    }
+    
+    static public String getPartnerToken()
+    {
+        return mPartnerToken;
     }
 
     public Session getCurrentSession()
@@ -66,20 +72,25 @@ public class Locker
         return mSession;
     }
 
-    public void refreshSession(String username, String password) throws LockerException
+    
+    public void refreshSession(String username, String password) throws LockerException, LoginException
     {
-        try {
-            mSession = Authenticator.getSession(mPartnerToken, username,
+        int tries = 3;
+        while (tries > 0) {
+            try {
+                mSession = Authenticator.getSession(mPartnerToken, username,
                     password);
-        } catch (IOException e) {
-            throw (new LockerException("connection issue"));
+            } catch (IOException e) {
+                throw (new LockerException("connection issue"));
+            }
+            Caller.getInstance().setSession(mSession);
+            if (mSession != null) return;
+            tries--;
         }
-        Caller.getInstance().setSession(mSession);
-        if (mSession == null)
-            throw (new LockerException("connection issue"));
+        throw (new LockerException("connection issue"));
     }
 
-    public long getLastUpdate(UpdateType type) throws LockerException
+    public long getLastUpdate(UpdateType type) throws LockerException, InvalidSessionException
     {
 
         String m = "lastUpdate";
@@ -121,7 +132,7 @@ public class Locker
         return 0;
     }
 
-    public Artist getArtist(int id) throws LockerException
+    public Artist getArtist(int id) throws LockerException, InvalidSessionException
     {
         DataResult<Artist> res = fetchArtists(Integer.toString(id), null);
         if (res.getData().length == 1)
@@ -131,7 +142,7 @@ public class Locker
 
     }
 
-    public DataResult<Artist> getArtists() throws LockerException
+    public DataResult<Artist> getArtists() throws LockerException, InvalidSessionException
     {
         return fetchArtists("", mDefaultQuery);
     }
@@ -146,16 +157,17 @@ public class Locker
      *            based
      * @return a list of count artists
      * @throws LockerException
+     * @throws InvalidSessionException 
      */
     public SetResult<Artist> getArtistsSet(int count, int set)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
 
         return (SetResult<Artist>) fetchArtists("", new SetQuery(count, set));
     }
 
     private static DataResult<Artist> fetchArtists(String artistId,
-            SetQuery setQuery) throws LockerException
+            SetQuery setQuery) throws LockerException, InvalidSessionException
     {
         String m = "lockerData";
         Map<String, String> params = new HashMap<String, String>();
@@ -220,7 +232,7 @@ public class Locker
 
     }
 
-    public Album getAlbum(int id) throws LockerException
+    public Album getAlbum(int id) throws LockerException, InvalidSessionException
     {
 
         Album[] list = fetchAlbums("", "", Integer.toString(id), null)
@@ -231,33 +243,33 @@ public class Locker
             throw (new NoSuchEntryException("No such album w/ id " + id));
     }
 
-    public DataResult<Album> getAlbumsForArtist(int id) throws LockerException
+    public DataResult<Album> getAlbumsForArtist(int id) throws LockerException, InvalidSessionException
     {
         return fetchAlbums(Integer.toString(id), "", "", mDefaultQuery);
     }
 
     public DataResult<Album> getAlbumsforToken(String token)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         return fetchAlbums("", token, "", mDefaultQuery);
     }
 
     public SetResult<Album> getAlbumsSet(int count, int set)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
 
         return (SetResult<Album>) fetchAlbums("", "", "", new SetQuery(count,
                 set));
     }
 
-    public DataResult<Album> getAlbums() throws LockerException
+    public DataResult<Album> getAlbums() throws LockerException, InvalidSessionException
     {
         return fetchAlbums("", "", "", mDefaultQuery);
     }
 
     protected static DataResult<Album> fetchAlbums(String artistId,
             String token, String albumId, SetQuery setQuery)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
 
         String m = "lockerData";
@@ -303,7 +315,7 @@ public class Locker
             boolean loop = true;
             while (loop && event != XmlPullParser.END_DOCUMENT) {
                 String name = restResult.getParser().getName();
-                Log.w("Mp3Tunes", "tag: " + name);
+                //Log.w("Mp3Tunes", "tag: " + name);
                 switch (event) {
                     case XmlPullParser.START_TAG:
                         if (name.equals("item")) {
@@ -326,41 +338,41 @@ public class Locker
         }
     }
 
-    public DataResult<Track> getTracks() throws LockerException
+    public DataResult<Track> getTracks() throws LockerException, InvalidSessionException
     {
         return fetchTracks("", "", "", "", mDefaultQuery);
     }
     
-    public DataResult<Track> getTracks(int start, int count) throws LockerException
+    public DataResult<Track> getTracks(int start, int count) throws LockerException, InvalidSessionException
     {
         return fetchTracks("", "", "", "", new SetQuery(count, start));
     }
 
     public DataResult<Track> getTracksForAlbum(int albumId)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         return fetchTracks("", "", Integer.toString(albumId), "", mDefaultQuery);
     }
 
     public DataResult<Track> getTracksForArtist(int artistId)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         return fetchTracks(Integer.toString(artistId), "", "", "", mDefaultQuery);
     }
 
     public DataResult<Track> getTracksForToken(String token)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         return fetchTracks("", token, "", "", mDefaultQuery);
     }
 
     public DataResult<Track> getTracksForPlaylist(String playlistId)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         return fetchTracks("", "", "", playlistId, mDefaultQuery);
     }
 
-    public SetResult<Track> getTracksSet(int count, int set) throws LockerException
+    public SetResult<Track> getTracksSet(int count, int set) throws LockerException, InvalidSessionException
     {
         return (SetResult<Track>) fetchTracks("", "", "", "", new SetQuery(
                 count, set));
@@ -368,7 +380,7 @@ public class Locker
 
     protected static DataResult<Track> fetchTracks(String artistId,
             String token, String albumId, String playlistId, SetQuery setQuery)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
 
         String m = "lockerData";
@@ -510,7 +522,7 @@ public class Locker
     }
 
     public DataResult<Playlist> getPlaylists(boolean playmix)
-            throws LockerException
+            throws LockerException, IOException, InvalidSessionException
     {
 
         String m = "lockerData";
@@ -556,27 +568,28 @@ public class Locker
                         + e.getMessage()));
             }
         } catch (IOException e) {
-            throw (new LockerException("connection issue"));
+            Log.w("Mp3Tunes", Log.getStackTraceString(e));
+            throw e;
         }
     }
-
-    public DataResult<Token> getArtistTokens() throws LockerException
+    
+    public DataResult<Token> getArtistTokens() throws LockerException, InvalidSessionException
     {
         return fetchTokens("artist");
     }
 
-    public DataResult<Token> getAlbumTokens() throws LockerException
+    public DataResult<Token> getAlbumTokens() throws LockerException, InvalidSessionException
     {
         return fetchTokens("album");
     }
 
-    public DataResult<Token> getTrackTokens() throws LockerException
+    public DataResult<Token> getTrackTokens() throws LockerException, InvalidSessionException
     {
         return fetchTokens("track");
     }
 
     protected static DataResult<Token> fetchTokens(String type)
-            throws LockerException
+            throws LockerException, InvalidSessionException
     {
         String m = "lockerData";
         Map<String, String> params = new HashMap<String, String>();
@@ -677,7 +690,7 @@ public class Locker
     }
 
     public SearchResult search(String query, boolean artist, boolean album,
-            boolean track, int count, int set) throws LockerException
+            boolean track, int count, int set) throws LockerException, InvalidSessionException
     {
         if (!artist && !album && !track)
             return null;

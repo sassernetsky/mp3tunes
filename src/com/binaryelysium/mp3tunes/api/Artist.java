@@ -51,7 +51,7 @@ public class Artist {
 	private Artist() {
 	}
 	
-	public Album[] getAlbums() {
+	public Album[] getAlbums() throws InvalidSessionException {
 		if (mAlbums == null) { // we need to fetch the tracks
 			try {
 				mAlbums = Locker

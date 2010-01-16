@@ -43,6 +43,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
+import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Playlist;
@@ -51,6 +52,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.results.DataResult;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.LockerCache;
+import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 /**
  * This class is essentially a wrapper for storing MP3tunes locker data in an
@@ -471,8 +473,7 @@ public class LockerDb
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        catch (LockerException e) {
+        } catch (LockerException e) {
             e.printStackTrace();
         }
         return null;
@@ -794,42 +795,26 @@ public class LockerDb
 
     private void refreshTracks() throws SQLiteException, IOException, LockerException
     {
-//        int current = 0;
-//        int max     = 500;
-//        while (true) {
-//            long t1 = System.currentTimeMillis();
-//            Log.w("Mp3Tunes", "Getting tracks");
-//            DataResult<Track> results = mLocker.getTracks(current, max);
-//            int total = results.getData().length;
-//            if (total == 0) break;
-//            long t2 = System.currentTimeMillis();
-//            Log.w("Mp3Tunes", "Getting " + total + " took " + Long.toString(t2-t1) + " ms"); 
-//
-//            t1 = System.currentTimeMillis();
-//            Log.w("Mp3Tunes", "Inserting tracks");
-//            insertTracks(results);
-//            t2 = System.currentTimeMillis();
-//            Log.w("Mp3Tunes", "Inserting " + total + " took " + Long.toString(t2-t1) + " ms"); 
-//            current++;
-//        }
-        //Debug.startAllocCounting();
-        DataResult<Track> results = mLocker.getTracks();
-        //Debug.stopAllocCounting();
-        
-        
+        DataResult<Track> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getTracks();
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
+
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks");
 
         insertTracks(results);
 
-        // int i = 0;
-        // for( Track t : results.getData() )
-        // {
-        // if ((i % 10) == 0) Log.w("mp3tunes player: ", "inserted: " +
-        // Integer.toString(i) + "tracks");
-        // insertTrack( t );
-        // i++;
-        // }
         System.out.println("insertion complete");
         mCache.setUpdate(System.currentTimeMillis(), LockerCache.TRACK);
         mCache.saveCache(mContext);
@@ -837,7 +822,20 @@ public class LockerDb
 
     private void refreshPlaylists() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Playlist> results = mLocker.getPlaylists(false);
+        DataResult<Playlist> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getPlaylists(false);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " playlists");
         int i = 0;
@@ -854,7 +852,20 @@ public class LockerDb
 
     private void refreshArtists() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Artist> results = mLocker.getArtists();
+        DataResult<Artist> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getArtists();
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " artists");
         for (Artist a : results.getData()) {
@@ -867,7 +878,21 @@ public class LockerDb
 
     private void refreshAlbums() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Album> results = mLocker.getAlbums();
+        //FIXME bad repeated code
+        DataResult<Album> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getAlbums();
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " albums");
         for (Album a : results.getData()) {
@@ -881,7 +906,21 @@ public class LockerDb
     private void refreshAlbumsForArtist(int artist_id) throws SQLiteException,
             IOException, LockerException
     {
-        DataResult<Album> results = mLocker.getAlbumsForArtist(artist_id);
+      //FIXME bad repeated code
+        DataResult<Album> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getAlbumsForArtist(artist_id);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " albums for artist id " + artist_id);
         for (Album a : results.getData()) {
@@ -893,7 +932,21 @@ public class LockerDb
     private void refreshTracksforAlbum(int album_id) throws SQLiteException,
             IOException, LockerException
     {
-        DataResult<Track> results = mLocker.getTracksForAlbum(album_id);
+      //FIXME bad repeated code
+        DataResult<Track> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getTracksForAlbum(album_id);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for album id " + album_id);
         for (Track t : results.getData()) {
@@ -905,7 +958,21 @@ public class LockerDb
     private void refreshTracksforArtist(int artist_id) throws SQLiteException,
             IOException, LockerException
     {
-        DataResult<Track> results = mLocker.getTracksForArtist(artist_id);
+        //FIXME bad repeated code
+        DataResult<Track> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getTracksForArtist(artist_id);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for artist id " + artist_id);
         for (Track t : results.getData()) {
@@ -917,7 +984,21 @@ public class LockerDb
     private void refreshTracksforPlaylist(String playlist_id)
             throws SQLiteException, IOException, LockerException
     {
-        DataResult<Track> results = mLocker.getTracksForPlaylist(playlist_id);
+      //FIXME bad repeated code
+        DataResult<Track> results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.getTracksForPlaylist(playlist_id);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for playlist id " + playlist_id);
 
@@ -943,8 +1024,21 @@ public class LockerDb
     {
         if (!artist && !album && !track)
             return;
-        SearchResult results = mLocker.search(query, artist, album, track, 50,
-                0);
+        //FIXME bad repeated code
+        SearchResult results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = mLocker.search(query, artist, album, track, 50, 0);
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        if (results == null) return;
 
         if (artist) {
             System.out.println("beginning insertion of "
@@ -973,22 +1067,59 @@ public class LockerDb
     private void refreshTokens(Music.Meta type) throws SQLiteException,
             IOException, LockerException
     {
-        DataResult<Token> results;
+        DataResult<Token> results = null;
         String typename;
         int cachetype;
+        int tries = 0;
         switch (type) {
             case ARTIST:
-                results = mLocker.getArtistTokens();
+                //FIXME bad repeated code
+                while (tries < 3) {
+                    try {
+                        results = mLocker.getArtistTokens();
+                        break;
+                    } catch (InvalidSessionException e) {
+                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                        if (!task.doInForground())
+                            break;
+                    }
+                    tries++;
+                }
+                if (results == null) return;
                 typename = "artist";
                 cachetype = LockerCache.ARTIST_TOKENS;
                 break;
             case ALBUM:
-                results = mLocker.getAlbumTokens();
+                //FIXME bad repeated code
+                while (tries < 3) {
+                    try {
+                        results = mLocker.getAlbumTokens();
+                        break;
+                    } catch (InvalidSessionException e) {
+                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                        if (!task.doInForground())
+                            break;
+                    }
+                    tries++;
+                }
+                if (results == null) return;
                 typename = "album";
                 cachetype = LockerCache.ALBUM_TOKENS;
                 break;
             case TRACK:
-                results = mLocker.getTrackTokens();
+              //FIXME bad repeated code
+                while (tries < 3) {
+                    try {
+                        results = mLocker.getTrackTokens();
+                        break;
+                    } catch (InvalidSessionException e) {
+                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                        if (!task.doInForground())
+                            break;
+                    }
+                    tries++;
+                }
+                if (results == null) return;
                 typename = "track";
                 cachetype = LockerCache.TRACK_TOKENS;
                 break;

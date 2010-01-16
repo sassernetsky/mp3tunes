@@ -55,6 +55,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
     //private final static int EXPLORE_ALBUM = 6;
     //private final static int REQUERY = 3;
     private final static int PROGRESS = 7;
+    private final static int NO_RESULTS = 8;
 
     private QueryListAdapter mAdapter;
     private boolean mAdapterSent;
@@ -62,6 +63,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
     private ListView mTrackList;
     private SearchCursor mQueryCursor;
     private AlertDialog mProgDialog;
+    private AlertDialog mNoResults;
     private AsyncTask<String, Void, Boolean> mSearchTask;
 
     /** Called when the activity is first created. */
@@ -95,6 +97,10 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         builder = new AlertDialog.Builder(this);
         builder.setView(layout);
         mProgDialog = builder.create();
+        
+        AlertDialog.Builder builder1 = new AlertDialog.Builder(this);
+        builder1.setMessage("No Results");
+        mNoResults = builder1.create();
         
         mTrackList = getListView();
         mTrackList.setTextFilterEnabled(true);
@@ -170,19 +176,31 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         {
         case PROGRESS:
             return mProgDialog;
+        case NO_RESULTS:
+            return mNoResults;
         default:
             return null;
         }
     }
     
+    private boolean gotNoResults(SearchCursor c)
+    {
+        if (c.getCount() > -1)
+            return false;
+        return true;
+    }
+    
     public void init(SearchCursor c) {
         
         mAdapter.changeCursor(c);
-
+        
         if (mQueryCursor == null) {
 //            Music.displayDatabaseError(this);
             setListAdapter(null);
             return;
+        }
+        if (gotNoResults(c)) {
+            this.showDialog(NO_RESULTS);
         }
 //        Music.hideDatabaseError(this);
     }
@@ -260,6 +278,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
                 mTracks.moveToPosition( total - newPosition );    
             return true;
         }
+        
         @Override
         public String[] getColumnNames()
         {

@@ -29,6 +29,7 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.PrivateAPIKey;
 import com.mp3tunes.android.player.service.ITunesService;
 import com.mp3tunes.android.player.service.PlayerHandler.ChangeTrackException;
+import com.mp3tunes.android.player.service.PlayerHandler.ERROR_ACTION;
 import com.mp3tunes.android.player.service.PlayerHandler.PlaybackException;
 
 import android.app.Service;
@@ -53,6 +54,8 @@ public class Mp3tunesService extends Service
     private Locker               mLocker;
     
     private Bitmap  mAlbumArt;
+    
+    private int mTimeout = 0;
 
     public static final String META_CHANGED           = "com.mp3tunes.android.player.metachanged";
     public static final String QUEUE_CHANGED          = "com.mp3tunes.android.player.queuechanged";
@@ -86,7 +89,8 @@ public class Mp3tunesService extends Service
         mPlayerHandler.setOnErrorListener(mOnErrorListener);
         mPlayerHandler.setOnPreparedListener(mOnPreparedListener);
 
-        mLocker = MP3tunesApplication.getInstance().getLocker();       
+        mLocker = MP3tunesApplication.getInstance().getLocker();  
+        mPlayStateLocker.lock();
     }
 
     @Override
@@ -125,9 +129,11 @@ public class Mp3tunesService extends Service
     private OnCompletionListener mOnCompletionListener = new OnCompletionListener() {
 
         public void onCompletion(MediaPlayer mp)
-        {       
+        {    
+            mp.stop();
             Track t = null;
             try {
+                mPlayerHandler.playbackSucceeded();
                 t = mPlayerHandler.nextTrack();
                 if (t == null) return;
                 mGuiNotifier.nextTrack(t);
@@ -140,12 +146,34 @@ public class Mp3tunesService extends Service
         }
     };
 
+    //TODO: this function is repeated elsewhere need to break it out
+    private boolean timedOut(int percent)
+    {
+        if (mPlayerHandler.getBufferPercent() == percent) {
+            mTimeout++;
+            if (mTimeout >= 20) {
+                mTimeout = 0;
+                try {
+                    mBinder.next();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                return true;
+            }
+        } else {
+            mTimeout = 0;
+        }
+        return false;
+    }
+    
     private OnBufferingUpdateListener mOnBufferingUpdateListener = new OnBufferingUpdateListener() {
 
         public void onBufferingUpdate(MediaPlayer mp, int percent)
         {
+            if (timedOut(percent)) return;
             mPlayerHandler.updateBuffering(mp, percent);
-            Log.w("Mp3Tunes", "Buffering: " + Integer.toString(percent));
+            if (percent % 10 == 0)
+                Log.w("Mp3Tunes", "Buffering: " + Integer.toString(percent));
         }
     };
 
@@ -153,15 +181,21 @@ public class Mp3tunesService extends Service
 
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
-            if (mPlayerHandler.handleError(mp, what, extra)) 
-                return true;
             try {
-                mBinder.next();
+                int state = mPlayerHandler.handleError(mp, what, extra);
+                if (state == ERROR_ACTION.RETRYING) {
+                    return true;
+                } else if (state == ERROR_ACTION.SKIPPING) {
+                    mBinder.next();
+                    return true;
+                } else if (state == ERROR_ACTION.STOPPING) {
+                    mGuiNotifier.stop(null);
+                }
             } catch (RemoteException e) {
                 e.printStackTrace();
-                return false;
+                mGuiNotifier.stop(null);
             }
-            return true;
+            return false;
         }
     };
 
@@ -267,7 +301,6 @@ public class Mp3tunesService extends Service
                 e.printStackTrace();
                 throw new RemoteException();
             } catch (ChangeTrackException e) {
-                e.printStackTrace();
                 throw new RemoteException();
             }
         }
@@ -289,8 +322,6 @@ public class Mp3tunesService extends Service
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             } catch (ChangeTrackException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
             }
         }
 
@@ -315,6 +346,7 @@ public class Mp3tunesService extends Service
         public void startAt(int pos) throws RemoteException
         {
             try {
+                mPlayerHandler.emptyPrefetcher();
                 Track t = mPlayerHandler.prepareTrack(pos);
                 if (t == null) return;
                 mGuiNotifier.play(t);

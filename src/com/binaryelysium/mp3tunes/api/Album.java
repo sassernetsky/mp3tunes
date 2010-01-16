@@ -92,7 +92,7 @@ public class Album {
 		return mArtistName;
 	}
 
-	public Track[] getTracks() {
+	public Track[] getTracks() throws InvalidSessionException {
 		if (mTracks == null) { // we need to fetch the tracks
 			try {
 				mTracks = Locker

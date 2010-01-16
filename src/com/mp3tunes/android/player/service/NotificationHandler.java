@@ -43,8 +43,8 @@ public class NotificationHandler
         Notification notification = build(track.getArtistName(), track.getTitle(), text);
         notification.flags |= Notification.FLAG_ONGOING_EVENT;
 
-        mNm.notify(NOTIFY_ID, notification);
         mNm.cancel(NOTIFY_ID);
+        mNm.notify(NOTIFY_ID, notification);
     }
     
     public void pause(Track track)

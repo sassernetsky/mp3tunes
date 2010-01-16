@@ -27,7 +27,8 @@ public class MusicPlayStateLocker
     
     public void lock()
     {
-        
+        mWakeLock.acquire();
+        mWifiLock.acquire();
     }
     
     public void release()
