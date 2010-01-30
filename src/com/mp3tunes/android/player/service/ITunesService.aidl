@@ -1,4 +1,7 @@
 package com.mp3tunes.android.player.service;
+
+import com.mp3tunes.android.player.ParcelableTrack;
+
 interface ITunesService {  
 
 	/* Pause playback */
@@ -21,16 +24,16 @@ interface ITunesService {
 	
 	
 	/* SHUFFLE or NORMAL */
-	void setShuffleMode(int mode);
+	/*void setShuffleMode(int mode);*/
 	
 	/* Get the shuffle state */
-	int getShuffleMode();
+	/*int getShuffleMode();*/
 	
 	/* NONE, SONG, or PLAYLIST */
-	void setRepeatMode(int mode);
+	/*void setRepeatMode(int mode);*/
 	
 	/* Get the repeat state */
-	int getRepeatMode();
+	/*int getRepeatMode();*/
 
 	
 	/* Returns the meta data of the current track
@@ -40,12 +43,15 @@ interface ITunesService {
 	 3: artist id
 	 4: album name
 	 5: album id
-	*/
-	String[] getMetadata();
 	
+	String[] getMetadata();
+
 	String getArtUrl();
 	Bitmap getAlbumArt();
 	void setAlbumArt(in Bitmap art);
+	*/
+	
+	ParcelableTrack getTrack();
 	
 	/* Returns the duration of the current track */
 	long   getDuration();
@@ -54,8 +60,9 @@ interface ITunesService {
 	long   getPosition(); 
 	
 	/* Set the position of the currently played track. Returns true 
-	   if the operation was successful. */
+	   if the operation was successful.
 	boolean setPosition(in int msec);
+	*/
 	
 	/* Returns the percentage the track has buffered */
 	int	   getBufferPercent();
@@ -67,9 +74,13 @@ interface ITunesService {
 	/* Returns true if a track is currently playing but paused */
 	boolean isPaused();
 
+
 	int getQueuePosition();
+	/*	
 	void moveQueueItem(int index1, int index2);
 	int removeQueueItem(int first, int last);
+	*/
 	
-	
+	void createPlaybackList(in int[] track_ids);
+	void togglePlayback();
 } 

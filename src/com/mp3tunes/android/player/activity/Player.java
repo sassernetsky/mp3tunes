@@ -24,12 +24,14 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.Locker;
+import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.PrivateAPIKey;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteImageHandler;
 import com.mp3tunes.android.player.RemoteImageView;
+import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.util.Worker;
 
@@ -93,11 +95,11 @@ public class Player extends Activity
                 mHandler);
         Music.bindToService(this);
         mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction(Mp3tunesService.META_CHANGED);
-        mIntentFilter.addAction(Mp3tunesService.PLAYBACK_FINISHED);
-        mIntentFilter.addAction(Mp3tunesService.PLAYBACK_STATE_CHANGED);
-        mIntentFilter.addAction(Mp3tunesService.PLAYBACK_ERROR);
-        mIntentFilter.addAction(Mp3tunesService.DATABASE_ERROR);
+        mIntentFilter.addAction(GuiNotifier.META_CHANGED);
+        mIntentFilter.addAction(GuiNotifier.PLAYBACK_FINISHED);
+        mIntentFilter.addAction(GuiNotifier.PLAYBACK_STATE_CHANGED);
+        mIntentFilter.addAction(GuiNotifier.PLAYBACK_ERROR);
+        mIntentFilter.addAction(GuiNotifier.DATABASE_ERROR);
     }
     
     @Override
@@ -199,7 +201,7 @@ public class Player extends Activity
                 return;
             try
             {
-                Music.sService.pause();
+                Music.sService.togglePlayback();
             }
             catch ( RemoteException e )
             {
@@ -240,9 +242,7 @@ public class Player extends Activity
     }
     
     private View.OnClickListener mNextListener = new View.OnClickListener() {
-
         public void onClick(View v) {
-
             if (Music.sService== null)
                 return;
             try
@@ -262,18 +262,18 @@ public class Player extends Activity
         public void onReceive(Context context, Intent intent) {
 
             String action = intent.getAction();
-            if (action.equals(Mp3tunesService.META_CHANGED)) {
+            if (action.equals(GuiNotifier.META_CHANGED)) {
                 // redraw the artist/title info and
                 // set new max for progress bar
                 updateTrackInfo();
-            } else if (action.equals(Mp3tunesService.PLAYBACK_FINISHED)) {
+            } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
                 if (mProgressDialog != null) {
                     Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
                     mProgressDialog.dismiss();
                     mProgressDialog = null;
                 }
                 finish();
-            } else if (action.equals(Mp3tunesService.PLAYBACK_ERROR)) {
+            } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
                 MP3tunesApplication.getInstance().presentError(
                         context,
                         getResources().getString(
@@ -281,7 +281,7 @@ public class Player extends Activity
                         getResources().getString(
                                 R.string.ERROR_GENERIC));
                 finish();
-            } else if (action.equals(Mp3tunesService.PLAYBACK_ERROR)) {
+            } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
                 // TODO add a skip counter and try to skip 3 times before
                 // display an error message
                 if (Music.sService== null)
@@ -298,7 +298,7 @@ public class Player extends Activity
                             getResources().getString(
                                     R.string.ERROR_PLAYBACK_FAILED));
                 }
-            } else if(action.equals( Mp3tunesService.PLAYBACK_STATE_CHANGED )) {
+            } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
                 setPauseButtonImage();
             }
         }
@@ -309,29 +309,32 @@ public class Player extends Activity
         try {
             if (Music.sService== null)
                 return;
+            Track track = Music.sService.getTrack();
+            int album_id = track.getAlbumId();
+            mArtistName.setText(track.getArtistName());
+            mTrackName.setText(track.getTitle());
+            //String[] metadata = Music.sService.getMetadata();
+            //String artistName = metadata[2];
+            //String trackName = metadata[0];
             
-            String[] metadata = Music.sService.getMetadata();
-            String artistName = metadata[2];
-            String trackName = metadata[0];
             
+            //int album_id;
+            //if (metadata[5].equals(Mp3tunesService.UNKNOWN)) {
+            //	album_id = 0;
+            //} else {
+            //	album_id = Integer.valueOf( metadata[5] );
+            //}
             
-            int album_id;
-            if (metadata[5].equals(Mp3tunesService.UNKNOWN)) {
-            	album_id = 0;
-            } else {
-            	album_id = Integer.valueOf( metadata[5] );
-            }
-            
-            if(artistName.equals(Mp3tunesService.UNKNOWN)) {
-                mArtistName.setText("");
-            } else {
-                mArtistName.setText(artistName);
-            }
-            if(trackName.equals(Mp3tunesService.UNKNOWN)) {
-                mTrackName.setText("");
-            } else {
-                mTrackName.setText(trackName);
-            }
+            //if(artistName.equals(Mp3tunesService.UNKNOWN)) {
+            //    mArtistName.setText("");
+            //} else {
+            //    mArtistName.setText(artistName);
+            //}
+            //if(trackName.equals(Mp3tunesService.UNKNOWN)) {
+            //    mTrackName.setText("");
+            //} else {
+            //    mTrackName.setText(trackName);
+            //}
 
             Bitmap bit = Music.getArtworkQuick( Player.this, album_id, mAlbum.getWidth(), mAlbum.getHeight() );
             mAlbum.setArtwork( bit );
@@ -412,13 +415,13 @@ public class Player extends Activity
                 case RemoteImageHandler.REMOTE_IMAGE_DECODED:
                     mAlbum.setArtwork((Bitmap) msg.obj);
                     mAlbum.invalidate();
-                    try {
-                        if (Music.sService!= null)
-                            Music.sService
-                                    .setAlbumArt((Bitmap) msg.obj);
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
+                    //try {
+                        //if (Music.sService!= null)
+                        //    Music.sService
+                        //            .setAlbumArt((Bitmap) msg.obj);
+                    //} catch (RemoteException e) {
+                    //    e.printStackTrace();
+                    //}
                     break;
     
                 default:
@@ -440,12 +443,14 @@ public class Player extends Activity
         {
             try {
                 if (Music.sService!= null) {
-                    String albumId = Music.sService.getMetadata()[5];
+                    //String albumId = Music.sService.getMetadata()[5];
+                    Integer albumId = Music.sService.getTrack().getAlbumId();
                     artUrl = "http://content.mp3tunes.com/storage/albumartget/" + 
-                             albumId + "?sid=" + mLocker.getCurrentSession().getSessionId() + 
+                             albumId.toString() + "?sid=" + mLocker.getCurrentSession().getSessionId() + 
                              "&partner_token=" + PrivateAPIKey.KEY;
                     return true;
                 }
+            } catch (NullPointerException e) {
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -457,7 +462,7 @@ public class Player extends Activity
         public void onPostExecute(Boolean result) {
             if (result) {
                 System.out.println("Art url: " + artUrl);
-                if (artUrl != Mp3tunesService.UNKNOWN) {
+                if (artUrl != GuiNotifier.UNKNOWN) {
                     mAlbumArtHandler
                         .removeMessages(RemoteImageHandler.GET_REMOTE_IMAGE);
                     mAlbumArtHandler.obtainMessage(

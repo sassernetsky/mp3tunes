@@ -136,9 +136,11 @@ public class Caller {
 		// create new Map in case params is an immutable Map
 		params = new HashMap<String, String>(params);
 		params.put(PARAM_OUTPUT_METHOD, PARAM_OUTPUT_TYPE);
-		if (mSession != null) {
-			params.put("sid", mSession.getSessionId());
+		Session session = LockerContext.instance().getSession();
+		if (session != null) {
+			params.put("sid", session.getSessionId());
 		}
+
 		try {
 			String get = buildParameterQueue(method, params);
 			if (mDebugMode) {

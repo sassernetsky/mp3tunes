@@ -12,6 +12,8 @@ public class GuiNotifier
     Service             mService;
     Context             mContext;
     
+    //This stuff belongs in a separate file to decouple this file from the files that react to 
+    //these intents
     public static final String META_CHANGED           = "com.mp3tunes.android.player.metachanged";
     public static final String QUEUE_CHANGED          = "com.mp3tunes.android.player.queuechanged";
     public static final String PLAYBACK_FINISHED      = "com.mp3tunes.android.player.playbackcomplete";
@@ -29,11 +31,13 @@ public class GuiNotifier
     
     public void prevTrack(Track t)
     {
+        mNotifier.play(t);
         send(META_CHANGED, t);
     }
     
     public void nextTrack(Track t)
     {
+        mNotifier.play(t);
         send(META_CHANGED, t);
     }
     
@@ -67,9 +71,10 @@ public class GuiNotifier
     
     private void send(String what, Track track)
     {
-
+        Logger.log("Sending notification: " + what);
         Intent i = new Intent(what);
         if (track != null) {
+            Logger.log("track: " + track.getTitle());
             i.putExtra("artist", track.getArtistName());
             i.putExtra("album", track.getAlbumTitle());
             i.putExtra("track", track.getTitle());

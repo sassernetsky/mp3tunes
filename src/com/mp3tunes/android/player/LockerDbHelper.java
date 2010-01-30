@@ -10,7 +10,7 @@ class LockerDbHelper extends SQLiteOpenHelper
 {
 
     private static final String DB_NAME = "locker.dat";
-    private static final int DB_VERSION = 5;
+    private static final int DB_VERSION = 7;
     
     private static final String CREATE_TRACK = "CREATE TABLE " + LockerDb.TABLE_TRACK + "(" +
                                                     LockerDb.KEY_ID           + " INTEGER PRIMARY KEY," +
@@ -52,6 +52,18 @@ class LockerDbHelper extends SQLiteOpenHelper
                                                                LockerDb.KEY_TRACK_ID       + " INTEGER," + 
                                                                LockerDb.KEY_PLAYLIST_INDEX + " INTEGER" + 
                                                            ")";
+//    private static final String CREATE_RADIO = "CREATE TABLE " + LockerDb.TABLE_RADIO + "(" + 
+//                                                   LockerDb.KEY_ID             + " VARCHAR PRIMARY KEY," + 
+//                                                   LockerDb.KEY_RADIO_NAME  + " VARCHAR, " + 
+//                                                   LockerDb.KEY_FILE_COUNT     + " INTEGER," + 
+//                                                   LockerDb.KEY_FILE_NAME      + " VARCHAR," + 
+//                                                   LockerDb.KEY_RADIO_ORDER + " INTEGER" +
+//                                               ")";
+//    private static final String CREATE_RADIO_TRACKS  = "CREATE TABLE " + LockerDb.TABLE_RADIO_TRACKS + "(" + 
+//                                                              LockerDb.KEY_RADIO_ID    + " VARCHAR," + 
+//                                                              LockerDb.KEY_TRACK_ID    + " INTEGER," + 
+//                                                              LockerDb.KEY_RADIO_INDEX + " INTEGER" + 
+//                                                          ")";
     private static final String CREATE_TOKEN = "CREATE TABLE " + LockerDb.TABLE_TOKEN + "(" + 
                                                     LockerDb.KEY_TYPE  + " VARCHAR," + 
                                                     LockerDb.KEY_TOKEN + " VARCHAR," + 
@@ -77,6 +89,8 @@ class LockerDbHelper extends SQLiteOpenHelper
         db.execSQL(CREATE_ALBUM);
         db.execSQL(CREATE_PLAYLIST);
         db.execSQL(CREATE_PLAYLIST_TRACKS);
+//        db.execSQL(CREATE_RADIO);
+//        db.execSQL(CREATE_RADIO_TRACKS);
         db.execSQL(CREATE_TOKEN);
         db.execSQL(CREATE_CURRENT_PLAYLIST);
 
@@ -91,6 +105,8 @@ class LockerDbHelper extends SQLiteOpenHelper
         db.execSQL(DELETE + LockerDb.TABLE_TRACK);
         db.execSQL(DELETE + LockerDb.TABLE_PLAYLIST);
         db.execSQL(DELETE + LockerDb.TABLE_PLAYLIST_TRACKS);
+//        db.execSQL(DELETE + LockerDb.TABLE_RADIO);
+//        db.execSQL(DELETE + LockerDb.TABLE_RADIO_TRACKS);
         db.execSQL(DELETE + LockerDb.TABLE_TOKEN);
         //mCache.clearCache();
         onCreate( db );

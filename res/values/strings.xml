@@ -26,9 +26,9 @@
     <string name="title_working_albums">Albums…</string>
     <string name="title_albums">Albums</string>
     <string name="title_artists">Artists</string>
-    <string name="title_working_artists">Artists…</string>
+    <string name="title_working_artists">Artists…</string><string name="title_radio">Radio</string>
     <string name="title_playlists">Playlists</string>
-    <string name="title_working_playlists">Playlists…</string>
+    <string name="title_working_radio">Radio...</string><string name="title_working_playlists">Playlists…</string>
     <string name="title_search">Search</string>
     
 	
@@ -36,7 +36,7 @@
 	<string name="albums">Albums</string>
 	<string name="tracks">Tracks</string>
 	<string name="playlists">Playlists</string>
-	<string name="search">Search</string>
+	<string name="radio">Radio</string><string name="search">Search</string>
 	
 	<string name="shuffle_tracks">Shuffle Tracks</string>
 	<string name="shuffle_artists">Shuffle Artists</string>
@@ -50,7 +50,7 @@
 	<string name="loading_artists">Loading Artists...</string>
     <string name="loading_albums">Loading Albums...</string>
     <string name="loading_tracks">Loading Tracks...</string>
-    <string name="loading_playlists">Loading Playlists...</string>
+    <string name="loading_playlists">Loading Playlists...</string><string name="loading_playmix">Loading Radio...</string>
     <string name="loading_search">Searching...</string>
     <string name="loading_authentication">Authenticating...</string>
     
@@ -111,4 +111,8 @@
     <string name="update_confirm_text">Would you like to update this application to the newest version?</string>
     <string name="update_confirm_stop">Don\'t notify me of this update again</string>
     
+
+
+
+
 </resources>

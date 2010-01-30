@@ -24,8 +24,8 @@ package com.mp3tunes.android.player;
 import java.util.WeakHashMap;
 
 import com.binaryelysium.mp3tunes.api.Locker;
-import com.tomgibara.android.veecheck.Veecheck;
-import com.tomgibara.android.veecheck.util.PrefSettings;
+import com.binaryelysium.mp3tunes.api.LockerContext;
+import com.binaryelysium.mp3tunes.api.LockerContext.ContextRetriever;
 
 import android.app.AlertDialog;
 import android.app.Application;
@@ -40,10 +40,12 @@ public class MP3tunesApplication extends Application
 {
 
 	private WeakHashMap<String, Object> map; // used to store global instance specific data
-    public static final String LAST_UPDATE = "LastUpdate"; // for SharedPreferences
-//    public com.mp3tunes.android.service.ITunesService player = null;
-
     private static MP3tunesApplication instance;
+    
+    public static final String LAST_UPDATE  = "LastUpdate";
+    private final String LOCKER_CONTEXT_KEY = "mp3tunes_locker_context";
+    private final String LOCKER_KEY         = "mp3tunes_locker";
+    
     public static MP3tunesApplication getInstance()
     {
 
@@ -57,22 +59,9 @@ public class MP3tunesApplication extends Application
         instance = this;
 
         this.map = new WeakHashMap<String, Object>();
-        
-        SharedPreferences prefs = PrefSettings.getSharedPrefs(this);
-        //assign some default settings if necessary
-        if (prefs.getString(PrefSettings.KEY_CHECK_URI, null) == null) {
-            Editor editor = prefs.edit();
-            editor.putBoolean(PrefSettings.KEY_ENABLED, true);
-            editor.putLong(PrefSettings.KEY_PERIOD, 24 * 60 * 60 * 1000);
-            editor.putLong(PrefSettings.KEY_CHECK_INTERVAL, 3 * 24 * 60 * 60 * 1000L);
-//            editor.putLong(PrefSettings.KEY_PERIOD, 15 * 1000L);
-//            editor.putLong(PrefSettings.KEY_CHECK_INTERVAL, 30 * 1000L);
-            editor.putString(PrefSettings.KEY_CHECK_URI, "http://www.binaryelysium.com/code/mp3tunes-update.xml");
-            editor.commit();
-        }
-        System.out.println("Doing reschedule");
-        Intent intent = new Intent(Veecheck.getRescheduleAction(this));
-        sendBroadcast(intent);
+        map.put(LOCKER_CONTEXT_KEY, new LockerContext());
+        LockerContext.setContextRetriever(new Retriever());
+        LockerContext.instance().setPartnerToken(PrivateAPIKey.KEY);
     }    
 
 
@@ -110,13 +99,23 @@ public class MP3tunesApplication extends Application
     
     public void setLocker(Locker l)
     {
-        map.put("mp3tunes_locker", l);
+        map.put(LOCKER_KEY, l);
     }
     
     public Locker getLocker()
     {
-        Locker l = (Locker)map.get("mp3tunes_locker");
+        Locker l = (Locker)map.get(LOCKER_KEY);
         
         return l;
+    }
+    
+    private class Retriever implements ContextRetriever 
+    {
+        public LockerContext get()
+        {
+            LockerContext l = (LockerContext)map.get(LOCKER_CONTEXT_KEY);
+            return l;
+        }
+        
     }
 }

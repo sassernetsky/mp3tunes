@@ -55,6 +55,7 @@ import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class ArtistBrowser extends ListActivity
@@ -177,8 +178,8 @@ public class ArtistBrowser extends ListActivity
     public void onResume() {
         super.onResume();
         IntentFilter f = new IntentFilter();
-        f.addAction(Mp3tunesService.META_CHANGED);
-        f.addAction(Mp3tunesService.QUEUE_CHANGED);
+        f.addAction(GuiNotifier.META_CHANGED);
+        f.addAction(GuiNotifier.QUEUE_CHANGED);
         registerReceiver(mTrackListListener, f);
         mTrackListListener.onReceive(null, null);
     }

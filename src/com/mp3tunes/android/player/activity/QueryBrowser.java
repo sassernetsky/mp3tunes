@@ -56,7 +56,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
     //private final static int REQUERY = 3;
     private final static int PROGRESS = 7;
     private final static int NO_RESULTS = 8;
-
+    
     private QueryListAdapter mAdapter;
     private boolean mAdapterSent;
     private String mFilterString = "";

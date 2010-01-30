@@ -25,6 +25,7 @@ import com.mp3tunes.android.player.ListAdapter;
 import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 
 import android.app.Dialog;
@@ -59,15 +60,15 @@ public class LockerList extends ListActivity
     private Cursor mCursor = null;
 
     // id List for main menu
-    private static final int[] mMainOpts = { R.string.artists, R.string.albums, /*R.string.tracks,*/
-            R.string.playlists, R.string.search };
+    private static final int[] mMainOpts = { R.string.artists, R.string.albums,
+            R.string.playlists, R.string.radio, R.string.search };
 
     // icon list for the main menu
     private static final int[] mMainOptsIcon = { R.drawable.artist_icon, R.drawable.album_icon,
-            /*R.drawable.song_icon,*/ R.drawable.playlist_icon, R.drawable.search_icon };
+             R.drawable.playlist_icon, R.drawable.playlist_icon, R.drawable.search_icon };
 
     // number of main menu options
-    private static final int mMainOptsNum = 4;
+    private static final int mMainOptsNum = 5;
 
     // C++ style enum of the possible states of the LockerList
     private static final class STATE
@@ -117,8 +118,8 @@ public class LockerList extends ListActivity
         
 
         mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction( Mp3tunesService.PLAYBACK_ERROR );
-        mIntentFilter.addAction( Mp3tunesService.META_CHANGED );
+        mIntentFilter.addAction(GuiNotifier.PLAYBACK_ERROR );
+        mIntentFilter.addAction(GuiNotifier.META_CHANGED );
 
         
         Music.bindToService( this );
@@ -167,11 +168,11 @@ public class LockerList extends ListActivity
         {
 
             String action = intent.getAction();
-            if ( action.equals( Mp3tunesService.PLAYBACK_ERROR ) )
+            if ( action.equals(GuiNotifier.PLAYBACK_ERROR))
             {
 
             }
-            else if( action.equals( Mp3tunesService.META_CHANGED))
+            else if( action.equals(GuiNotifier.META_CHANGED))
             {
                 //Update now playing buttons after the service is re-bound
                 
@@ -286,6 +287,11 @@ public class LockerList extends ListActivity
             
             break;
 
+        case R.string.radio:
+            intent = new Intent(Intent.ACTION_PICK);
+            intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/radio");
+            startActivity(intent);
+            break;
         case R.string.playlists:
             intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/playlist");

@@ -19,7 +19,15 @@
 package com.binaryelysium.mp3tunes.api;
 
 
+import java.io.IOException;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
+
+import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
+
+import android.util.Log;
 
 public class Session {
 	String mUsername;
@@ -31,6 +39,24 @@ public class Session {
 	}
 
 	public Session() {
+	}
+	
+	public static Session sessionFromJson(String text) throws JSONException, LockerException, LoginException
+	{
+	    Session session = new Session();
+        JSONObject json = new JSONObject(text);
+        int result = json.getInt("status");
+	    if (result != 1) {
+	        Log.e("Mp3Tunes", "Error login request returned: \"" + text + "\"");
+	        String error     = json.getString("errorMessage");
+	        int    errorCode = json.getInt("errorCode");
+	        if (error.equals("Login failed")) throw new LoginException();
+	        throw new LockerException("Error Code: " + Integer.toString(errorCode) + " Error Message: " + error);
+	    }
+	    session.mSessionId = json.getString("session_id");
+	    session.mUsername  = json.getString("username");
+
+	    return session;
 	}
 	
 	public static Session sessionFromResult(RestResult restResult) throws LockerException

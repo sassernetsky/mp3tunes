@@ -30,6 +30,7 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -50,22 +51,28 @@ import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class PlaylistBrowser extends ListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
-    private String mCurrentPlaylistId;
-    private String mCurrentPlaylistName;
-//    private String mCurrentArtistNameForAlbum;
+    private String              mCurrentPlaylistId;
+    private String              mCurrentPlaylistName;
     private PlaylistListAdapter mAdapter;
-    private boolean mAdapterSent;
+    private boolean             mAdapterSent;
+    
     private static final int DELETE_PLAYLIST = CHILD_MENU_BASE + 1;
-    private static final int EDIT_PLAYLIST = CHILD_MENU_BASE + 2;
+    private static final int EDIT_PLAYLIST   = CHILD_MENU_BASE + 2;
     private static final int RENAME_PLAYLIST = CHILD_MENU_BASE + 3;
-    private AsyncTask<Void, Void, Boolean> mPlaylistTask;
+    
+    private AsyncTask<Void, Void, Boolean>   mPlaylistTask;
     private AsyncTask<String, Void, Boolean> mTracksTask;
-
+    
+    private int        mWorkingTitle;
+    private int        mTitle;
+    private Music.Meta mType;
+    private boolean    mIsRadio;
     
     /** Called when the activity is first created. */
     @Override
@@ -76,7 +83,7 @@ public class PlaylistBrowser extends ListActivity
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
         if(! Music.connectToDb( this ) )
-            finish(); //TODO show error
+            finish();
 
 
         setContentView(R.layout.media_picker_activity);
@@ -85,9 +92,29 @@ public class PlaylistBrowser extends ListActivity
         lv.setOnCreateContextMenuListener(this);
         lv.setTextFilterEnabled(true);
 
+        Intent intent = getIntent();
+        String mimeType = intent.getType();
+        if (mimeType.equals("vnd.mp3tunes.android.dir/playlist"))
+            mIsRadio = false;
+        else if (mimeType.equals("vnd.mp3tunes.android.dir/radio"))
+            mIsRadio = true;
+        else {
+            Log.e("Mp3Tunes Intent", "\"" + mimeType + "\"");
+            mIsRadio = false;
+        }
+        
+        if (!mIsRadio) {
+            mTitle        = R.string.title_playlists;
+            mWorkingTitle = R.string.title_working_playlists;
+            mType         = Music.Meta.PLAYLIST;
+        } else {
+            mTitle        = R.string.title_radio;
+            mWorkingTitle = R.string.title_working_radio;
+            mType         = Music.Meta.RADIO;
+        }
+        
         mAdapter = (PlaylistListAdapter) getLastNonConfigurationInstance();
         if (mAdapter == null) {
-            //Log.i("@@@", "starting query");
             mAdapter = new PlaylistListAdapter(
                     getApplication(),
                     this,
@@ -96,7 +123,7 @@ public class PlaylistBrowser extends ListActivity
                     new String[] {},
                     new int[] {});
             setListAdapter(mAdapter);
-            setTitle(R.string.title_working_playlists);
+            setTitle(mWorkingTitle);
             mPlaylistTask = new FetchPlaylistsTask().execute();
         } else {
             mAdapter.setActivity(this);
@@ -105,7 +132,7 @@ public class PlaylistBrowser extends ListActivity
             if (mPlaylistCursor != null) {
                 init(mPlaylistCursor);
             } else {
-                setTitle(R.string.title_working_playlists);
+                setTitle(mWorkingTitle);
                 mPlaylistTask = new FetchPlaylistsTask().execute();
             }
         }
@@ -155,8 +182,8 @@ public class PlaylistBrowser extends ListActivity
     public void onResume() {
         super.onResume();
         IntentFilter f = new IntentFilter();
-        f.addAction(Mp3tunesService.META_CHANGED);
-        f.addAction(Mp3tunesService.QUEUE_CHANGED);
+        f.addAction(GuiNotifier.META_CHANGED);
+        f.addAction(GuiNotifier.QUEUE_CHANGED);
         registerReceiver(mTrackListListener, f);
         mTrackListListener.onReceive(null, null);
     }
@@ -179,17 +206,14 @@ public class PlaylistBrowser extends ListActivity
         mAdapter.changeCursor(c); // also sets mPlaylistCursor
 
         if (mPlaylistCursor == null) {
-//            Music.displayDatabaseError(this); //TODO display error
             closeContextMenu();
             return;
         }
-        
-//        Music.hideDatabaseError(this);//TODO display error
         setTitle();
     }
 
     private void setTitle() {
-        setTitle(R.string.title_playlists);
+        setTitle(mTitle);
     }
     
     @Override
@@ -197,14 +221,6 @@ public class PlaylistBrowser extends ListActivity
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
 
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
-
-//        if (mi.id >= 0  ) {
-//            menu.add(0, DELETE_PLAYLIST, 0, R.string.menu_delete);
-//        }
-//
-//        if (mi.id >= 0) {
-//            menu.add(0, RENAME_PLAYLIST, 0, R.string.menu_rename_playlist);
-//        }
 
         mPlaylistCursor.moveToPosition(mi.position);
         mCurrentPlaylistName = mPlaylistCursor.getString(Music.PLAYLIST_MAPPING.PLAYLIST_NAME);
@@ -285,19 +301,15 @@ public class PlaylistBrowser extends ListActivity
         return super.onOptionsItemSelected(item);
     }
     
-    static class PlaylistListAdapter extends SimpleCursorAdapter implements SectionIndexer {
-        
-        //private final Drawable mNowPlayingOverlay;
+    class PlaylistListAdapter extends SimpleCursorAdapter implements SectionIndexer {
+
         private final BitmapDrawable mDefaultPlaylistIcon;
         private int mPlaylistNameIdx;
-        //private int mPlaylistIdIdx;
         private int mNumSongsIdx;
         private final Resources mResources;
         private final String mUnknownPlaylist;
         private AlphabetIndexer mIndexer;
         private PlaylistBrowser mActivity;
-        //private String mConstraint = null;
-        //private boolean mConstraintIsValid = false;
         
         class ViewHolder {
             TextView line1;
@@ -312,13 +324,10 @@ public class PlaylistBrowser extends ListActivity
             super(context, layout, cursor, from, to);
 
             mActivity = currentactivity;
-            
-//            mUnknownAlbum = context.getString(R.string.unknown_album_name);
+          
             mUnknownPlaylist = context.getString(R.string.unknown_playlist_name);
-//            mAlbumSongSeparator = context.getString(R.string.albumsongseparator);
 
             Resources r = context.getResources();
-            //mNowPlayingOverlay = 
             r.getDrawable(R.drawable.indicator_ic_mp_playing_list);
 
             Bitmap b = BitmapFactory.decodeResource(r, R.drawable.playlist_icon);
@@ -332,9 +341,7 @@ public class PlaylistBrowser extends ListActivity
 
         private void getColumnIndices(Cursor cursor) {
             if (cursor != null) {
-//                mAlbumIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM);
                 mPlaylistNameIdx = Music.PLAYLIST_MAPPING.PLAYLIST_NAME;
-                //mPlaylistIdIdx  = Music.PLAYLIST_MAPPING.ID;
                 mNumSongsIdx = Music.PLAYLIST_MAPPING.FILE_COUNT;
                 
                 if (mIndexer != null) {
@@ -376,12 +383,17 @@ public class PlaylistBrowser extends ListActivity
             if (unknown) {
                 displayname = mUnknownPlaylist;
             }
+            if (mIsRadio) {
+                displayname = displayname.replaceFirst("\\* ", "").replaceFirst(" \\(PlayMix\\)", "");
+            }
             vh.line1.setText(displayname);
             
-            int numalbums = cursor.getInt(mNumSongsIdx);
-            int numsongs = cursor.getInt(mNumSongsIdx);
-            displayname = Music.makeAlbumsLabel( context, numalbums, numsongs, true );
-            vh.line2.setText(displayname);
+            if(!mIsRadio) {
+                int numalbums = cursor.getInt(mNumSongsIdx);
+                int numsongs = cursor.getInt(mNumSongsIdx);
+                displayname = Music.makeAlbumsLabel( context, numalbums, numsongs, true );
+                vh.line2.setText(displayname);
+            }
         }
         
         @Override
@@ -395,16 +407,6 @@ public class PlaylistBrowser extends ListActivity
         
         @Override
         public Cursor runQueryOnBackgroundThread(CharSequence constraint) {
-//            String s = constraint.toString();
-//            if (mConstraintIsValid && (
-//                    (s == null && mConstraint == null) ||
-//                    (s != null && s.equals(mConstraint)))) {
-//                return getCursor();
-//            }
-//            Cursor c = mActivity.getArtistCursor(null, s);
-//            mConstraint = s;
-//            mConstraintIsValid = true;
-//            return c;
             return null;
         }
         
@@ -441,11 +443,9 @@ public class PlaylistBrowser extends ListActivity
             try
             {
                 if( Music.sDb!= null)
-                    cursor = Music.sDb.getTableList( Music.Meta.PLAYLIST );
+                    cursor = Music.sDb.getTableList(mType);
                 else
                     System.out.println("database null");
-//                Token[] t = Music.sDb.getTokens( Music.Meta.ARTIST );
-//                tokens = LockerDb.tokensToString( t );
             }
             catch ( Exception e )
             {

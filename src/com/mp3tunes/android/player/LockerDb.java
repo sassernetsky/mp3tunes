@@ -27,6 +27,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
+
+import org.json.JSONException;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -43,15 +46,18 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
+import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Playlist;
+import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Token;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.results.DataResult;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.LockerCache;
+import com.mp3tunes.android.player.service.Logger;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 /**
@@ -115,6 +121,7 @@ public class LockerDb
     public static final String KEY_TYPE               = "type";
     public static final String KEY_TOKEN              = "token";
     public static final String KEY_COUNT              = "count";
+    
 
     public static final String TABLE_TRACK            = "track";
     public static final String TABLE_ARTIST           = "artist";
@@ -216,10 +223,15 @@ public class LockerDb
                         if (!mCache.isCacheValid(LockerCache.PLAYLIST))
                             refreshPlaylists();
                         return queryPlaylists();
+                    case RADIO:
+                        if (!mCache.isCacheValid(LockerCache.PLAYLIST))
+                            refreshPlaylists();
+                        return queryRadio();
                     default:
                         return null;
                 }
-            }});
+            }
+        });
     }
 
     public Token[] getTokens(final Music.Meta type)
@@ -370,6 +382,30 @@ public class LockerDb
             public Cursor run() throws IOException, LockerException {
                 refreshTracksforPlaylist(playlist_id);
                 return queryPlaylists(playlist_id);
+            }});
+    }
+    
+    public Cursor getTracksForRadio(final String radio_id)
+    {
+        Cursor c = mDb.rawQuery(
+                "SELECT radio_name FROM playlist WHERE _id='" + radio_id
+                        + "'", null);
+        if (!c.moveToNext()) {
+            // TODO fetch the playlist?
+            Log.e("Mp3tunes", "Error playlist doesnt exist");
+            return null;
+        }
+        c.close();
+        c = queryPlaylists(radio_id);
+        if (c.getCount() > 0)
+            return c;
+        else
+            c.close();
+        
+        return getCursor(new GetCursorTask() {
+            public Cursor run() throws IOException, LockerException {
+                refreshTracksforRadio(radio_id);
+                return queryPlaylists(radio_id);
             }});
     }
     
@@ -763,6 +799,39 @@ public class LockerDb
         }
     }
 
+//    private void insertRadio(Playlist playlist, int index)
+//    throws IOException, SQLiteException
+//    {
+//        if (playlist == null) {
+//            System.out.println("OMG Playlist NULL");
+//            return;
+//        }
+//        try {
+//            if (playlist.getName().length() > 0) {
+//                try {
+//                    mRadioExists.bindString(1, playlist.getId());
+//                    mRadioExists.simpleQueryForString();
+//
+//                    mUpdateRadio.bindString(1, playlist.getName());
+//                    mUpdateRadio.bindLong(2, playlist.getCount());
+//                    mUpdateRadio.bindString(3, playlist.getFileName());
+//                    mUpdateRadio.bindLong(4, index);
+//                    mUpdateRadio.bindString(5, playlist.getId());
+//                    mUpdateRadio.execute();
+//                } catch (SQLiteDoneException e) {
+//                    mInsertRadio.bindString(1, playlist.getId());
+//                    mInsertRadio.bindString(2, playlist.getName());
+//                    mInsertRadio.bindLong(3, playlist.getCount());
+//                    mInsertRadio.bindString(4, playlist.getFileName());
+//                    mInsertRadio.bindLong(5, index);
+//                    mInsertRadio.execute();
+//                }
+//            }
+//        } catch (SQLiteException e) {
+//            throw e;
+//        }
+//    }
+    
     private void insertToken(Token token, String type) throws IOException,
             SQLiteException
     {
@@ -795,19 +864,11 @@ public class LockerDb
 
     private void refreshTracks() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Track> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getTracks();
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
+            public DataResult<Track> run() throws InvalidSessionException, LockerException {
+                return mLocker.getTracks();
+        }});
+        
         if (results == null) return;
 
         System.out.println("beginning insertion of " + results.getData().length
@@ -820,21 +881,35 @@ public class LockerDb
         mCache.saveCache(mContext);
     }
 
+//    private void refreshRadio() throws SQLiteException, IOException, LockerException
+//    {
+//        DataResult<Playlist> results = tryGetData(new Call<DataResult<Playlist>>() {
+//            public DataResult<Playlist> run() throws InvalidSessionException, LockerException {
+//                return mLocker.getPlaylists(true);
+//        }});
+//        
+//        if (results == null) return;
+//        System.out.println("beginning insertion of " + results.getData().length
+//                + " playlists");
+//        int i = 0;
+//        for (Playlist p : results.getData()) {
+//            insertRadio(p, i);
+//            i++;
+//        }
+//        System.out.println("insertion complete");
+//        if (i > 0) {
+//            mCache.setUpdate(System.currentTimeMillis(), LockerCache.PLAYLIST);
+//            mCache.saveCache(mContext);
+//        }
+//    }
+    
     private void refreshPlaylists() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Playlist> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getPlaylists(false);
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Playlist> results = tryGetData(new Call<DataResult<Playlist>>() {
+            public DataResult<Playlist> run() throws InvalidSessionException, LockerException {
+                return mLocker.getPlaylists(true);
+        }});
+        
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " playlists");
@@ -852,23 +927,28 @@ public class LockerDb
 
     private void refreshArtists() throws SQLiteException, IOException, LockerException
     {
-        DataResult<Artist> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getArtists();
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
+        
+        
+//        DataResult<Artist> results = tryGetData(new Call<DataResult<Artist>>() {
+//            public DataResult<Artist> run() throws InvalidSessionException, LockerException {
+//                return mLocker.getArtists();
+//        }});
+//
+//        if (results == null) return;
+//        System.out.println("beginning insertion of " + results.getData().length
+//                + " artists");
+        
+        List<Artist> artists;
+        try {
+            artists = mLocker.getArtistsFromJson();
+        } catch (InvalidSessionException e) {
+            throw new LockerException("Bad Session Data");
+        } catch (JSONException e) {
+            throw new LockerException("Sever Sent Corrupt Data");
         }
-        if (results == null) return;
-        System.out.println("beginning insertion of " + results.getData().length
-                + " artists");
-        for (Artist a : results.getData()) {
+        
+        //for (Artist a : results.getData()) {
+        for (Artist a : artists) {
             insertArtist(a);
         }
         System.out.println("insertion complete");
@@ -878,20 +958,10 @@ public class LockerDb
 
     private void refreshAlbums() throws SQLiteException, IOException, LockerException
     {
-        //FIXME bad repeated code
-        DataResult<Album> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getAlbums();
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Album> results = tryGetData(new Call<DataResult<Album>>() {
+            public DataResult<Album> run() throws InvalidSessionException, LockerException {
+                return mLocker.getAlbums();
+            }});
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " albums");
@@ -903,23 +973,14 @@ public class LockerDb
         mCache.saveCache(mContext);
     }
 
-    private void refreshAlbumsForArtist(int artist_id) throws SQLiteException,
+    private void refreshAlbumsForArtist(final int artist_id) throws SQLiteException,
             IOException, LockerException
     {
-      //FIXME bad repeated code
-        DataResult<Album> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getAlbumsForArtist(artist_id);
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Album> results = tryGetData(new Call<DataResult<Album>>() {
+            public DataResult<Album> run() throws InvalidSessionException, LockerException {
+                return mLocker.getAlbumsForArtist(artist_id);
+        }});
+        
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " albums for artist id " + artist_id);
@@ -929,23 +990,14 @@ public class LockerDb
         System.out.println("insertion complete");
     }
 
-    private void refreshTracksforAlbum(int album_id) throws SQLiteException,
+    private void refreshTracksforAlbum(final int album_id) throws SQLiteException,
             IOException, LockerException
     {
-      //FIXME bad repeated code
-        DataResult<Track> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getTracksForAlbum(album_id);
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
+            public DataResult<Track> run() throws InvalidSessionException, LockerException {
+                return mLocker.getTracksForAlbum(album_id);
+        }});
+      
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for album id " + album_id);
@@ -955,23 +1007,14 @@ public class LockerDb
         System.out.println("insertion complete");
     }
 
-    private void refreshTracksforArtist(int artist_id) throws SQLiteException,
+    private void refreshTracksforArtist(final int artist_id) throws SQLiteException,
             IOException, LockerException
     {
-        //FIXME bad repeated code
-        DataResult<Track> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getTracksForArtist(artist_id);
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
+            public DataResult<Track> run() throws InvalidSessionException, LockerException {
+                return mLocker.getTracksForArtist(artist_id);
+        }});
+        
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for artist id " + artist_id);
@@ -981,23 +1024,14 @@ public class LockerDb
         System.out.println("insertion complete");
     }
 
-    private void refreshTracksforPlaylist(String playlist_id)
+    private void refreshTracksforPlaylist(final String playlist_id)
             throws SQLiteException, IOException, LockerException
     {
-      //FIXME bad repeated code
-        DataResult<Track> results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = mLocker.getTracksForPlaylist(playlist_id);
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
+        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
+            public DataResult<Track> run() throws InvalidSessionException, LockerException {
+                return mLocker.getTracksForPlaylist(playlist_id);
+        }});
+
         if (results == null) return;
         System.out.println("beginning insertion of " + results.getData().length
                 + " tracks for playlist id " + playlist_id);
@@ -1014,6 +1048,34 @@ public class LockerDb
             cv.put("track_id", t.getId());
             cv.put("playlist_index", index);
             mDb.insert("playlist_tracks", UNKNOWN_STRING, cv);
+            index++;
+        }
+        System.out.println("insertion complete");
+    }
+    
+    private void refreshTracksforRadio(final String radio_id)
+    throws SQLiteException, IOException, LockerException
+    {
+        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
+            public DataResult<Track> run() throws InvalidSessionException, LockerException {
+                return mLocker.getTracksForPlaylist(radio_id);
+            }});
+
+        if (results == null) return;
+        System.out.println("beginning insertion of " + results.getData().length
+                + " tracks for playlist id " + radio_id);
+
+        mDb.delete("radio_tracks", "radio_id='" + radio_id + "'",
+                null);
+        int index = 0;
+        for (Track t : results.getData()) {
+            ContentValues cv = new ContentValues(); // TODO move this outside
+                                            // the loop?
+            insertTrack(t);
+            cv.put("radio_id", radio_id);
+            cv.put("track_id", t.getId());
+            cv.put("radio_index", index);
+            mDb.insert("radio_tracks", UNKNOWN_STRING, cv);
             index++;
         }
         System.out.println("insertion complete");
@@ -1073,52 +1135,29 @@ public class LockerDb
         int tries = 0;
         switch (type) {
             case ARTIST:
-                //FIXME bad repeated code
-                while (tries < 3) {
-                    try {
-                        results = mLocker.getArtistTokens();
-                        break;
-                    } catch (InvalidSessionException e) {
-                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                        if (!task.doInForground())
-                            break;
-                    }
-                    tries++;
-                }
+                results = tryGetData(new Call<DataResult<Token>>() {
+                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
+                        return mLocker.getArtistTokens();
+                }});
                 if (results == null) return;
                 typename = "artist";
                 cachetype = LockerCache.ARTIST_TOKENS;
                 break;
             case ALBUM:
-                //FIXME bad repeated code
-                while (tries < 3) {
-                    try {
-                        results = mLocker.getAlbumTokens();
-                        break;
-                    } catch (InvalidSessionException e) {
-                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                        if (!task.doInForground())
-                            break;
-                    }
-                    tries++;
-                }
+                results = tryGetData(new Call<DataResult<Token>>() {
+                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
+                        return mLocker.getAlbumTokens();
+                }});
                 if (results == null) return;
                 typename = "album";
                 cachetype = LockerCache.ALBUM_TOKENS;
                 break;
             case TRACK:
-              //FIXME bad repeated code
-                while (tries < 3) {
-                    try {
-                        results = mLocker.getTrackTokens();
-                        break;
-                    } catch (InvalidSessionException e) {
-                        RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
-                        if (!task.doInForground())
-                            break;
-                    }
-                    tries++;
-                }
+                results = tryGetData(new Call<DataResult<Token>>() {
+                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
+                        return mLocker.getTrackTokens();
+                }});
+              
                 if (results == null) return;
                 typename = "track";
                 cachetype = LockerCache.TRACK_TOKENS;
@@ -1142,9 +1181,42 @@ public class LockerDb
                 null, null, KEY_TOKEN);
     }
 
+    private Cursor queryRadio()
+    {
+        return mDb.query(TABLE_PLAYLIST, Music.PLAYLIST, KEY_ID + " like 'PLAYMIX_GENRE_D%'", null, null,
+                null, KEY_PLAYLIST_ORDER);
+    }
+
+//    private Cursor queryRadio(String playlist_id)
+//    {
+//        StringBuilder query = new StringBuilder("SELECT DISTINCT ")
+//            .append(TABLE_TRACK).append(".").append(KEY_ID).append(" ")
+//            .append(KEY_ID).append(", ").append(KEY_TITLE).append(", ")
+//            .append(KEY_ARTIST_NAME).append(", ").append(KEY_ARTIST_ID)
+//            .append(", ").append(KEY_ALBUM_NAME).append(", ")
+//            .append(KEY_ALBUM_ID).append(", ").append(KEY_TRACK)
+//            .append(", ").append(KEY_PLAY_URL).append(", ")
+//            .append(KEY_DOWNLOAD_URL).append(", ").append(KEY_TRACK_LENGTH)
+//            .append(", ").append(KEY_COVER_URL).append(", ")
+//            .append(KEY_PLAYLIST_INDEX).append(" ").append("FROM ")
+//            .append(TABLE_PLAYLIST).append(" JOIN ")
+//            .append(TABLE_PLAYLIST_TRACKS).append(" ").append("ON ")
+//            .append(TABLE_PLAYLIST).append(".").append(KEY_ID)
+//            .append(" = ").append(TABLE_PLAYLIST_TRACKS).append(".")
+//            .append(KEY_PLAYLIST_ID).append(" ").append("JOIN ")
+//            .append(TABLE_TRACK).append(" ").append("ON ")
+//            .append(TABLE_PLAYLIST_TRACKS).append(".").append(KEY_TRACK_ID)
+//            .append(" = ").append(TABLE_TRACK).append(".").append(KEY_ID)
+//            .append(" ").append("WHERE ").append(KEY_RADIO_ID).append("='")
+//            .append(playlist_id).append("' ").append("ORDER BY ")
+//            .append(KEY_RADIO_INDEX);
+//        return mDb.rawQuery(query.toString(), null);
+//
+//    }
+    
     private Cursor queryPlaylists()
     {
-        return mDb.query(TABLE_PLAYLIST, Music.PLAYLIST, null, null, null,
+        return mDb.query(TABLE_PLAYLIST, Music.PLAYLIST, KEY_ID + " not like 'PLAYMIX_GENRE_D%'", null, null,
                 null, KEY_PLAYLIST_ORDER);
     }
 
@@ -1308,5 +1380,28 @@ public class LockerDb
             Log.w("Mp3Tunes", Log.getStackTraceString(e));
         }
         return null;
+    }
+    
+    private <T> T tryGetData(Call<T> func) throws LockerException
+    {
+        T results = null;
+        int tries = 0;
+        while (tries < 3) {
+            try {
+                results = func.run();
+                break;
+            } catch (InvalidSessionException e) {
+                RefreshSessionTask task = new RefreshSessionTask(mContext, mLocker);
+                if (!task.doInForground())
+                    break;
+            }
+            tries++;
+        }
+        return results;
+    }
+    
+    interface Call<T>
+    {
+        public T run() throws InvalidSessionException, LockerException;
     }
 }

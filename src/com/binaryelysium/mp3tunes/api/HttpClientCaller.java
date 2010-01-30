@@ -6,7 +6,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -104,18 +106,25 @@ public class HttpClientCaller
      * @throws InvalidSessionException 
      * @throws XmlPullParserException
      */
-    public RestResult call(RemoteMethod method) throws IOException, InvalidSessionException 
+    public String call(RemoteMethod method) throws IOException, InvalidSessionException 
     {
-        
-        HttpClient client = new DefaultHttpClient();
-        HttpGet get = new HttpGet(method.getCall());
-        ResponseHandler<String> responseHandler = new BasicResponseHandler();
-        String response = client.execute(get, responseHandler);
-
-        Log.w("Mp3Tunes", response);
-        
-        client.getConnectionManager().shutdown();
-        return null;
+        try {
+            HttpClient client = new DefaultHttpClient();
+            HttpGet get = new HttpGet(method.getCall());
+            ResponseHandler<String> responseHandler = new BasicResponseHandler();
+            String response = client.execute(get, responseHandler);
+            client.getConnectionManager().shutdown();
+            return response;
+        } catch (UnknownHostException e) {
+            Log.e("Mp3Tunes", "UnknownHostException: what do we do?");
+            throw e;
+        } catch (SocketException e) {
+            Log.e("Mp3Tunes", "SocketException: what do we do?");
+            throw e;
+        } catch (IOException e) {
+            Log.e("Mp3Tunes", Log.getStackTraceString(e));
+            throw e;
+        }
 //        
 //        try {
 //        try {

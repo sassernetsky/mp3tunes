@@ -1,71 +1,30 @@
-/***************************************************************************
- *   Copyright 2008 Casey Link <unnamedrambler@gmail.com>                  *
- *   Copyright (C) 2007-2008 sibyl project http://code.google.com/p/sibyl/ *
- *   Copyright 2005-2009 Last.fm Ltd.                                      *
- *   Portions contributed by Casey Link, Lukasz Wisniewski,                *
- *   Mike Jennings, and Michael Novak Jr.                                  *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
- ***************************************************************************/
 package com.mp3tunes.android.player.service;
 
-import com.binaryelysium.mp3tunes.api.Locker;
+import java.util.Vector;
+
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.MP3tunesApplication;
-import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.PrivateAPIKey;
+import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.ITunesService;
-import com.mp3tunes.android.player.service.PlayerHandler.ChangeTrackException;
-import com.mp3tunes.android.player.service.PlayerHandler.ERROR_ACTION;
-import com.mp3tunes.android.player.service.PlayerHandler.PlaybackException;
+import com.mp3tunes.android.player.service.MediaPlayerTrack.TrackFinishedHandler;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.media.MediaPlayer;
-import android.media.MediaPlayer.OnBufferingUpdateListener;
-import android.media.MediaPlayer.OnCompletionListener;
-import android.media.MediaPlayer.OnErrorListener;
-import android.media.MediaPlayer.OnPreparedListener;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
-import android.util.Log;
+import android.telephony.TelephonyManager;
 
 public class Mp3tunesService extends Service
 {
-    private PlayerHandler        mPlayerHandler;
-    private GuiNotifier          mGuiNotifier;
+    private PlayerHandler       mPlayerHandler;
     private MusicPlayStateLocker mPlayStateLocker;
-    private Locker               mLocker;
     
-    private Bitmap  mAlbumArt;
-    
-    private int mTimeout = 0;
-
-    public static final String META_CHANGED           = "com.mp3tunes.android.player.metachanged";
-    public static final String QUEUE_CHANGED          = "com.mp3tunes.android.player.queuechanged";
-    public static final String PLAYBACK_FINISHED      = "com.mp3tunes.android.player.playbackcomplete";
-    public static final String PLAYBACK_STATE_CHANGED = "com.mp3tunes.android.player.playstatechanged";
-    public static final String PLAYBACK_ERROR         = "com.mp3tunes.android.player.playbackerror";
-    public static final String DATABASE_ERROR         = "com.mp3tunes.android.player.databaseerror";
-    public static final String UNKNOWN                = "com.mp3tunes.android.player.unknown";
-    
-    //Service Overrides
+    private Mp3TunesPhoneStateListener mPhoneStateListener;
+    private TelephonyManager           mTelephonyManager;
     
     @Override
     public void onCreate()
@@ -76,28 +35,17 @@ public class Mp3tunesService extends Service
         setForeground(true);
         
         mPlayStateLocker = new MusicPlayStateLocker(getBaseContext());
-        mGuiNotifier     = new GuiNotifier(this, getBaseContext());
-        try {
-            mPlayerHandler   = new PlayerHandler(this, getBaseContext());
-        } catch (PlaybackException e) {
-            mPlayStateLocker.release();
-            e.printStackTrace();
-        }
-        
-        mPlayerHandler.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
-        mPlayerHandler.setOnCompletionListener(mOnCompletionListener);
-        mPlayerHandler.setOnErrorListener(mOnErrorListener);
-        mPlayerHandler.setOnPreparedListener(mOnPreparedListener);
-
-        mLocker = MP3tunesApplication.getInstance().getLocker();  
+        mPlayerHandler   = new PlayerHandler(this, getBaseContext());
         mPlayStateLocker.lock();
+        
+        //mTelephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+        //mTelephonyManager.listen(mPhoneStateListener, Mp3TunesPhoneStateListener.LISTEN_CALL_STATE);
     }
 
     @Override
     public void onDestroy()
     {
         mPlayerHandler.destroy();
-        mGuiNotifier.stop(null);
         mPlayStateLocker.release();
     }
 
@@ -117,102 +65,12 @@ public class Mp3tunesService extends Service
     @Override
     public boolean onUnbind(Intent intent)
     {
-        if (mPlayerHandler.isPlaying())
+        if (mPlayerHandler.getTrack().isPlaying())
             return true;
 
         mDeferredStopHandler.deferredStopSelf();
         return true;
     }
- 
-    //MediaPlayer Listeners
-    
-    private OnCompletionListener mOnCompletionListener = new OnCompletionListener() {
-
-        public void onCompletion(MediaPlayer mp)
-        {    
-            mp.stop();
-            Track t = null;
-            try {
-                mPlayerHandler.playbackSucceeded();
-                t = mPlayerHandler.nextTrack();
-                if (t == null) return;
-                mGuiNotifier.nextTrack(t);
-            } catch (PlaybackException e) {
-             // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (ChangeTrackException e) {
-                mGuiNotifier.stop(t);
-            }
-        }
-    };
-
-    //TODO: this function is repeated elsewhere need to break it out
-    private boolean timedOut(int percent)
-    {
-        if (mPlayerHandler.getBufferPercent() == percent) {
-            mTimeout++;
-            if (mTimeout >= 20) {
-                mTimeout = 0;
-                try {
-                    mBinder.next();
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-        } else {
-            mTimeout = 0;
-        }
-        return false;
-    }
-    
-    private OnBufferingUpdateListener mOnBufferingUpdateListener = new OnBufferingUpdateListener() {
-
-        public void onBufferingUpdate(MediaPlayer mp, int percent)
-        {
-            if (timedOut(percent)) return;
-            mPlayerHandler.updateBuffering(mp, percent);
-            if (percent % 10 == 0)
-                Log.w("Mp3Tunes", "Buffering: " + Integer.toString(percent));
-        }
-    };
-
-    private OnErrorListener mOnErrorListener = new OnErrorListener() {
-
-        public boolean onError(MediaPlayer mp, int what, int extra)
-        {
-            try {
-                int state = mPlayerHandler.handleError(mp, what, extra);
-                if (state == ERROR_ACTION.RETRYING) {
-                    return true;
-                } else if (state == ERROR_ACTION.SKIPPING) {
-                    mBinder.next();
-                    return true;
-                } else if (state == ERROR_ACTION.STOPPING) {
-                    mGuiNotifier.stop(null);
-                }
-            } catch (RemoteException e) {
-                e.printStackTrace();
-                mGuiNotifier.stop(null);
-            }
-            return false;
-        }
-    };
-
-    private OnPreparedListener mOnPreparedListener = new OnPreparedListener() {
-
-        public void onPrepared(MediaPlayer mp)
-        {
-            try {
-                Track t = mPlayerHandler.start(mp);
-                if (t == null) return;
-                mGuiNotifier.play(t);
-            } catch (PlaybackException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-    };
     
     /**
      * Deferred stop implementation from the five music player for android:
@@ -242,8 +100,7 @@ public class Mp3tunesService extends Service
 
         public void deferredStopSelf()
         {
-
-            Log.i("Mp3tunes", "Service stop scheduled "
+            Logger.log(this, "deferredStopSelf", "Service stop scheduled "
                     + (DEFERRAL_DELAY / 1000 / 60) + " minutes from now.");
             sendMessageDelayed(obtainMessage(DEFERRED_STOP), DEFERRAL_DELAY);
         }
@@ -252,7 +109,7 @@ public class Mp3tunesService extends Service
         {
 
             if (hasMessages(DEFERRED_STOP) == true) {
-                Log.i("Mp3tunes", "Service stop cancelled.");
+                Logger.log(this, "cancelStopSelf", "Service stop cancelled.");
                 removeMessages(DEFERRED_STOP);
             }
         }
@@ -262,159 +119,120 @@ public class Mp3tunesService extends Service
 
         public int getBufferPercent() throws RemoteException
         {
-
-            return mPlayerHandler.getBufferPercent();
+            try {
+                return mPlayerHandler.getTrack().getBufferPercent();
+            } catch (Exception e) {
+                return 0;
+            } 
         }
 
         public long getDuration() throws RemoteException
         {
-            return mPlayerHandler.getDuration();
+            try {
+                return mPlayerHandler.getTrack().getDuration();
+            } catch (Exception e) {
+                return 0;
+            }  
         }
 
         public long getPosition() throws RemoteException
         {
-            return mPlayerHandler.getPosition();
-        }
-
-        public int getRepeatMode() throws RemoteException
-        {
-            return Music.RepeatMode.NO_REPEAT;
-        }
-
-        public int getShuffleMode() throws RemoteException
-        {
-            return Music.ShuffleMode.NORMAL;
+            try {
+                return mPlayerHandler.getTrack().getPosition();
+            } catch (Exception e) {
+                return 0;
+            } 
         }
 
         public boolean isPlaying() throws RemoteException
         {
-            return mPlayerHandler.isPlaying();
+            try {
+                return mPlayerHandler.getTrack().isPlaying();
+            } catch (Exception e) {
+                return false;
+            }
         }
 
         public void next() throws RemoteException
         {
-            try {
-                Track t = mPlayerHandler.nextTrack();
-                if (t == null) return;
-                mGuiNotifier.nextTrack(t);
-            } catch (PlaybackException e) {
-                e.printStackTrace();
-                throw new RemoteException();
-            } catch (ChangeTrackException e) {
-                throw new RemoteException();
-            }
+            if (!mPlayerHandler.playNext()) throw new RemoteException();
         }
 
         public void pause() throws RemoteException
         {
-            Track t = mPlayerHandler.pause();
-            if (t == null) return;
-            mGuiNotifier.pause(t);
+            if (!mPlayerHandler.pause()) throw new RemoteException();
         }
 
         public void prev() throws RemoteException
         {
-            try {
-                Track t = mPlayerHandler.prevTrack();
-                if (t == null) return;
-                mGuiNotifier.prevTrack(t);
-            } catch (PlaybackException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (ChangeTrackException e) {
-            }
+            if (!mPlayerHandler.playPrevious()) throw new RemoteException();
         }
-
-        public boolean setPosition(int msec) throws RemoteException
-        {
-            return mPlayerHandler.setCurrentPosition(msec);
-        }
-
-        public void setRepeatMode(int mode) throws RemoteException
-        {
-        }
-
-        public void setShuffleMode(int mode) throws RemoteException
-        {
-        }
-
+        
         public void start() throws RemoteException
         {
-            startAt(1);
+            if (!mPlayerHandler.playAt(0)) throw new RemoteException();
         }
 
         public void startAt(int pos) throws RemoteException
         {
-            try {
-                mPlayerHandler.emptyPrefetcher();
-                Track t = mPlayerHandler.prepareTrack(pos);
-                if (t == null) return;
-                mGuiNotifier.play(t);
-            } catch (PlaybackException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            if (!mPlayerHandler.playAt(pos)) throw new RemoteException();
         }
 
         public void stop() throws RemoteException
         {
-            Track t = mPlayerHandler.stop();
-            if (t == null) return;
-            mGuiNotifier.stop(t);
+            if (!mPlayerHandler.stop()) throw new RemoteException();
         }
 
-        
-        //Most of this here is silly.  We should just provide a function
-        //that returns a Track and make it the caller's responsibilty to 
-        //get the data it needs
-        public void setAlbumArt(Bitmap art) throws RemoteException
+        public ParcelableTrack getTrack() throws RemoteException
         {
-            mAlbumArt = art;
-        }
-
-        public Bitmap getAlbumArt() throws RemoteException
-        {
-            return mAlbumArt;
-        }
-
-        /*
-         * Returns the meta data of the current track 0: track name 1: track id
-         * 2: artist name 3: artist id 4: album name 5: album id
-         */
-        public String[] getMetadata() throws RemoteException
-        {
-            return mPlayerHandler.getMetadata();
-        }
-
-        public String getArtUrl() throws RemoteException
-        {
-            Track t = mPlayerHandler.getCurrentTrack();
-            return "http://content.mp3tunes.com/storage/albumartget/" + 
-                    t.getAlbumId() + "?sid=" + mLocker.getCurrentSession().getSessionId() + "&partner_token=" + PrivateAPIKey.KEY;
-
+            try {
+                return new ParcelableTrack(mPlayerHandler.getTrack().getTrack());
+            } catch (Exception e) {
+                throw new RemoteException();
+            }
         }
 
         public boolean isPaused() throws RemoteException
         {
-            return mPlayerHandler.isPaused();
+            try {
+                return mPlayerHandler.getTrack().isPaused();
+            } catch (Exception e) {
+                throw new RemoteException();
+            }     
         }
 
         public int getQueuePosition() throws RemoteException
         {
-            return mPlayerHandler.getQueuePosition();
+            try {
+                return mPlayerHandler.getQueuePosition();
+            } catch (Exception e) {
+                return -1;
+            }   
         }
 
-        public void moveQueueItem(int index1, int index2)
-                throws RemoteException
+        public void createPlaybackList(int[] trackIds) throws RemoteException
         {
-            // TODO Auto-generated method stub
-            
+            PlaybackList list = new PlaybackList(getTracksForList(trackIds));
+            mPlayerHandler.setPlaybackList(list);
         }
 
-        public int removeQueueItem(int first, int last) throws RemoteException
+        public void togglePlayback() throws RemoteException
         {
-            // TODO Auto-generated method stub
-            return 0;
+            mPlayerHandler.tooglePlayback();
         }
+        
     };
+    
+    private Vector<MediaPlayerTrack> getTracksForList(int[] trackIds)
+    {
+        Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
+        LockerDb db = new LockerDb(getBaseContext(), MP3tunesApplication.getInstance().getLocker());
+        for (int id : trackIds) {
+            Track t = db.getTrack(id);
+            MediaPlayerTrack track = new MediaPlayerTrack(t, this, getBaseContext());
+            tracks.add(track);
+        }
+        db.close();
+        return tracks;
+    }
 }

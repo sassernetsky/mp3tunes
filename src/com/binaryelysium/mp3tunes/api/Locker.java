@@ -25,6 +25,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.client.HttpResponseException;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 
 import android.os.Debug;
@@ -34,6 +38,7 @@ import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
 import com.binaryelysium.mp3tunes.api.results.DataResult;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.binaryelysium.mp3tunes.api.results.SetResult;
+import com.mp3tunes.android.player.service.Logger;
 
 public class Locker
 {
@@ -45,9 +50,12 @@ public class Locker
         locker, playlist, preferences
     };
 
+    public Locker()
+    {}
+    
     public Locker(String partnerToken, Session session) throws LockerException
     {
-
+        //FIXME:
         if (mSession == null)
             throw (new LockerException("Invalid Session"));
         mSession = session;
@@ -66,6 +74,11 @@ public class Locker
     {
         return mPartnerToken;
     }
+    
+    static public void setPartnerToken(String token)
+    {
+        mPartnerToken = token;
+    }
 
     public Session getCurrentSession()
     {
@@ -75,19 +88,44 @@ public class Locker
     
     public void refreshSession(String username, String password) throws LockerException, LoginException
     {
-        int tries = 3;
-        while (tries > 0) {
+        Log.w("Mp3Tunes", "Called refresh session");
+        
+        try {
+            HttpClientCaller caller = HttpClientCaller.getInstance();
+            String response = 
+                caller.call(new RemoteMethod.Builder(RemoteMethod.METHODS.LOGIN)
+                            .addParam("username", username)
+                            .addParam("password", password)
+                            .create());
             try {
-                mSession = Authenticator.getSession(mPartnerToken, username,
-                    password);
-            } catch (IOException e) {
-                throw (new LockerException("connection issue"));
-            }
-            Caller.getInstance().setSession(mSession);
-            if (mSession != null) return;
-            tries--;
+                LockerContext.instance().setSession(Session.sessionFromJson(response));
+            } catch (JSONException e) {
+                throw new LockerException("Server returned corrupt data");
+            } 
+        } catch (IllegalArgumentException e) {
+            throw new LoginException();
+        } catch (HttpResponseException e) {
+            Log.w("Mp3Tunes", "Error code: " + Integer.toString(e.getStatusCode()) + "\n" + Log.getStackTraceString(e));
+            throw new LockerException("connection issue");
+        } catch (IOException e) {
+            Log.w("Mp3Tunes", Log.getStackTraceString(e));
+            throw new LockerException("connection issue");
+        } catch (InvalidSessionException e) {
+            throw new LoginException();
         }
-        throw (new LockerException("connection issue"));
+//        int tries = 3;
+//        while (tries > 0) {
+//            try {
+//                mSession = Authenticator.getSession(mPartnerToken, username,
+//                    password);
+//            } catch (IOException e) {
+//                throw (new LockerException("connection issue"));
+//            }
+//            Caller.getInstance().setSession(mSession);
+//            if (mSession != null) return;
+//            tries--;
+//        }
+//        throw (new LockerException("connection issue"));
     }
 
     public long getLastUpdate(UpdateType type) throws LockerException, InvalidSessionException
@@ -142,9 +180,67 @@ public class Locker
 
     }
 
+    public List<Artist> getArtistsFromJson() throws LockerException, InvalidSessionException, JSONException
+    {
+        String text;
+        try {
+            text = HttpClientCaller.getInstance()
+                .call(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
+                .addParam("type", "artist")
+                .addParam("count", "200")
+                .addParam("set", "0")
+                .create());
+        } catch (IOException e) {
+            throw new LockerException("download failed");
+        }
+        
+        JSONObject json = new JSONObject(text);
+        int numResults = json.getJSONObject("summary").getInt("totalResults");
+        Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
+        JSONArray jsonArtists = json.getJSONArray("artistList");
+        ArrayList<Artist> artists = new ArrayList<Artist>();
+        for (int i = 0; i < jsonArtists.length(); i++) {
+            JSONObject obj = jsonArtists.getJSONObject(i);
+            Artist a = Artist.artistFromJson(obj);
+            if (a != null)
+                artists.add(a);
+        }
+        return artists;
+        
+        //String m = "lockerData";
+        //Map<String, String> params = new HashMap<String, String>();
+        //params.put("type", "artist");
+        //if (artistId != "")
+        //    params.put("artist_id", artistId);
+        //else if (setQuery != null) {
+        //    params.put("count", setQuery.count);
+        //    params.put("set", setQuery.set);
+        //}
+//        try {
+//            System.out.println("Making GET ARTISTS call");
+//            RestResult restResult = Caller.getInstance().call(m, params);
+//            System.out.println("BACK FROM GET ARTISTS call");
+//            if (!restResult.isSuccessful())
+//                throw (new LockerException("Call Failed: "
+//                        + restResult.getErrorMessage()));
+//
+//            DataResult<Artist> results = null;
+//            if (setQuery != null)
+//                results = parseSetSummary(restResult);
+//
+//            Artist[] artists = parseArtists(restResult);
+//            if (results == null)
+//                results = new DataResult<Artist>("artist", artists.length);
+//            results.setData(artists);
+//            return results;
+//        } catch (IOException e) {
+//            throw (new LockerException("connection issue"));
+//        }
+    }
+    
     public DataResult<Artist> getArtists() throws LockerException, InvalidSessionException
     {
-        return fetchArtists("", mDefaultQuery);
+        return fetchArtists("", null/*mDefaultQuery*/);
     }
 
     /**
@@ -180,8 +276,14 @@ public class Locker
         }
         try {
             System.out.println("Making GET ARTISTS call");
+            Logger.log("Starting API Call");
+            long t1 = java.lang.System.currentTimeMillis();
             RestResult restResult = Caller.getInstance().call(m, params);
+            long t2 = java.lang.System.currentTimeMillis();
+            Logger.log("API call took " + Long.toString(t2 - t1));
             System.out.println("BACK FROM GET ARTISTS call");
+            Logger.log("Starting parse");
+            t1 = java.lang.System.currentTimeMillis();
             if (!restResult.isSuccessful())
                 throw (new LockerException("Call Failed: "
                         + restResult.getErrorMessage()));
@@ -194,6 +296,8 @@ public class Locker
             if (results == null)
                 results = new DataResult<Artist>("artist", artists.length);
             results.setData(artists);
+            t2 = java.lang.System.currentTimeMillis();
+            Logger.log("parse took " + Long.toString(t2 - t1));
             return results;
         } catch (IOException e) {
             throw (new LockerException("connection issue"));
@@ -522,7 +626,7 @@ public class Locker
     }
 
     public DataResult<Playlist> getPlaylists(boolean playmix)
-            throws LockerException, IOException, InvalidSessionException
+            throws LockerException, InvalidSessionException
     {
 
         String m = "lockerData";
@@ -569,8 +673,8 @@ public class Locker
             }
         } catch (IOException e) {
             Log.w("Mp3Tunes", Log.getStackTraceString(e));
-            throw e;
         }
+        return null;
     }
     
     public DataResult<Token> getArtistTokens() throws LockerException, InvalidSessionException
@@ -786,6 +890,11 @@ public class Locker
             throw (new LockerException("Getting set summary failed: "
                     + e.getMessage()));
         }
+    }
+
+    public void setSession(Session session)
+    {
+        mSession = session;
     }
 
 }

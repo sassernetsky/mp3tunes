@@ -18,6 +18,8 @@
  ***************************************************************************/
 package com.binaryelysium.mp3tunes.api;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 
 public class Artist {
@@ -96,5 +98,20 @@ public class Artist {
 		}
 		return null;
 	}
+
+    public static Artist artistFromJson(JSONObject obj)
+    {
+        Artist a = new Artist();
+        try {
+            a.mId         = obj.getInt("artistId");
+            a.mSize       = obj.getInt("artistSize");
+            a.mName       = obj.getString("artistName");
+            a.mAlbumCount = obj.getInt("albumCount");
+            a.mTrackCount = obj.getInt("trackCount");
+            return a;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
 
 }

@@ -41,16 +41,16 @@ public class Track
     private int mId;
     private String mTitle;
     int mNumber;
-    double mDuration;
-    String mFileName;
-    String mFileKey;
-    int mFileSize;
+    protected double mDuration;
+    protected String mFileName;
+    protected String mFileKey;
+    protected int mFileSize;
     String mDownloadUrl;
     String mPlayUrl;
 
     int mAlbumId;
     String mAlbumTitle;
-    String mAlbumYear; // stored as a string cause we hardly use it as an int
+    protected String mAlbumYear; // stored as a string cause we hardly use it as an int
 
     int mArtistId;
     String mArtistName;
@@ -59,6 +59,25 @@ public class Track
 
     private Track()
     {
+    }
+    
+    public Track(Track t)
+    {
+        mId          = t.mId;
+        mPlayUrl     = t.mPlayUrl;
+        mDownloadUrl = t.mDownloadUrl;
+        mTitle       = t.mTitle;
+        mNumber      = t.mNumber;
+        mArtistId    = t.mArtistId;
+        mArtistName  = t.mArtistName;
+        mAlbumId     = t.mAlbumId;
+        mAlbumTitle  = t.mAlbumTitle;
+        mAlbumArt    = t.mAlbumArt;
+        mDuration    = t.mDuration;
+        mFileName    = t.mFileName;
+        mFileKey     = t.mFileKey;
+        mFileSize    = t.mFileSize;
+        mAlbumYear   = t.mAlbumYear;
     }
 
     public Track(int id, String play_url, String download_url, String title,
@@ -75,6 +94,28 @@ public class Track
         mAlbumId = album_id;
         mAlbumTitle = album_name;
         mAlbumArt = cover_url;
+    }
+    
+    public Track(int id, String playUrl, String downloadUrl, String title, int number,
+                 int artistId, String artistName, int albumId, String albumTitle, 
+                 String albumArt, double duration, String fileName, String fileKey,
+                 int fileSize, String albumYear)
+    {
+        mId          = id;
+        mPlayUrl     = playUrl;
+        mDownloadUrl = downloadUrl;
+        mTitle       = title;
+        mNumber      = number;
+        mArtistId    = artistId;
+        mArtistName  = artistName;
+        mAlbumId     = albumId;
+        mAlbumTitle  = albumTitle;
+        mAlbumArt    = albumArt;
+        mDuration    = duration;
+        mFileName    = fileName;
+        mFileKey     = fileKey;
+        mFileSize    = fileSize;
+        mAlbumYear   = albumYear;
     }
     
     @Override
@@ -199,6 +240,13 @@ public class Track
 
     public String getFileKey()
     {
+        if (mFileKey == null) {
+            if (mPlayUrl != null) {
+                mFileKey = mPlayUrl.replaceFirst("^.*lockerplay/", "").replaceFirst("\\?.*", "");
+            } else if (mDownloadUrl != null) {
+                mFileKey = mDownloadUrl.replaceFirst("^.*lockerget/", "").replaceFirst("\\?.*", "");
+            }
+        }
         return mFileKey;
     }
 

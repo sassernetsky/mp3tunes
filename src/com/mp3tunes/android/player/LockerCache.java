@@ -48,6 +48,7 @@ public class LockerCache
     static final int ARTIST_TOKENS = 5;
     static final int ALBUM_TOKENS = 6;
     static final int TRACK_TOKENS = 7;
+    static final int RADIO = 8;
     
 
     private LockerCache()

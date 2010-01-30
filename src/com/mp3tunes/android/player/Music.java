@@ -61,7 +61,7 @@ public class Music
 
     public static enum Meta
     {
-        TRACK, ARTIST, ALBUM, PLAYLIST, CURRENT_PLAYLIST;
+        TRACK, ARTIST, ALBUM, PLAYLIST, CURRENT_PLAYLIST, RADIO;
     }
     
     public static String[] ID = {LockerDb.KEY_ID};
@@ -413,9 +413,10 @@ public class Music
     public static int getCurrentAlbumId() {
         if (sService != null) {
             try {
-                String id = sService.getMetadata()[5];
-                if( id != Mp3tunesService.UNKNOWN )
-                    return Integer.parseInt( id );
+                //String id = sService.getMetadata()[5];
+                //if( id != Mp3tunesService.UNKNOWN )
+                //    return Integer.parseInt( id );
+                return sService.getTrack().getAlbumId();
             } catch (RemoteException ex) {
             }
         }
@@ -424,9 +425,10 @@ public class Music
     public static int getCurrentArtistId() {
         if (sService != null) {
             try {
-                String id = sService.getMetadata()[3];
-                if( id != Mp3tunesService.UNKNOWN )
-                    return Integer.parseInt( id );
+                //String id = sService.getMetadata()[3];
+                //if( id != Mp3tunesService.UNKNOWN )
+                //    return Integer.parseInt( id );
+                return sService.getTrack().getArtistId();
             } catch (RemoteException ex) {
             }
         }
@@ -435,9 +437,10 @@ public class Music
     public static int getCurrentTrackId() {
         if (sService != null) {
             try {
-                String id = sService.getMetadata()[1];
-                if( id != Mp3tunesService.UNKNOWN )
-                    return Integer.parseInt( id );
+                //String id = sService.getMetadata()[1];
+                //if( id != Mp3tunesService.UNKNOWN )
+                //    return Integer.parseInt( id );
+                return sService.getTrack().getId();
             } catch (RemoteException ex) {
             }
         }
@@ -482,9 +485,6 @@ public class Music
             return;
         }
         try {
-            if (force_shuffle) {
-                sService.setShuffleMode(Music.ShuffleMode.TRACKS);
-            }
             int curid = getCurrentTrackId();
             int curpos = sService.getQueuePosition();
             if (position != -1 && curpos == position && curid == list[position]) {
@@ -493,14 +493,15 @@ public class Music
                 // or just launch the playback activity.
                 int [] playlist = sCp.getQueue();
                 if (Arrays.equals(list, playlist))
-                    return; // the 'finally' block will still run
+                    return; 
             }
             if (position < 0) {
                 position = 0;
             }
-            Music.sCp.clearQueue();
-            Music.sCp.insertQueueItems( list );
-            sService.startAt( position + 1 ); // +1 because the dbase queue is 1-indexed
+            sService.createPlaybackList(list);
+            //Music.sCp.clearQueue();
+            //Music.sCp.insertQueueItems( list );
+            sService.startAt(position); // +1 because the dbase queue is 1-indexed
         } catch (RemoteException ex) {
         } finally {
             Intent intent = new Intent("com.mp3tunes.android.player.PLAYER")

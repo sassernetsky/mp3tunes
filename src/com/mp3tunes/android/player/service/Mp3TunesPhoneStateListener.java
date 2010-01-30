@@ -8,45 +8,51 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
 {
     private FadeVolumeTask mFadeVolumeTask = null;
     private PlayerHandler  mPlayerHandler;
+    private boolean        mFadingIn  = false;   
+    private boolean        mFadingOut = false;
+    private boolean        mFadedOut  = false;
     
     public Mp3TunesPhoneStateListener(PlayerHandler player)
     {
         mPlayerHandler = player;
     }
 
+    
+    
     @Override
-    public void onCallStateChanged(int state, String incomingNumber)
+    synchronized public void onCallStateChanged(int state, String incomingNumber)
     {
         if (mFadeVolumeTask != null)
             mFadeVolumeTask.cancel();
 
-        if (state == TelephonyManager.CALL_STATE_IDLE) // fade music in to
-        // 100%
+        if (state == TelephonyManager.CALL_STATE_IDLE)
         {
+            if (!mFadedOut || mFadingIn) {
+                return;
+            }
             mFadeVolumeTask = new FadeVolumeTask(mPlayerHandler, FadeVolumeTask.FADE_IN,
                     5000) {
                 @Override
                 public void onPreExecute()
                 {
-                    if (mPlayerHandler.isSystemPaused())
-                        mPlayerHandler.pause();
+                    mPlayerHandler.unpause();
                 }
 
                 @Override
                 public void onPostExecute()
                 {
+                    mFadingIn       = false;
+                    mFadedOut       = false;
                     mFadeVolumeTask = null;
                 }
             };
-        } else { // fade music out to
-            // silence
-            if (mPlayerHandler.isPaused()) {
-                // this particular state of affairs should be impossible,
-                // seeing as we are the only component that dares the pause
-                // the radio. But we cater to it just in case
-                mPlayerHandler.setVolume(0.0f, 0.0f);
+        } else {
+            //Check to see if the current track is already paused
+            //if it is do nothing
+            if (mFadingOut || mPlayerHandler.getTrack().isPaused()) {
                 return;
             }
+            mFadingOut = true;
 
             // fade out faster if making a call, this feels more natural
             int duration = state == TelephonyManager.CALL_STATE_RINGING ? 3000
@@ -54,18 +60,13 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
 
             mFadeVolumeTask = new FadeVolumeTask(mPlayerHandler, FadeVolumeTask.FADE_OUT,
                     duration) {
-
-                @Override
-                public void onPreExecute()
+                @Override public void onPostExecute()
                 {
-                }
-
-                @Override
-                public void onPostExecute()
-                {
-                    mPlayerHandler.systemPause();
+                    mPlayerHandler.pause();
+                    mFadedOut       = true;
                     mFadeVolumeTask = null;
                 }
+                @Override public void onPreExecute() {}
             };
         }
         super.onCallStateChanged(state, incomingNumber);

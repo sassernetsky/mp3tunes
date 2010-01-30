@@ -156,6 +156,7 @@ public class Login extends Activity
 
         public void onClick( View v )
         {
+            Log.w("Mp3tunes", "Called on click");
             String user = mUserField.getText().toString();
             String password = mPassField.getText().toString();
 
@@ -179,9 +180,8 @@ public class Login extends Activity
             switch ( event.getKeyCode() )
             {
             case KeyEvent.KEYCODE_ENTER:
-                mLoginButton.setPressed( true );
-                mLoginButton.performClick();
-                return true;
+                if (event.getAction() == KeyEvent.ACTION_UP)
+                    return mLoginButton.performClick();
             }
             return false;
         }

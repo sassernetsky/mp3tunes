@@ -8,7 +8,8 @@ public class RemoteMethod
     public static final String API_GENERAL = "http://ws.mp3tunes.com/api/v1/";
     public static final String API_STORAGE = "http://ws.mp3tunes.com/api/v1/";
     public static final String API_LOGIN   = "https://shop.mp3tunes.com/api/v1/";
-    public static final String XML_OUTPUT  = "output=xml";
+    public static final String API_CONTENT = "http://content.mp3tunes.com/storage/";
+    public static final String JSON_OUTPUT = "output=json";
     
     public static final class METHODS {
         public static final String LOGIN                  = "login";
@@ -46,8 +47,9 @@ public class RemoteMethod
         mCall = call;
     }
 
-    public class Builder {
+    public static class Builder {
         private String mMethod;
+        private String mFileKey;
         private List<String> params = new LinkedList<String>();
     
         public Builder(String method) 
@@ -55,33 +57,76 @@ public class RemoteMethod
             mMethod = method;
         }
         
-        public void addParam(String key, String val)
+        public Builder addParam(String key, String val)
         {
             params.add("&" + key + "=" + val);
+            return this;
         }
         
-        public void addParam(String key)
+        public Builder addParam(String key)
         {
             params.add("&" + key);
+            return this;
+        }
+        
+        public Builder addFileKey(String key)
+        {
+            if (callNeedsFileKey(mMethod)) {
+                mFileKey = key;
+            }
+            return this;
         }
         
         public RemoteMethod create()
         {
-            String site;
-            if (mMethod == METHODS.LOGIN || mMethod == METHODS.LOGOUT)
-                site = API_LOGIN;
-            else 
-                site = API_GENERAL;
+            String site = getSiteForCall(mMethod);
             
-            StringBuilder builder = new StringBuilder(site).append(mMethod).append("?")
-                                        .append(XML_OUTPUT).append("&partner_token=")
-                                        .append(Locker.getPartnerToken());
+            StringBuilder builder = new StringBuilder(site).append(mMethod);
+            
+            if (callNeedsFileKey(mMethod) && mFileKey != null)
+                builder.append("/").append(mFileKey);
+            
+            builder.append("?");
+            builder.append("partner_token=").append(LockerContext.instance().getPartnerToken());
+            
+            if (parseResponse(mMethod))
+                builder.append("&").append(JSON_OUTPUT);
+            
+            if (mMethod != METHODS.LOGIN && mMethod != METHODS.LOGOUT)
+                builder.append("&sid=").append(LockerContext.instance().getSessionId());
             
             for (String val : params) {
                 builder.append(val);
             }
             
             return new RemoteMethod(builder.toString());
+        }
+        
+        //TODO It is probably better to do this without the huge conditional
+        private static String getSiteForCall(String call)
+        {
+            if (call == METHODS.LOGIN || call == METHODS.LOGOUT)
+                return API_LOGIN;
+            else if (call == METHODS.LOCKER_PLAY || call == METHODS.LOCKER_GET || 
+                     call == METHODS.LOCKER_PUT  || call == METHODS.LOCKER_DELETE)
+                return API_CONTENT; 
+            else 
+                return API_GENERAL;
+        }
+        
+        private static boolean callNeedsFileKey(String call)
+        {
+            if (call == METHODS.LOCKER_PLAY   || call == METHODS.LOCKER_GET || 
+                call == METHODS.LOCKER_DELETE || call == METHODS.LOCKER_PUT)
+                return true;
+            return false;
+        }
+        
+        private static boolean parseResponse(String call)
+        {
+            if (call != METHODS.LOCKER_PLAY && call != METHODS.LOCKER_GET)
+                return true;
+            return false;
         }
     }
 }

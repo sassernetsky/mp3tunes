@@ -58,27 +58,27 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.TouchInterceptor;
+import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class QueueBrowser extends ListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
 {
-    private final static int               PROGRESS       = CHILD_MENU_BASE;
-    private boolean                        mDeletedOneRow = false;
-    private boolean                        mEditMode      = false;
-    private boolean                        mAdapterSent   = false;
-    private ListView                       mTrackList;
-    private Cursor                         mTrackCursor;
-    private TrackListAdapter               mAdapter;
-    private AlertDialog                    mProgDialog;
-    private String                         mAlbumId;
-    private String                         mArtistId;
-    private String                         mPlaylist;
-    private String                         mPlaylistName;
-    private String                         mGenre;
-    private long                           mSelectedId;
+    private final static int PROGRESS = CHILD_MENU_BASE;
+    private boolean mDeletedOneRow = false;
+    private boolean mEditMode = false;
+    private boolean mAdapterSent = false;
+    private ListView mTrackList;
+    private Cursor mTrackCursor;
+    private TrackListAdapter mAdapter;
+    private AlertDialog mProgDialog;
+    private String mAlbumId;
+    private String mArtistId;
+    private String mPlaylist;
+    private String mPlaylistName;
+    private String mGenre;
+    private long mSelectedId;
     private AsyncTask<Void, Void, Boolean> mTrackTask;
-
 
     public QueueBrowser()
     {
@@ -99,7 +99,7 @@ public class QueueBrowser extends ListActivity implements
             mPlaylistName = icicle.getString("playlist_name");
             mGenre = icicle.getString("genre");
             mEditMode = icicle.getBoolean("editmode", false);
-        } else  {
+        } else {
             mAlbumId = getIntent().getStringExtra("album");
             // If we have an album, show everything on the album, not just stuff
             // by a particular artist.
@@ -278,7 +278,8 @@ public class QueueBrowser extends ListActivity implements
     public void init(Cursor newCursor)
     {
         if (newCursor != null) {
-            Log.w("Mp3Tunes", "cursor count: " + Integer.toString(newCursor.getCount()));
+            Log.w("Mp3Tunes", "cursor count: "
+                    + Integer.toString(newCursor.getCount()));
         }
         mAdapter.changeCursor(newCursor); // also sets mTrackCursor
 
@@ -304,7 +305,7 @@ public class QueueBrowser extends ListActivity implements
                 setSelection(cur);
                 registerReceiver(mNowPlayingListener, new IntentFilter(f));
                 mNowPlayingListener.onReceive(this, new Intent(
-                        Mp3tunesService.META_CHANGED));
+                        GuiNotifier.META_CHANGED));
             } catch (RemoteException ex) {
             }
         }/*
@@ -358,209 +359,26 @@ public class QueueBrowser extends ListActivity implements
 
     public void moveQueueItem(int from, int to)
     {
-        try {
-            Music.sService.moveQueueItem(from, to);
-            mTrackCursor.requery();
-        } catch (RemoteException ex) {
-            ex.printStackTrace();
-        }
     }
 
-    private TouchInterceptor.DropListener   mDropListener   = new TouchInterceptor.DropListener() {
+    private TouchInterceptor.DropListener mDropListener = new TouchInterceptor.DropListener() {
 
-                                                                public void drop(
-                                                                        int from,
-                                                                        int to)
-                                                                {
-                                                                    moveQueueItem(
-                                                                            from,
-                                                                            to);
-                                                                    ((TrackListAdapter) getListAdapter())
-                                                                            .notifyDataSetChanged();
-                                                                    getListView()
-                                                                            .invalidateViews();
-                                                                    mDeletedOneRow = true;
-                                                                    // if (
-                                                                    // mTrackCursor
-                                                                    // instanceof
-                                                                    // NowPlayingCursor
-                                                                    // )
-                                                                    // {
-                                                                    // // update
-                                                                    // the
-                                                                    // currently
-                                                                    // playing
-                                                                    // list
-                                                                    // NowPlayingCursor
-                                                                    // c = (
-                                                                    // NowPlayingCursor
-                                                                    // )
-                                                                    // mTrackCursor;
-                                                                    // c.moveItem(
-                                                                    // from, to
-                                                                    // );
-                                                                    // ( (
-                                                                    // TrackListAdapter
-                                                                    // )
-                                                                    // getListAdapter()
-                                                                    // ).notifyDataSetChanged();
-                                                                    // getListView().invalidateViews();
-                                                                    // mDeletedOneRow
-                                                                    // = true;
-                                                                    // }
-                                                                    // else
-                                                                    // {
-                                                                    // // update
-                                                                    // a saved
-                                                                    // playlist
-                                                                    // Uri
-                                                                    // baseUri =
-                                                                    // MediaStore.Audio.Playlists.Members.getContentUri(
-                                                                    // "external",
-                                                                    // Long
-                                                                    // .valueOf(
-                                                                    // mPlaylist
-                                                                    // ) );
-                                                                    // ContentValues
-                                                                    // values =
-                                                                    // new
-                                                                    // ContentValues();
-                                                                    // String
-                                                                    // where =
-                                                                    // MediaStore.Audio.Playlists.Members._ID
-                                                                    // + "=?";
-                                                                    // String[]
-                                                                    // wherearg
-                                                                    // = new
-                                                                    // String[1];
-                                                                    // ContentResolver
-                                                                    // res =
-                                                                    // getContentResolver();
-                                                                    //
-                                                                    // int
-                                                                    // colidx =
-                                                                    // mTrackCursor
-                                                                    // .getColumnIndexOrThrow(
-                                                                    // MediaStore.Audio.Playlists.Members.PLAY_ORDER
-                                                                    // );
-                                                                    // if ( from
-                                                                    // < to )
-                                                                    // {
-                                                                    // // move
-                                                                    // the item
-                                                                    // to
-                                                                    // somewhere
-                                                                    // later in
-                                                                    // the list
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // to );
-                                                                    // int toidx
-                                                                    // =
-                                                                    // mTrackCursor.getInt(
-                                                                    // colidx );
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // from );
-                                                                    // values.put(
-                                                                    // MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-                                                                    // toidx );
-                                                                    // wherearg[0]
-                                                                    // =
-                                                                    // mTrackCursor.getString(
-                                                                    // 0 );
-                                                                    // res.update(
-                                                                    // baseUri,
-                                                                    // values,
-                                                                    // where,
-                                                                    // wherearg
-                                                                    // );
-                                                                    // for ( int
-                                                                    // i = from
-                                                                    // + 1; i <=
-                                                                    // to; i++ )
-                                                                    // {
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // i );
-                                                                    // values.put(
-                                                                    // MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-                                                                    // i - 1 );
-                                                                    // wherearg[0]
-                                                                    // =
-                                                                    // mTrackCursor.getString(
-                                                                    // 0 );
-                                                                    // res.update(
-                                                                    // baseUri,
-                                                                    // values,
-                                                                    // where,
-                                                                    // wherearg
-                                                                    // );
-                                                                    // }
-                                                                    // }
-                                                                    // else if (
-                                                                    // from > to
-                                                                    // )
-                                                                    // {
-                                                                    // // move
-                                                                    // the item
-                                                                    // to
-                                                                    // somewhere
-                                                                    // earlier
-                                                                    // in the
-                                                                    // list
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // to );
-                                                                    // int toidx
-                                                                    // =
-                                                                    // mTrackCursor.getInt(
-                                                                    // colidx );
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // from );
-                                                                    // values.put(
-                                                                    // MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-                                                                    // toidx );
-                                                                    // wherearg[0]
-                                                                    // =
-                                                                    // mTrackCursor.getString(
-                                                                    // 0 );
-                                                                    // res.update(
-                                                                    // baseUri,
-                                                                    // values,
-                                                                    // where,
-                                                                    // wherearg
-                                                                    // );
-                                                                    // for ( int
-                                                                    // i = from
-                                                                    // - 1; i >=
-                                                                    // to; i-- )
-                                                                    // {
-                                                                    // mTrackCursor.moveToPosition(
-                                                                    // i );
-                                                                    // values.put(
-                                                                    // MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-                                                                    // i + 1 );
-                                                                    // wherearg[0]
-                                                                    // =
-                                                                    // mTrackCursor.getString(
-                                                                    // 0 );
-                                                                    // res.update(
-                                                                    // baseUri,
-                                                                    // values,
-                                                                    // where,
-                                                                    // wherearg
-                                                                    // );
-                                                                    // }
-                                                                    // }
-                                                                    // }
-                                                                }
-                                                            };
+        public void drop(int from, int to)
+        {
+            moveQueueItem(from, to);
+            ((TrackListAdapter) getListAdapter()).notifyDataSetChanged();
+            getListView().invalidateViews();
+            mDeletedOneRow = true;
+        }
+    };
 
     private TouchInterceptor.RemoveListener mRemoveListener = new TouchInterceptor.RemoveListener() {
 
-                                                                public void remove(
-                                                                        int which)
-                                                                {
-                                                                    removePlaylistItem(which);
-                                                                }
-                                                            };
+        public void remove(int which)
+        {
+            removePlaylistItem(which);
+        }
+    };
 
     private void removePlaylistItem(int which)
     {
@@ -578,198 +396,54 @@ public class QueueBrowser extends ListActivity implements
         v.setVisibility(View.GONE);
         mTrackList.invalidateViews();
         Music.sCp.removeQueueItem(which, which);
-        // if ( mTrackCursor instanceof NowPlayingCursor )
-        // {
-        // ( ( NowPlayingCursor ) mTrackCursor ).removeItem( which );
-        // }
-        // else
-        // {
-        // int colidx = mTrackCursor
-        // .getColumnIndexOrThrow( MediaStore.Audio.Playlists.Members._ID );
-        // mTrackCursor.moveToPosition( which );
-        // long id = mTrackCursor.getLong( colidx );
-        // Uri uri = MediaStore.Audio.Playlists.Members.getContentUri(
-        // "external", Long
-        // .valueOf( mPlaylist ) );
-        // getContentResolver().delete( ContentUris.withAppendedId( uri, id ),
-        // null, null );
-        // }
         v.setVisibility(View.VISIBLE);
         mTrackList.invalidateViews();
     }
 
-    private BroadcastReceiver mTrackListListener  = new BroadcastReceiver() {
+    private BroadcastReceiver mTrackListListener = new BroadcastReceiver() {
 
-                                                      @Override
-                                                      public void onReceive(
-                                                              Context context,
-                                                              Intent intent)
-                                                      {
-                                                          getListView()
-                                                                  .invalidateViews();
-                                                      }
-                                                  };
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            getListView().invalidateViews();
+        }
+    };
 
     private BroadcastReceiver mNowPlayingListener = new BroadcastReceiver() {
 
-                                                      @Override
-                                                      public void onReceive(
-                                                              Context context,
-                                                              Intent intent)
-                                                      {
-                                                          if (intent
-                                                                  .getAction()
-                                                                  .equals(
-                                                                          Mp3tunesService.META_CHANGED)) {
-                                                              getListView()
-                                                                      .invalidateViews();
-                                                          } else if (intent
-                                                                  .getAction()
-                                                                  .equals(
-                                                                          Mp3tunesService.QUEUE_CHANGED)) {
-                                                              if (mDeletedOneRow) {
-                                                                  // This is the
-                                                                  // notification
-                                                                  // for a
-                                                                  // single row
-                                                                  // that was
-                                                                  // deleted
-                                                                  // previously,
-                                                                  // which is
-                                                                  // already
-                                                                  // reflected
-                                                                  // in
-                                                                  // the UI.
-                                                                  mDeletedOneRow = false;
-                                                                  return;
-                                                              }
-                                                              Cursor c = Music.sCp
-                                                                      .getQueueCursor();
-                                                              if (c.getCount() == 0) {
-                                                                  finish();
-                                                                  return;
-                                                              }
-                                                              mAdapter
-                                                                      .changeCursor(c);
-                                                          }
-                                                      }
-                                                  };
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            if (intent.getAction().equals(GuiNotifier.META_CHANGED)) {
+                getListView().invalidateViews();
+            } else if (intent.getAction().equals(GuiNotifier.QUEUE_CHANGED)) {
+                if (mDeletedOneRow) {
+                    // This is the notification for a single row that was deleted
+                    //previously, which is already reflected in the UI.
+                    mDeletedOneRow = false;
+                    return;
+                }
+                Cursor c = Music.sCp.getQueueCursor();
+                if (c.getCount() == 0) {
+                    finish();
+                    return;
+                }
+                mAdapter.changeCursor(c);
+            }
+        }
+    };
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View view,
             ContextMenuInfo menuInfoIn)
     {
-        // menu.add(0, PLAY_SELECTION, 0, R.string.play_selection);
-        // SubMenu sub = menu.addSubMenu(0, ADD_TO_PLAYLIST, 0,
-        // R.string.add_to_playlist);
-        // Music.makePlaylistMenu(this, sub);
-        // if (mEditMode) {
-        // menu.add(0, REMOVE, 0, R.string.remove_from_playlist);
-        // }
-        // menu.add(0, USE_AS_RINGTONE, 0, R.string.ringtone_menu);
-        // menu.add(0, DELETE_ITEM, 0, R.string.delete_item);
-        // menu.add(0, SEARCH, 0, R.string.search_title);
-        // AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
-        // mSelectedPosition = mi.position;
-        // mTrackCursor.moveToPosition(mSelectedPosition);
-        // try {
-        // int id_idx = mTrackCursor.getColumnIndexOrThrow(
-        // MediaStore.Audio.Playlists.Members.AUDIO_ID);
-        // mSelectedId = mTrackCursor.getInt(id_idx);
-        // } catch (IllegalArgumentException ex) {
-        // mSelectedId = mi.id;
-        // }
-        // mCurrentAlbumName =
-        // mTrackCursor.getString(mTrackCursor.getColumnIndexOrThrow(
-        // MediaStore.Audio.Media.ALBUM));
-        // mCurrentArtistNameForAlbum =
-        // mTrackCursor.getString(mTrackCursor.getColumnIndexOrThrow(
-        // MediaStore.Audio.Media.ARTIST));
-        // mCurrentTrackName =
-        // mTrackCursor.getString(mTrackCursor.getColumnIndexOrThrow(
-        // MediaStore.Audio.Media.TITLE));
-        // menu.setHeaderTitle(mCurrentTrackName);
     }
 
     @Override
     public boolean onContextItemSelected(MenuItem item)
     {
-        // switch (item.getItemId()) {
-        // case PLAY_SELECTION: {
-        // // play the track
-        // int position = mSelectedPosition;
-        // Music.playAll(this, mTrackCursor, position);
-        // return true;
-        // }
-        //
-        // case QUEUE: {
-        // int [] list = new int[] { (int) mSelectedId };
-        // Music.addToCurrentPlaylist(this, list);
-        // return true;
-        // }
-        //
-        // case NEW_PLAYLIST: {
-        // Intent intent = new Intent();
-        // intent.setClass(this, CreatePlaylist.class);
-        // startActivityForResult(intent, NEW_PLAYLIST);
-        // return true;
-        // }
-        //
-        // case PLAYLIST_SELECTED: {
-        // int [] list = new int[] { (int) mSelectedId };
-        // int playlist = item.getIntent().getIntExtra("playlist", 0);
-        // Music.addToPlaylist(this, list, playlist);
-        // return true;
-        // }
-        //
-        // case USE_AS_RINGTONE:
-        // // Set the system setting to make this the current ringtone
-        // Music.setRingtone(this, mSelectedId);
-        // return true;
-        //
-        // case DELETE_ITEM: {
-        // int [] list = new int[1];
-        // list[0] = (int) mSelectedId;
-        // Bundle b = new Bundle();
-        // String f = getString(R.string.delete_song_desc);
-        // String desc = String.format(f, mCurrentTrackName);
-        // b.putString("description", desc);
-        // b.putIntArray("items", list);
-        // Intent intent = new Intent();
-        // intent.setClass(this, DeleteItems.class);
-        // intent.putExtras(b);
-        // startActivityForResult(intent, -1);
-        // return true;
-        // }
-        //            
-        // case REMOVE:
-        // removePlaylistItem(mSelectedPosition);
-        // return true;
-        //                
-        // case SEARCH:
-        // doSearch();
-        // return true;
-        // }
         return super.onContextItemSelected(item);
     }
-
-    // void doSearch() {
-    // CharSequence title = null;
-    // String query = null;
-    //        
-    // Intent i = new Intent();
-    // i.setAction(MediaStore.INTENT_ACTION_MEDIA_SEARCH);
-    //        
-    // title = mCurrentAlbumName;
-    // query = mCurrentArtistNameForAlbum + " " + mCurrentAlbumName;
-    // i.putExtra(MediaStore.EXTRA_MEDIA_ARTIST, mCurrentArtistNameForAlbum);
-    // i.putExtra(MediaStore.EXTRA_MEDIA_ALBUM, mCurrentAlbumName);
-    // i.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "audio/*");
-    // title = getString(R.string.mediasearch, title);
-    // i.putExtra(SearchManager.QUERY, query);
-    //
-    // startActivity(Intent.createChooser(i, title));
-    // }
 
     // In order to use alt-up/down as a shortcut for moving the selected item
     // in the list, we need to override dispatchKeyEvent, not onKeyDown.
@@ -857,38 +531,6 @@ public class QueueBrowser extends ListActivity implements
                 mTrackList.setSelection(curpos + 1);
             }
         } else {
-            // int colidx = mTrackCursor
-            // .getColumnIndexOrThrow(
-            // MediaStore.Audio.Playlists.Members.PLAY_ORDER );
-            // mTrackCursor.moveToPosition( curpos );
-            // int currentplayidx = mTrackCursor.getInt( colidx );
-            // Uri baseUri = MediaStore.Audio.Playlists.Members.getContentUri(
-            // "external", Long
-            // .valueOf( mPlaylist ) );
-            // ContentValues values = new ContentValues();
-            // String where = MediaStore.Audio.Playlists.Members._ID + "=?";
-            // String[] wherearg = new String[1];
-            // ContentResolver res = getContentResolver();
-            // if ( up )
-            // {
-            // values.put( MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-            // currentplayidx - 1 );
-            // wherearg[0] = mTrackCursor.getString( 0 );
-            // res.update( baseUri, values, where, wherearg );
-            // mTrackCursor.moveToPrevious();
-            // }
-            // else
-            // {
-            // values.put( MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-            // currentplayidx + 1 );
-            // wherearg[0] = mTrackCursor.getString( 0 );
-            // res.update( baseUri, values, where, wherearg );
-            // mTrackCursor.moveToNext();
-            // }
-            // values.put( MediaStore.Audio.Playlists.Members.PLAY_ORDER,
-            // currentplayidx );
-            // wherearg[0] = mTrackCursor.getString( 0 );
-            // res.update( baseUri, values, where, wherearg );
         }
     }
 
@@ -897,7 +539,7 @@ public class QueueBrowser extends ListActivity implements
     {
         if (mTrackCursor.getCount() == 0)
             return;
-        
+
         Music.playAll(this, mTrackCursor, position);
     }
 
@@ -948,117 +590,6 @@ public class QueueBrowser extends ListActivity implements
         return super.onOptionsItemSelected(item);
     }
 
-    // @Override
-    // public boolean onCreateOptionsMenu( Menu menu )
-    // {
-    // /* This activity is used for a number of different browsing modes,
-    // and the menu can
-    // * be different for each of them:
-    // * - all tracks, optionally restricted to an album, artist or playlist
-    // * - the list of currently playing songs
-    // */
-    // super.onCreateOptionsMenu(menu);
-    // if (mPlaylist == null) {
-    // menu.add(0, PLAY_ALL, 0,
-    // R.string.play_all).setIcon(com.android.internal.R.drawable.ic_menu_play_clip);
-    // }
-    // menu.add(0, GOTO_START, 0,
-    // R.string.goto_start).setIcon(R.drawable.ic_menu_music_library);
-    // menu.add(0, GOTO_PLAYBACK, 0,
-    // R.string.goto_playback).setIcon(R.drawable.ic_menu_playback)
-    // .setVisible(Music.isMusicLoaded());
-    // menu.add(0, SHUFFLE_ALL, 0,
-    // R.string.shuffle_all).setIcon(R.drawable.ic_menu_shuffle);
-    // if (mPlaylist != null) {
-    // menu.add(0, SAVE_AS_PLAYLIST, 0,
-    // R.string.save_as_playlist).setIcon(android.R.drawable.ic_menu_save);
-    // if (mPlaylist.equals("nowplaying")) {
-    // menu.add(0, CLEAR_PLAYLIST, 0,
-    // R.string.clear_playlist).setIcon(com.android.internal.R.drawable.ic_menu_clear_playlist);
-    // }
-    // }
-    // return true;
-    // }
-    //
-    // @Override
-    // public boolean onOptionsItemSelected( MenuItem item )
-    // {
-    // Intent intent;
-    // Cursor cursor;
-    // switch (item.getItemId()) {
-    // case PLAY_ALL: {
-    // Music.playAll(this, mTrackCursor);
-    // return true;
-    // }
-    //
-    // case GOTO_START:
-    // intent = new Intent();
-    // intent.setClass(this, MusicBrowserActivity.class);
-    // intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-    // startActivity(intent);
-    // return true;
-    //
-    // case GOTO_PLAYBACK:
-    // intent = new Intent("com.android.music.PLAYBACK_VIEWER");
-    // intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-    // startActivity(intent);
-    // return true;
-    //                
-    // case SHUFFLE_ALL:
-    // // Should 'shuffle all' shuffle ALL, or only the tracks shown?
-    // cursor = Music.query(this,
-    // MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-    // new String [] { MediaStore.Audio.Media._ID},
-    // MediaStore.Audio.Media.IS_MUSIC + "=1", null,
-    // MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
-    // if (cursor != null) {
-    // Music.shuffleAll(this, cursor);
-    // cursor.close();
-    // }
-    // return true;
-    //                
-    // case SAVE_AS_PLAYLIST:
-    // intent = new Intent();
-    // intent.setClass(this, CreatePlaylist.class);
-    // startActivityForResult(intent, SAVE_AS_PLAYLIST);
-    // return true;
-    //                
-    // case CLEAR_PLAYLIST:
-    // // We only clear the current playlist
-    // Music.clearQueue();
-    // return true;
-    // }
-    // return super.onOptionsItemSelected( item );
-    // }
-
-    // @Override
-    // protected void onActivityResult(int requestCode, int resultCode, Intent
-    // intent) {
-    // switch (requestCode) {
-    // case NEW_PLAYLIST:
-    // if (resultCode == RESULT_OK) {
-    // Uri uri = intent.getData();
-    // if (uri != null) {
-    // int [] list = new int[] { (int) mSelectedId };
-    // Music.addToPlaylist(this, list,
-    // Integer.valueOf(uri.getLastPathSegment()));
-    // }
-    // }
-    // break;
-    //
-    // case SAVE_AS_PLAYLIST:
-    // if (resultCode == RESULT_OK) {
-    // Uri uri = intent.getData();
-    // if (uri != null) {
-    // int [] list = Music.getSongListForCursor(mTrackCursor);
-    // int plid = Integer.parseInt(uri.getLastPathSegment());
-    // Music.addToPlaylist(this, list, plid);
-    // }
-    // }
-    // break;
-    // }
-    // }
-
     private Cursor getTrackCursor(String filter)
     {
         Cursor ret = null;
@@ -1090,34 +621,34 @@ public class QueueBrowser extends ListActivity implements
             SectionIndexer
     {
 
-        boolean                     mIsNowPlaying;
-        boolean                     mDisableNowPlayingIndicator;
+        boolean mIsNowPlaying;
+        boolean mDisableNowPlayingIndicator;
 
-        int                         mTitleIdx;
-        int                         mArtistIdx;
-        int                         mAlbumIdx;
-        int                         mDurationIdx;
-        int                         mAudioIdIdx;
+        int mTitleIdx;
+        int mArtistIdx;
+        int mAlbumIdx;
+        int mDurationIdx;
+        int mAudioIdIdx;
 
-        private final StringBuilder mBuilder           = new StringBuilder();
-        private final String        mUnknownArtist;
+        private final StringBuilder mBuilder = new StringBuilder();
+        private final String mUnknownArtist;
         // private final String mUnknownAlbum;
 
-        private AlphabetIndexer     mIndexer;
+        private AlphabetIndexer mIndexer;
 
-        private QueueBrowser        mActivity          = null;
-        private String              mConstraint        = null;
-        private boolean             mConstraintIsValid = false;
+        private QueueBrowser mActivity = null;
+        private String mConstraint = null;
+        private boolean mConstraintIsValid = false;
 
         class ViewHolder
         {
-            ImageView       icon;
-            TextView        line1;
-            TextView        line2;
-            TextView        duration;
-            ImageView       play_indicator;
+            ImageView icon;
+            TextView line1;
+            TextView line2;
+            TextView duration;
+            ImageView play_indicator;
             CharArrayBuffer buffer1;
-            char[]          buffer2;
+            char[] buffer2;
         }
 
         TrackListAdapter(Context context, QueueBrowser currentactivity,
@@ -1133,22 +664,6 @@ public class QueueBrowser extends ListActivity implements
             // mUnknownAlbum =
             context.getString(R.string.unknown_album_name);
         }
-
-        // @Override
-        // public int getCount()
-        // {
-        // try {
-        // if (getCursor() == null) return 0;
-        // int size = getCursor().getCount();
-        // if (size > 100)
-        // return 100;
-        // return size;
-        // } catch (Exception e) {
-        // Log.w("Mp3Tunes", e.getMessage() + "\n" +
-        // Log.getStackTraceString(e));
-        // }
-        // return 0;
-        // }
 
         public void setActivity(QueueBrowser newactivity)
         {
@@ -1172,13 +687,6 @@ public class QueueBrowser extends ListActivity implements
                     mIndexer = new MusicAlphabetIndexer(cursor, mTitleIdx,
                             alpha);
                 }
-                // else if (mActivity.mPlaylist.equals("NEWEST_TRACKS"))
-                // {
-                // String alpha = mActivity.getString( R.string.alphabet );
-                //
-                // mIndexer = new MusicAlphabetIndexer( cursor, mTitleIdx, alpha
-                // );
-                // }
 
             }
         }
@@ -1283,13 +791,7 @@ public class QueueBrowser extends ListActivity implements
             try {
                 if (cursor != mActivity.mTrackCursor) {
                     mActivity.mTrackCursor = cursor;
-                    // if(mActivity.mPlaylist != null && mActivity.mPlaylist !=
-                    // "nowplaying")
-                    // {
-                    // super.changeCursorAndColumns( cursor, Music.TRACKP,
-                    // Music.TRACKP_MAPPING);
-                    // } else
-                    
+
                     super.changeCursor(cursor);
                     getColumnIndices(cursor);
                 }
