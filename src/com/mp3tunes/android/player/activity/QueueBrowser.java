@@ -77,6 +77,7 @@ public class QueueBrowser extends ListActivity implements
     private String mPlaylist;
     private String mPlaylistName;
     private String mGenre;
+    private boolean mPlayNow;
     private long mSelectedId;
     private AsyncTask<Void, Void, Boolean> mTrackTask;
 
@@ -104,11 +105,12 @@ public class QueueBrowser extends ListActivity implements
             // If we have an album, show everything on the album, not just stuff
             // by a particular artist.
             Intent intent = getIntent();
-            mArtistId = intent.getStringExtra("artist");
-            mPlaylist = intent.getStringExtra("playlist");
+            mArtistId     = intent.getStringExtra("artist");
+            mPlaylist     = intent.getStringExtra("playlist");
             mPlaylistName = intent.getStringExtra("playlist_name");
-            mGenre = intent.getStringExtra("genre");
-            mEditMode = intent.getAction().equals(Intent.ACTION_EDIT);
+            mGenre        = intent.getStringExtra("genre");
+            mPlayNow      = intent.getBooleanExtra("playnow", false);
+            mEditMode     = intent.getAction().equals(Intent.ACTION_EDIT);
         }
 
         setContentView(R.layout.media_picker_activity);
@@ -154,7 +156,8 @@ public class QueueBrowser extends ListActivity implements
                     new String[] {}, new int[] {}, "nowplaying"
                             .equals(mPlaylist), mPlaylist != null
                             && !(mPlaylist.equals("podcasts") || mPlaylist
-                                    .equals("recentlyadded")));
+                                    .equals("recentlyadded")), mPlayNow);
+            mPlayNow = false;
             setListAdapter(mAdapter);
             setTitle(R.string.title_working_songs);
             getTrackCursor(null);
@@ -653,7 +656,7 @@ public class QueueBrowser extends ListActivity implements
 
         TrackListAdapter(Context context, QueueBrowser currentactivity,
                 int layout, Cursor cursor, String[] from, int[] to,
-                boolean isnowplaying, boolean disablenowplayingindicator)
+                boolean isnowplaying, boolean disablenowplayingindicator, boolean playnow)
         {
             super(context, layout, cursor, from, to);
             mActivity = currentactivity;
@@ -863,7 +866,7 @@ public class QueueBrowser extends ListActivity implements
                 else
                     cursor = Music.sDb.getTableList(Music.Meta.TRACK);
 
-                Music.sDb.getTokens(Music.Meta.TRACK);
+                //Music.sDb.getTokens(Music.Meta.TRACK);
                 // tokens = LockerDb.tokensToString( t );
             } catch (Exception e) {
                 Log.w("Mp3Tunes Player", "Exception: " + e.getMessage() + "\n"

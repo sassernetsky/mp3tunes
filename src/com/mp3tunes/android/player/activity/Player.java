@@ -24,6 +24,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.Locker;
+import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.Music;
@@ -43,7 +44,7 @@ public class Player extends Activity
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
     private ImageButton mNextButton;
-    private ImageButton mQueueButton;
+    //private ImageButton mQueueButton;
     private RemoteImageView mAlbum;
     private TextView mCurrentTime;
     private TextView mTotalTime;
@@ -87,8 +88,8 @@ public class Player extends Activity
         mNextButton = ( ImageButton ) findViewById( R.id.fwd );
         mNextButton.setOnClickListener(mNextListener);
         
-        mQueueButton = ( ImageButton ) findViewById( R.id.playlist_button );
-        mQueueButton.setOnClickListener(mQueueListener);
+        //mQueueButton = ( ImageButton ) findViewById( R.id.playlist_button );
+        //mQueueButton.setOnClickListener(mQueueListener);
         
         mAlbumArtWorker = new Worker("album art worker");
         mAlbumArtHandler = new RemoteImageHandler(mAlbumArtWorker.getLooper(),
@@ -267,36 +268,27 @@ public class Player extends Activity
                 // set new max for progress bar
                 updateTrackInfo();
             } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
-                if (mProgressDialog != null) {
-                    Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
-                    mProgressDialog.dismiss();
-                    mProgressDialog = null;
-                }
+                dismissDialog();
                 finish();
             } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
-                MP3tunesApplication.getInstance().presentError(
-                        context,
-                        getResources().getString(
-                                R.string.ERROR_GENERIC_TITLE),
-                        getResources().getString(
-                                R.string.ERROR_GENERIC));
+                MP3tunesApplication.getInstance().presentError(context,
+                        getResources().getString(R.string.ERROR_GENERIC_TITLE),
+                        getResources().getString(R.string.ERROR_GENERIC));
+                dismissDialog();
                 finish();
             } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
                 // TODO add a skip counter and try to skip 3 times before
                 // display an error message
-                if (Music.sService== null)
+                if (Music.sService == null)
                     return;
                 String error = null; // TODO pass some error messages?
                 if (error != null) {
                     MP3tunesApplication.getInstance().presentError(context,
                             error, error);
                 } else {
-                    MP3tunesApplication.getInstance().presentError(
-                            context,
-                            getResources().getString(
-                                    R.string.ERROR_PLAYBACK_FAILED_TITLE),
-                            getResources().getString(
-                                    R.string.ERROR_PLAYBACK_FAILED));
+                    MP3tunesApplication.getInstance().presentError(context,
+                            getResources().getString(R.string.ERROR_PLAYBACK_FAILED_TITLE),
+                            getResources().getString(R.string.ERROR_PLAYBACK_FAILED));
                 }
             } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
                 setPauseButtonImage();
@@ -361,7 +353,17 @@ public class Player extends Activity
             mHandler.sendMessageDelayed(msg, delay);
         }
     }
+    
+    private void dismissDialog()
+    {
+        if (mProgressDialog != null) {
+            Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
+            mProgressDialog.dismiss();
+            mProgressDialog = null;
+        }
+    }
 
+    //TODO: Just  hunch but this looks way too complicated we should try to refactor this
     private long refreshNow() {
 
         if (Music.sService== null)
@@ -386,7 +388,7 @@ public class Player extends Activity
                 mCurrentTime.setText("--:--");
                 mTotalTime.setText("--:--");
                 mProgress.setProgress(0);
-                if (mProgressDialog == null && Music.sService.isPlaying()) {
+                if (mProgressDialog == null && pos < 1/*Music.sService.isPlaying()*/) {
                     mProgressDialog = ProgressDialog.show(this, "", "Buffering", true, false);
                     Log.w("Mp3Tunes", "created progress dialog: " + mProgressDialog.toString());
                     mProgressDialog.setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
@@ -434,6 +436,14 @@ public class Player extends Activity
     {
         String artUrl;
 
+        private void setArtUrl(Track t) {
+            RemoteMethod method 
+            = new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
+                    .addFileKey(t.getFileKey())
+                    .create();
+            artUrl = method.getCall();
+        }
+        
         @Override
         public void onPreExecute() {
         }
@@ -443,14 +453,11 @@ public class Player extends Activity
         {
             try {
                 if (Music.sService!= null) {
-                    //String albumId = Music.sService.getMetadata()[5];
-                    Integer albumId = Music.sService.getTrack().getAlbumId();
-                    artUrl = "http://content.mp3tunes.com/storage/albumartget/" + 
-                             albumId.toString() + "?sid=" + mLocker.getCurrentSession().getSessionId() + 
-                             "&partner_token=" + PrivateAPIKey.KEY;
+                    setArtUrl(Music.sService.getTrack());
                     return true;
                 }
             } catch (NullPointerException e) {
+                e.printStackTrace();
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -1,138 +1,52 @@
 package com.binaryelysium.mp3tunes.api.results;
 
+import java.util.ArrayList;
+
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
 import com.binaryelysium.mp3tunes.api.Track;
 
 
 public class SearchResult
-{
-    private String mType;
-    
-    private Artist[] mArtists;
-    private Album[] mAlbums;
-    private Track[] mTracks;
-    
-    private int mSet;
-    private int mCount;
-    private int mTotalResultSets;
-    
-    private int mTotalArtistResults;
-    private int mTotalAlbumResults;
-    private int mTotalTrackResults;
+{    
+    private ArrayList<Artist> mArtists;
+    private ArrayList<Album> mAlbums;
+    private ArrayList<Track> mTracks;
 
     public SearchResult()
     {
+        mArtists = new ArrayList<Artist>();
+        mAlbums  = new ArrayList<Album>();
+        mTracks  = new ArrayList<Track>();
     }
     
-    public String getType()
-    {
-        return mType;
-    }
-    
-    public void setType( String type )
-    {
-        type = mType;
-    }
-    
-    public int getSet()
-    {
-        return mSet;
-    }
-
-    
-    public int getCount()
-    {
-        return mCount;
-    }
-
-    
-    public int getTotalResultSets()
-    {
-        return mTotalResultSets;
-    }
-    
-    public void setSet( int set )
-    {
-        mSet = set;
-    }
-
-    
-    public void setCount( int count )
-    {
-        mCount = count;
-    }
-
-    
-    public void setTotalResultSets( int totalResultSets )
-    {
-        mTotalResultSets = totalResultSets;
-    }
-    
-    public Artist[] getArtists()
+    public ArrayList<Artist> getArtists()
     {
         return mArtists;
     }
     
-    public Album[] getAlbums()
+    public ArrayList<Album> getAlbums()
     {
         return mAlbums;
     }
     
-    public Track[] getTracks()
+    public ArrayList<Track> getTracks()
     {
         return mTracks;
     }
     
-    public void setArtists( Artist[] artists )
+    public void setArtists(ArrayList<Artist> artists)
     {
         mArtists = artists;
     }
     
-    public void setAlbums( Album[] albums )
+    public void setAlbums(ArrayList<Album> albums)
     {
         mAlbums = albums;
     }
     
-    public void setTracks( Track[] track )
+    public void setTracks(ArrayList<Track> track)
     {
         mTracks = track;
-    }
-    
-
-    
-    public int getTotalTrackResults()
-    {
-        return mTotalTrackResults;
-    }
-
-    
-    public void setTotalTrackResults( int totalTrackResults )
-    {
-        mTotalTrackResults = totalTrackResults;
-    }
-
-    
-    public int getTotalArtistResults()
-    {
-        return mTotalArtistResults;
-    }
-
-    
-    public int getTotalAlbumResults()
-    {
-        return mTotalAlbumResults;
-    }
-
-    
-    public void setTotalArtistResults( int totalArtistResults )
-    {
-        mTotalArtistResults = totalArtistResults;
-    }
-
-    
-    public void setTotalAlbumResults( int totalAlbumResults )
-    {
-        mTotalAlbumResults = totalAlbumResults;
     }
 }

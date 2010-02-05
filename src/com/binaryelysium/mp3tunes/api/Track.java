@@ -19,6 +19,8 @@
 
 package com.binaryelysium.mp3tunes.api;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 
 import android.os.Debug;
@@ -319,5 +321,32 @@ public class Track
         }
         
         return myFileKey.equals(otherFileKey);
+    }
+
+    public static Track trackFromJson(JSONObject obj)
+    {
+        Track t = new Track();
+        try {
+            t.mId          = obj.getInt("trackId");
+            t.mFileSize    = obj.getInt("trackFileSize");
+            t.mNumber      = obj.getInt("trackNumber");
+            t.mAlbumId     = obj.getInt("albumId");
+            t.mArtistId    = obj.getInt("artistId");
+            t.mTitle       = obj.getString("trackTitle");
+            t.mFileName    = obj.getString("trackFileName");
+            t.mFileKey     = obj.getString("trackFileKey");
+            t.mAlbumTitle  = obj.getString("albumTitle");
+            t.mAlbumYear   = obj.getString("albumYear");
+            t.mArtistName  = obj.getString("artistName");
+            //t.mAlbumArt    = obj.getString("albumArtURL");
+            t.mDownloadUrl = obj.getString("downloadURL");
+            t.mPlayUrl     = obj.getString("playURL");
+            t.mDuration    = obj.getDouble("trackLength");
+
+            return t;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

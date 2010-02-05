@@ -595,7 +595,7 @@ public class AlbumBrowser extends ListActivity
                 else
                     cursor = Music.sDb.getTableList( Music.Meta.ALBUM );
                 
-                Music.sDb.getTokens( Music.Meta.ALBUM );
+                //Music.sDb.getTokens( Music.Meta.ALBUM );
             }
             catch ( Exception e )
             {

@@ -5,6 +5,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaPlayer;
 
 public class GuiNotifier
 {
@@ -59,8 +60,24 @@ public class GuiNotifier
         send(PLAYBACK_FINISHED, t);
     }
     
-    public void sendPlaybackError(Track t)
+    public void sendPlaybackError(Track t, int errorType, int errorCode)
     {
+        String errorMessage = "Unknown Error";
+        if (errorType == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
+            errorMessage = "Internal Android media server died";
+        }
+        if (errorType == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
+            if (errorCode < 0) {
+                errorMessage = PlaybackErrorCodes.getError(errorCode);
+            }
+        }
+        
+        sendPlaybackError(t, errorMessage);
+    }
+    
+    public void sendPlaybackError(Track t, String error)
+    {
+        mNotifier.error(t, error);
         send(PLAYBACK_ERROR, t);
     }
     

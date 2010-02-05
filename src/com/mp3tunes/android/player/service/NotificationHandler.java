@@ -68,4 +68,19 @@ public class NotificationHandler
         mNm.cancel(NOTIFY_ID);
     }
 
+    public void error(Track t, String errorMessage)
+    {
+        String name = "Error";
+        String title = "";
+        if (t != null) {
+            name  = t.getArtistName();
+            title = t.getTitle();
+        }
+        
+        Notification  notification  = build(name, title, errorMessage);
+        
+        mNm.cancel(NOTIFY_ID);
+        mNm.notify(NOTIFY_ID, notification);
+    }
+
 }

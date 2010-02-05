@@ -199,13 +199,15 @@ public class Login extends Activity
             pass = params[1];
             try 
             {
-                locker = new com.binaryelysium.mp3tunes.api.Locker( PrivateAPIKey.KEY, user, pass );
+                locker = new com.binaryelysium.mp3tunes.api.Locker(user, pass);
                 return "";
             } catch (LockerException e) {
                 Log.w("mp3tunes", Log.getStackTraceString(e));
                 return e.getMessage();
             } catch (LoginException e) {
                 return "auth failure";
+            } catch (Exception e) {
+                return "Logic Error";
             }
         }
         
@@ -245,6 +247,10 @@ public class Login extends Activity
                 MP3tunesApplication.getInstance().presentError( Login.this,
                         getResources().getString( R.string.ERROR_SERVER_UNAVAILABLE_TITLE ),
                         getResources().getString( R.string.ERROR_SERVER_UNAVAILABLE ) );
+            }
+            else if (result.contains("Logic Error"))
+            {
+                MP3tunesApplication.getInstance().presentError( Login.this, "Bad Error", "This is likely a logic error");
             }
         }
         

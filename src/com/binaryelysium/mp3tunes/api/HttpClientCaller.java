@@ -110,7 +110,9 @@ public class HttpClientCaller
     {
         try {
             HttpClient client = new DefaultHttpClient();
-            HttpGet get = new HttpGet(method.getCall());
+            String url = method.getCall();
+            Log.w("Mp3tunes", "Calling: " + url);
+            HttpGet get = new HttpGet(url);
             ResponseHandler<String> responseHandler = new BasicResponseHandler();
             String response = client.execute(get, responseHandler);
             client.getConnectionManager().shutdown();

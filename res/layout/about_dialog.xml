@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/layout_about_root"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content" android:orientation="vertical" android:padding="5px">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@+id/about_player_name" android:id="@+id/about_player_name_view" android:paddingBottom="10px"></TextView><TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/about_code_link_view" android:text="@+id/about_code_link" android:linksClickable="true" android:textColorLink="#0000ff" android:autoLink="web"></TextView><TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/about_bugs_link_view" android:text="@+id/about_bugs_link" android:linksClickable="true" android:textColorLink="#0000ff" android:autoLink="web"></TextView><TextView android:text="@+id/about_text" android:id="@+id/about_text_view" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="10px"></TextView>
+
+
+
+
+</LinearLayout>

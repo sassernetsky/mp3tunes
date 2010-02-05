@@ -17,7 +17,7 @@
     <string name="menu_player">Player</string>
     <string name="menu_rename_playlist">Rename</string>
     <string name="menu_edit_playlist">Edit</string>
-    <string name="menu_delete">Delete</string>
+    <string name="menu_delete">Delete</string><string name="menu_about">About</string>
     
     
     <string name="title_nowplaying">Now Playing</string>
@@ -115,4 +115,9 @@
 
 
 
+
+<string name="about_text">Version: %1$s</string>
+<string name="about_code_link">Code:  http://code.google.com/p/mp3tunes/</string>
+<string name="about_bugs_link">Bugs: http://androidmp3.uservoice.com</string>
+<string name="about_player_name">MP3tunes Mobile Locker\n© 2010 MP3tunes, Inc.</string>
 </resources>

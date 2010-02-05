@@ -18,6 +18,8 @@
  ***************************************************************************/
 package com.binaryelysium.mp3tunes.api;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 
 public class Album {
@@ -92,18 +94,6 @@ public class Album {
 		return mArtistName;
 	}
 
-	public Track[] getTracks() throws InvalidSessionException {
-		if (mTracks == null) { // we need to fetch the tracks
-			try {
-				mTracks = Locker
-						.fetchTracks("", "", Integer.toString(this.mId), "", null).getData();
-			} catch (LockerException e) {
-				mTracks = new Track[0];
-			}
-		}
-		return mTracks;
-	}
-
 	public static Album albumFromResult(RestResult restResult) {
 		try {
 			Album a = new Album();
@@ -149,5 +139,24 @@ public class Album {
 		}
 		return null;
 	}
+
+    public static Album albumFromJson(JSONObject obj)
+    {
+        Album a = new Album();
+        try {
+            a.mId          = obj.getInt("albumId");
+            a.mSize        = obj.getInt("albumSize");
+            a.mArtistId    = obj.getInt("artistId");
+            a.mTrackCount  = obj.getInt("trackCount");
+            a.mHasArt      = obj.getInt("hasArt");
+            a.mName        = obj.getString("albumTitle");
+            a.mArtistName  = obj.getString("artistName");
+            a.mPurhaseDate = obj.getString("purchaseDate");
+            a.mReleaseDate = obj.getString("releaseDate");
+            return a;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
 
 }

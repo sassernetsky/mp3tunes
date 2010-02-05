@@ -1,5 +1,7 @@
 package com.binaryelysium.mp3tunes.api;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -46,7 +48,7 @@ public class RemoteMethod
     {
         mCall = call;
     }
-
+    
     public static class Builder {
         private String mMethod;
         private String mFileKey;
@@ -59,20 +61,20 @@ public class RemoteMethod
         
         public Builder addParam(String key, String val)
         {
-            params.add("&" + key + "=" + val);
+            params.add("&" + encode(key) + "=" + encode(val));
             return this;
         }
         
         public Builder addParam(String key)
         {
-            params.add("&" + key);
+            params.add("&" + encode(key));
             return this;
         }
         
         public Builder addFileKey(String key)
         {
             if (callNeedsFileKey(mMethod)) {
-                mFileKey = key;
+                mFileKey = encode(key);
             }
             return this;
         }
@@ -105,10 +107,11 @@ public class RemoteMethod
         //TODO It is probably better to do this without the huge conditional
         private static String getSiteForCall(String call)
         {
-            if (call == METHODS.LOGIN || call == METHODS.LOGOUT)
+            if (call.equals(METHODS.LOGIN) || call.equals(METHODS.LOGOUT))
                 return API_LOGIN;
-            else if (call == METHODS.LOCKER_PLAY || call == METHODS.LOCKER_GET || 
-                     call == METHODS.LOCKER_PUT  || call == METHODS.LOCKER_DELETE)
+            else if (call.equals(METHODS.LOCKER_PLAY) || call.equals(METHODS.LOCKER_GET) || 
+                     call.equals(METHODS.LOCKER_PUT)  || call.equals(METHODS.LOCKER_DELETE) ||
+                     call.equals(METHODS.ALBUM_ART_GET))
                 return API_CONTENT; 
             else 
                 return API_GENERAL;
@@ -116,17 +119,32 @@ public class RemoteMethod
         
         private static boolean callNeedsFileKey(String call)
         {
-            if (call == METHODS.LOCKER_PLAY   || call == METHODS.LOCKER_GET || 
-                call == METHODS.LOCKER_DELETE || call == METHODS.LOCKER_PUT)
+            if (call.equals(METHODS.LOCKER_PLAY)   || call.equals(METHODS.LOCKER_GET) || 
+                call.equals(METHODS.LOCKER_DELETE) || call.equals(METHODS.LOCKER_PUT) ||
+                call.equals(METHODS.ALBUM_ART_GET))
                 return true;
             return false;
         }
         
         private static boolean parseResponse(String call)
         {
-            if (call != METHODS.LOCKER_PLAY && call != METHODS.LOCKER_GET)
+            if (!call.equals(METHODS.LOCKER_PLAY) && !call.equals(METHODS.LOCKER_GET) &&
+                !call.equals(METHODS.ALBUM_ART_GET))
                 return true;
             return false;
+        }
+        
+        private static String encode(String s)
+        {
+            try {
+                String output = URLEncoder.encode(s, "UTF-8");
+                return output;
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return s;
         }
     }
 }

@@ -12,32 +12,38 @@ public class LockerContext
     private String  mPartnerToken;
     private static ContextRetriever sRetriever = new Retriever();
     
-    public Session getSession()
+    synchronized public Session getSession()
     {
-        return sRetriever.get().mSession;
+        LockerContext c = sRetriever.get();
+        return c.mSession;
     }
     
-    public String getSessionId()
+    synchronized public String getSessionId()
     {
-        return sRetriever.get().mSession.getSessionId();
+        LockerContext c = sRetriever.get();
+        Session s = c.mSession;
+        return s.getSessionId();
     }
     
-    public void setSession(Session session)
+    synchronized public void setSession(Session session)
     {
-        sRetriever.get().mSession = session;
+        LockerContext c = sRetriever.get();
+        c.mSession = session;
     }
     
-    public String getPartnerToken()
+    synchronized public String getPartnerToken()
     {
-        return sRetriever.get().mPartnerToken;
+        LockerContext c = sRetriever.get();
+        return c.mPartnerToken;
     }
     
-    public void setPartnerToken(String token)
+    synchronized public void setPartnerToken(String token)
     {
-        sRetriever.get().mPartnerToken = token;
+        LockerContext c = sRetriever.get();
+        c.mPartnerToken = token;
     }
     
-    public static LockerContext instance()
+    synchronized public static LockerContext instance()
     {
         return sRetriever.get();
     }
@@ -46,7 +52,7 @@ public class LockerContext
     {
     }
     
-    public static void setContextRetriever(ContextRetriever retriever)
+    synchronized public static void setContextRetriever(ContextRetriever retriever)
     {
         sRetriever = retriever;
     }

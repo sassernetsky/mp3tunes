@@ -23,23 +23,20 @@ public class Mp3tunesService extends Service
     private PlayerHandler       mPlayerHandler;
     private MusicPlayStateLocker mPlayStateLocker;
     
-    private Mp3TunesPhoneStateListener mPhoneStateListener;
-    private TelephonyManager           mTelephonyManager;
-    
     @Override
     public void onCreate()
     {
         super.onCreate();
 
-        // we don't want the service to be killed while playing
+        //we don't want the service to be killed while playing
+        //later we need to determine a persistence strategy so that
+        //can only set us in the foreground when we are actually playing
+        //music
         setForeground(true);
         
         mPlayStateLocker = new MusicPlayStateLocker(getBaseContext());
         mPlayerHandler   = new PlayerHandler(this, getBaseContext());
         mPlayStateLocker.lock();
-        
-        //mTelephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
-        //mTelephonyManager.listen(mPhoneStateListener, Mp3TunesPhoneStateListener.LISTEN_CALL_STATE);
     }
 
     @Override
@@ -65,8 +62,8 @@ public class Mp3tunesService extends Service
     @Override
     public boolean onUnbind(Intent intent)
     {
-        if (mPlayerHandler.getTrack().isPlaying())
-            return true;
+        //if (mPlayerHandler.getTrack().isPlaying())
+        //    return true;
 
         mDeferredStopHandler.deferredStopSelf();
         return true;

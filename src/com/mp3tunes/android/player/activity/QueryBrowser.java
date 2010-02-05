@@ -182,7 +182,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
             return null;
         }
     }
-    
+   
     private boolean gotNoResults(SearchCursor c)
     {
         if (c.getCount() > -1)
@@ -443,21 +443,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
                 tv2.setText(songs_albums);
             
             } else if (mimetype.equals("album")) {
-//                iv.setImageResource(R.drawable.albumart_mp_unknown_list);
-//                String name = cursor.getString(cursor.getColumnIndexOrThrow(
-//                        SearchManager.SUGGEST_COLUMN_TEXT_1));
-//                String displayname = name;
-//                if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
-//                    displayname = context.getString(R.string.unknown_album_name);
-//                }
-//                tv1.setText(displayname);
-//                
-//                name = cursor.getString(cursor.getColumnIndexOrThrow("data1"));
-//                displayname = name;
-//                if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
-//                    displayname = context.getString(R.string.unknown_artist_name);
-//                }
-//                tv2.setText(displayname);
+
             } else if (mimetype.equals("track")) {
                 iv.setImageResource(R.drawable.song_icon);
                 String name = c.getString(Music.TRACK_MAPPING.TITLE);
@@ -504,6 +490,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
             }
             catch ( Exception e )
             {
+                e.printStackTrace();
                 return false;
             }
             return true;

@@ -22,6 +22,8 @@ package com.binaryelysium.mp3tunes.api;
 import java.util.Collection;
 import java.util.List;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParser;
 
 public class Playlist {
@@ -161,5 +163,20 @@ public class Playlist {
 	public Collection<Track> getTracks() {
 		return mTracks;
 	}
+
+    public static Playlist playlistFromJson(JSONObject obj)
+    {
+        Playlist p = new Playlist();
+        try {
+            p.mId       = obj.getString("playlistId");
+            p.mName     = obj.getString("playlistTitle");
+            p.mFileName = obj.getString("fileName");
+            p.mCount    = obj.getInt("fileCount");
+        } catch (JSONException e) {
+        e.printStackTrace();
+        return null;
+        }
+        return p;
+    }
 
 }

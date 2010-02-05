@@ -53,17 +53,17 @@ public class Artist {
 	private Artist() {
 	}
 	
-	public Album[] getAlbums() throws InvalidSessionException {
-		if (mAlbums == null) { // we need to fetch the tracks
-			try {
-				mAlbums = Locker
-						.fetchAlbums(Integer.toString(this.mId), "", "", null).getData();
-			} catch (LockerException e) {
-				mAlbums = new Album[0];
-			}
-		}
-		return mAlbums;
-	}
+//	public Album[] getAlbums() throws InvalidSessionException {
+//		if (mAlbums == null) { // we need to fetch the tracks
+//			try {
+//				mAlbums = Locker
+//						.fetchAlbums(Integer.toString(this.mId), "", "", null).getData();
+//			} catch (LockerException e) {
+//				mAlbums = new Album[0];
+//			}
+//		}
+//		return mAlbums;
+//	}
 
 	public static Artist artistFromResult(RestResult restResult) {
 		try {

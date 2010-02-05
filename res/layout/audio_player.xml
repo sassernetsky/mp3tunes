@@ -150,11 +150,7 @@
                 android:id="@+id/fwd"
                 style="@+style/TunesButton.Fwd" />
 
-            <ImageButton
-                android:id="@+id/playlist_button"
-                style="@+style/TunesButton.Playlist"
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content" />
+            
 
         </LinearLayout>
     </RelativeLayout>

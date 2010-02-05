@@ -28,6 +28,7 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
 import android.app.ProgressDialog;
@@ -36,17 +37,25 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.RemoteException;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ListView;
+import android.widget.TextView;
 
 /**
  * Primary activity that encapsulates browsing the locker
@@ -56,129 +65,101 @@ import android.widget.ListView;
  */
 public class LockerList extends ListActivity
 {
-    // the database cursor
-    private Cursor mCursor = null;
-
-    // id List for main menu
-    private static final int[] mMainOpts = { R.string.artists, R.string.albums,
-            R.string.playlists, R.string.radio, R.string.search };
-
-    // icon list for the main menu
-    private static final int[] mMainOptsIcon = { R.drawable.artist_icon, R.drawable.album_icon,
-             R.drawable.playlist_icon, R.drawable.playlist_icon, R.drawable.search_icon };
-
-    // number of main menu options
-    private static final int mMainOptsNum = 5;
-
-    // C++ style enum of the possible states of the LockerList
-    private static final class STATE
-    {
-
-        public static final int MAIN = 0;
-        //public static final int ARTIST = 1;
-        //public static final int ALBUM = 2;
-        //public static final int TRACK = 3;
-        //public static final int PLAYLISTS = 4;
-        //public static final int SEARCH = 5;
-    };
-
-    // tracks the current position in the menu
-    private int mPositionMenu = STATE.MAIN;
-
-    // tracks the current row position in main menu
-    private int mPositionRow = 0;
-
-    // sense of the animation when changing menu
-    private static final int TRANSLATION_LEFT = 0;
-    private static final int TRANSLATION_RIGHT = 1;
     
-    private static final int DIALOG_REFRESH = 0;
-
-    private Animation mLTRanim;
-    private Animation mRTLanim;
+    //Static finals
+    static class Option {
+        Option(int one, int two)
+        {
+            str  = one;
+            icon = two;
+        }
+        public final int str;
+        public final int icon;
+    };
+    private static final Option[] mMainOptions = {
+        new Option(R.string.artists, R.drawable.artist_icon),
+        new Option(R.string.albums, R.drawable.album_icon),
+        new Option(R.string.playlists, R.drawable.playlist_icon),
+        new Option(R.string.radio, R.drawable.playlist_icon),
+        new Option(R.string.search, R.drawable.search_icon)
+    };
+    
+    // sense of the animation when changing menu
+    private static final int TRANSLATION_LEFT  = 0;
+    private static final int TRANSLATION_RIGHT = 1;
+    private static final int ABOUT_DIALOG      = 0;
 
     private IntentFilter mIntentFilter;
+    private Dialog  mAboutDialog;
 
     @Override
-    public void onCreate( Bundle icicle )
+    public void onCreate(Bundle state)
     {
-        super.onCreate( icicle );
-        requestWindowFeature( Window.FEATURE_NO_TITLE );
-        setContentView( R.layout.lockerlist );
-
-        mLTRanim = AnimationUtils.loadAnimation( this, R.anim.ltrtranslation );
-        mRTLanim = AnimationUtils.loadAnimation( this, R.anim.rtltranslation );
+        super.onCreate(state);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        setContentView(R.layout.lockerlist);
 
         // this prevents the background image from flickering when the
         // animations run
         getListView().setAnimationCacheEnabled( false );
-
-        if(! Music.connectToDb( this ) )
-            logout(); //TODO show error
         
-
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_ERROR );
         mIntentFilter.addAction(GuiNotifier.META_CHANGED );
 
-        
-        Music.bindToService( this );
-        displayMainMenu( TRANSLATION_LEFT );
-    }
-    
-    @Override
-    protected void onSaveInstanceState( Bundle outState )
-    {
-        //TODO save state
-    }
-    
-    @Override
-    protected void onRestoreInstanceState( Bundle state )
-    {
-        //TODO restore state
+        createAlertDialog();
+        showMainMenu( TRANSLATION_LEFT );
     }
 
     @Override
     protected void onDestroy()
     {
-        if ( mCursor != null )
-            mCursor.close();
-        Music.unconnectFromDb( this );
-        Music.unbindFromService( this );
-        super.onDestroy();
+        super.onDestroy();    
     }
     
     @Override
     protected void onPause() {
-        unregisterReceiver(mStatusListener);
         super.onPause();
+        unregisterReceiver(mStatusListener);
+        
     }
     
     @Override
     public void onResume() {
         registerReceiver( mStatusListener, mIntentFilter );
-        
         super.onResume();
     }
+    
+    @Override
+    public void onStop() 
+    {
+        if (mAboutDialog.isShowing()) dismissDialog(ABOUT_DIALOG);
+        super.onStop();
+    }
+    
+    @Override
+    protected Dialog onCreateDialog(int id) {
+        Dialog d = null;
+        if(id == ABOUT_DIALOG){
+            createAlertDialog();
+            d = mAboutDialog;
+        }
+        return d;
+    }
+
     
     private BroadcastReceiver mStatusListener = new BroadcastReceiver()
     {
         @Override
         public void onReceive( Context context, Intent intent )
         {
-
             String action = intent.getAction();
-            if ( action.equals(GuiNotifier.PLAYBACK_ERROR))
-            {
+            if ( action.equals(GuiNotifier.PLAYBACK_ERROR)) {
 
-            }
-            else if( action.equals(GuiNotifier.META_CHANGED))
-            {
+            } else if( action.equals(GuiNotifier.META_CHANGED)){
                 //Update now playing buttons after the service is re-bound
-                
             }
         }
-
     };
 
     /** Creates the menu items */
@@ -187,10 +168,8 @@ public class LockerList extends ListActivity
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
 
-
         return true;
     }
-    
     
     @Override
     public boolean onPrepareOptionsMenu( Menu menu )
@@ -202,6 +181,7 @@ public class LockerList extends ListActivity
     /** Handles menu clicks */
     public boolean onOptionsItemSelected( MenuItem item )
     {
+        Intent intent;
         switch ( item.getItemId() )
         {
         case R.id.menu_opt_logout:
@@ -209,97 +189,72 @@ public class LockerList extends ListActivity
             logout();
             return true;
         case R.id.menu_opt_settings:
-            Intent intent;
-            intent = new Intent( LockerList.this, Preferences.class );
-            startActivity( intent );
+            intent = new Intent(LockerList.this, Preferences.class);
+            startActivity(intent);
+            return true;
+        case R.id.menu_opt_about:
+            showDialog(ABOUT_DIALOG);
             return true;
         }
         return false;
     }
 
     /** displays the main menu */
-    private void displayMainMenu( int sense )
+    private void showMainMenu( int sense )
     {
-        ArrayList<ListEntry> iconifiedEntries = new ArrayList<ListEntry>();
+        ArrayList<ListEntry> entries = new ArrayList<ListEntry>();
+        int listArrow = R.drawable.list_arrow;
 
-        for ( int i = 0; i < mMainOptsNum; i++ )
-        { // add all strings to the adapter
-            ListEntry entry = new ListEntry( getString( mMainOpts[i] ), mMainOptsIcon[i],
-                    getString( mMainOpts[i] ), R.drawable.list_arrow );
-            iconifiedEntries.add( entry );
+        for (Option o : mMainOptions) {
+            entries.add(new ListEntry(getString(o.str), o.icon, getString(o.str), listArrow));    
         }
-        ListAdapter adapter = new ListAdapter( LockerList.this );
-        adapter.setSourceIconified( iconifiedEntries );
-        setListAdapter( adapter );
-
-        getListView().setSelection( mPositionRow );
-        performSlide( sense );
+        
+        ListAdapter adapter = new ListAdapter(LockerList.this);
+        adapter.setSourceIconified(entries);
+        setListAdapter(adapter);
+        
+        if (sense == TRANSLATION_LEFT)
+            getListView().startAnimation(AnimationUtils.loadAnimation(this, R.anim.ltrtranslation));
+        else if (sense == TRANSLATION_RIGHT)
+            getListView().startAnimation(AnimationUtils.loadAnimation(this, R.anim.rtltranslation));
     }
 
-    protected void onListItemClick( ListView l, View vu, int position, long id )
-    {
-        // Show the requested option
-        refreshMenu( position );
-    }
-
-    /**
-     * Updates the screen with fresh menu options according to the current STATE
-     * and which item was clicked.
-     */
-    private void refreshMenu( int pos )
-    {
-        if ( mPositionMenu == STATE.MAIN )
-        {
-            mPositionRow = pos;
-            showSubMenu( TRANSLATION_LEFT );
-        }
-    }
-
-    private void showSubMenu( int sense )
+    private void showSubMenu( int sense , int pos)
     {
         // which menu option has been selected
-        Intent intent;
-        switch ( mMainOpts[mPositionRow] )
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        switch (mMainOptions[pos].str)
         {
         case R.string.artists:
-            intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/artist");
-            startActivity(intent);
-            return; 
-
+            break; 
         case R.string.albums:
-            intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/album");
-            startActivity(intent);
-            return;
-
+            break;
         case R.string.tracks:
-            intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
-            startActivity(intent);
-            return;
-
+            break;
         case R.string.search:
             onSearchRequested();
-//            mPositionMenu = STATE.SEARCH;
-//            (( ListAdapter ) getListAdapter() ).disableLoadBar();
-//            toggleHeader();
-            
-            break;
-
+            return;
         case R.string.radio:
-            intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/radio");
-            startActivity(intent);
             break;
         case R.string.playlists:
-            intent = new Intent(Intent.ACTION_PICK);
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/playlist");
-            startActivity(intent);
             break;
+        default:
+            return;
         }
+        startActivity(intent);
     }
     
+    @Override
+    protected void onListItemClick( ListView l, View vu, int position, long id )
+    {
+        showSubMenu(TRANSLATION_LEFT, position);
+    }
+
 
     /**
      * Clears all session data (and the cache), and sends the user back to the
@@ -317,61 +272,42 @@ public class LockerList extends ListActivity
         SharedPreferences settings = getSharedPreferences( Login.PREFS, 0 );
         SharedPreferences.Editor editor = settings.edit();
         editor.putBoolean("auto_login", false);
-        //editor.remove( "mp3tunes_user" );
-        //editor.remove( "mp3tunes_pass" );
         editor.commit();
         Music.sDb.clearDB();
+        try {
+            Music.sService.stop();
+        } catch (RemoteException e) {
+        } catch (Exception e) {
+        }
     }
-
-    protected Dialog onCreateDialog( int id )
+    
+    private void createAlertDialog()
     {
-        switch ( id )
-        {
-        case DIALOG_REFRESH: {
-            ProgressDialog dialog = new ProgressDialog( this );
-            dialog.setMessage( getString( R.string.loading_albums ) );
-            dialog.setIndeterminate( true );
-            dialog.setCancelable( false );
-            return dialog;
-        }
+        AlertDialog.Builder builder;
+        LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+        View layout = inflater.inflate(R.layout.about_dialog, (ViewGroup)findViewById(R.id.layout_about_root));
 
+        
+        ((TextView)layout.findViewById(R.id.about_player_name_view)).setText(R.string.about_player_name);
+        ((TextView)layout.findViewById(R.id.about_bugs_link_view)).setText(R.string.about_bugs_link);
+        ((TextView)layout.findViewById(R.id.about_code_link_view)).setText(R.string.about_code_link);
+        TextView text = (TextView)layout.findViewById(R.id.about_text_view);
+        
+        String version = "unknown";
+        try {
+            version = getPackageManager().getPackageInfo("com.mp3tunes.android.player", 0).versionName;
+        } catch (NameNotFoundException e) {
+            e.printStackTrace();
         }
-        return null;
+        String t = getString(R.string.about_text);
+        t = String.format(t, version);
+        text.setText(t);
 
+        builder = new AlertDialog.Builder(this);
+        builder.setView(layout);
+        mAboutDialog = builder.create();
+        mAboutDialog.setCancelable(true);
+        mAboutDialog.setCanceledOnTouchOutside(true);
     }
-  
-  private void performSlide( int sense )
-  {
-      if ( sense == TRANSLATION_LEFT )
-      {
-          getListView().startAnimation( mRTLanim );
-      }
-      else if ( sense == TRANSLATION_RIGHT )
-      {
-          getListView().startAnimation( mLTRanim );
-      }
-  }
-  
-//  private void showPlayer()
-//  {
-//      try
-//      {
-//          if( Music.sService != null ) 
-//          {
-//              Music.sService.start();
-//              Intent i = new Intent( LockerList.this, Player.class );
-////              i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//              startActivity( i );
-//          } else
-//              System.out.println("Player is null!");
-//          
-//      }
-//      catch ( RemoteException e )
-//      {
-//          // TODO Auto-generated catch block
-//          e.printStackTrace();
-//      }
-//  }
-
 }
 

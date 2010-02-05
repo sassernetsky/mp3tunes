@@ -84,17 +84,17 @@ public class MP3tunesApplication extends Application
      * @param description
      */
     public void presentError(Context ctx, String title, String description) {
-        AlertDialog.Builder d = new AlertDialog.Builder(ctx);
-        d.setTitle(title);
-        d.setMessage(description);
-        d.setIcon(android.R.drawable.ic_dialog_alert);
-        d.setNeutralButton("OK",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton)
-                    {
-                    }
-                });
-        d.show();
+        //AlertDialog.Builder d = new AlertDialog.Builder(ctx);
+        //d.setTitle(title);
+        //d.setMessage(description);
+        //d.setIcon(android.R.drawable.ic_dialog_alert);
+        //d.setNeutralButton("OK",
+        //        new DialogInterface.OnClickListener() {
+        //            public void onClick(DialogInterface dialog, int whichButton)
+        //            {
+        //            }
+        //        });
+        //d.show();
     }    
     
     public void setLocker(Locker l)
