@@ -1,13 +1,13 @@
 package com.mp3tunes.android.player.activity;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,40 +23,35 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.PrivateAPIKey;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteImageHandler;
 import com.mp3tunes.android.player.RemoteImageView;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.util.Worker;
 
 
 public class Player extends Activity
 {
-    protected static final int REFRESH = 0;
+    private static final int REFRESH = 0;
+    private static final int BUFFERING_DIALOG = 0;  
 
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
     private ImageButton mNextButton;
-    //private ImageButton mQueueButton;
     private RemoteImageView mAlbum;
     private TextView mCurrentTime;
     private TextView mTotalTime;
     private TextView mArtistName;
     private TextView mTrackName;
     private ProgressBar mProgress;
-    static private ProgressDialog mProgressDialog;
+    private ProgressDialog mBufferingDialog;
     
     private long mDuration;
     private boolean paused;
     
-    private Locker mLocker;
     private Worker mAlbumArtWorker;
     private RemoteImageHandler mAlbumArtHandler;
     private IntentFilter mIntentFilter;
@@ -69,38 +64,35 @@ public class Player extends Activity
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.audio_player);
         
-        mLocker = MP3tunesApplication.getInstance().getLocker();
-        
-        mCurrentTime = (TextView) findViewById(R.id.currenttime);
-        mTotalTime = (TextView) findViewById(R.id.totaltime);
-        mProgress = (ProgressBar) findViewById(android.R.id.progress);
+        mCurrentTime = (TextView)findViewById(R.id.currenttime);
+        mTotalTime   = (TextView)findViewById(R.id.totaltime);
+        mAlbum       = (RemoteImageView)findViewById(R.id.album);
+        mArtistName  = (TextView)findViewById(R.id.track_artist);
+        mTrackName   = (TextView)findViewById(R.id.track_title);
+        mProgress    = (ProgressBar)findViewById(android.R.id.progress);
         mProgress.setMax(1000);
-        mAlbum = (RemoteImageView) findViewById(R.id.album);
-        mArtistName = (TextView) findViewById(R.id.track_artist);
-        mTrackName = (TextView) findViewById(R.id.track_title);
         
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
-        mPrevButton.setOnClickListener(mPrevListener);
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
-        mPlayButton.setOnClickListener(mPlayListener);
-        mPlayButton.requestFocus();
-
         mNextButton = ( ImageButton ) findViewById( R.id.fwd );
+        
+        mPrevButton.setOnClickListener(mPrevListener);
+        mPlayButton.setOnClickListener(mPlayListener);
         mNextButton.setOnClickListener(mNextListener);
         
-        //mQueueButton = ( ImageButton ) findViewById( R.id.playlist_button );
-        //mQueueButton.setOnClickListener(mQueueListener);
+        mPlayButton.requestFocus();
         
-        mAlbumArtWorker = new Worker("album art worker");
-        mAlbumArtHandler = new RemoteImageHandler(mAlbumArtWorker.getLooper(),
-                mHandler);
-        Music.bindToService(this);
+        mAlbumArtWorker  = new Worker("album art worker");
+        mAlbumArtHandler = new RemoteImageHandler(mAlbumArtWorker.getLooper(), mHandler);
+        
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(GuiNotifier.META_CHANGED);
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_FINISHED);
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_STATE_CHANGED);
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_ERROR);
         mIntentFilter.addAction(GuiNotifier.DATABASE_ERROR);
+        
+        Music.bindToService(this);
     }
     
     @Override
@@ -177,82 +169,48 @@ public class Player extends Activity
     }
     
     private View.OnClickListener mPrevListener = new View.OnClickListener() {
-
-        public void onClick(View v) {
-
-            if (Music.sService == null)
-                return;
-            try
-            {
+        public void onClick(View v) 
+        {
+            if (Music.sService == null) return;
+            try {
                 Music.sService.prev();
-            }
-            catch ( RemoteException e )
-            {
-                // TODO Auto-generated catch block
+            } catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
     };
     
     private View.OnClickListener mPlayListener = new View.OnClickListener() {
+        public void onClick(View v) 
+        {
 
-        public void onClick(View v) {
-
-            if (Music.sService== null)
-                return;
-            try
-            {
+            if (Music.sService== null) return;
+            try {
                 Music.sService.togglePlayback();
-            }
-            catch ( RemoteException e )
-            {
-                // TODO Auto-generated catch block
+            } catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
     };
     
-    private View.OnClickListener mQueueListener = new View.OnClickListener() {
-
-        public void onClick(View v) 
-        {
-            startActivity(
-                    new Intent(Intent.ACTION_EDIT)
-                    .setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track")
-                    .putExtra("playlist", "nowplaying")
-            );
-        }
-    };
-    
     private void setPauseButtonImage()
     {
-         try
-        {
-            if ( Music.sService!= null && Music.sService.isPaused() )
-            {
+         try {
+            if (Music.sService != null && Music.sService.isPaused()) {
                 mPlayButton.setImageResource( R.drawable.play_button );
-            }
-            else
-            {
+            } else {
                 mPlayButton.setImageResource( R.drawable.pause_button );
             }
-        }
-        catch ( RemoteException ex )
-        {
-        }
+        } catch ( RemoteException ex ) {}
     }
     
     private View.OnClickListener mNextListener = new View.OnClickListener() {
         public void onClick(View v) {
             if (Music.sService== null)
                 return;
-            try
-            {
+            try {
                 Music.sService.next();
-            }
-            catch ( RemoteException e )
-            {
-                // TODO Auto-generated catch block
+            } catch ( RemoteException e ) {
                 e.printStackTrace();
             }
         }
@@ -260,38 +218,23 @@ public class Player extends Activity
     
     private BroadcastReceiver mStatusListener = new BroadcastReceiver() {
 
-        public void onReceive(Context context, Intent intent) {
-
-            String action = intent.getAction();
-            if (action.equals(GuiNotifier.META_CHANGED)) {
-                // redraw the artist/title info and
-                // set new max for progress bar
-                updateTrackInfo();
-            } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
-                dismissDialog();
-                finish();
-            } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
-                MP3tunesApplication.getInstance().presentError(context,
-                        getResources().getString(R.string.ERROR_GENERIC_TITLE),
-                        getResources().getString(R.string.ERROR_GENERIC));
-                dismissDialog();
-                finish();
-            } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
-                // TODO add a skip counter and try to skip 3 times before
-                // display an error message
-                if (Music.sService == null)
-                    return;
-                String error = null; // TODO pass some error messages?
-                if (error != null) {
-                    MP3tunesApplication.getInstance().presentError(context,
-                            error, error);
-                } else {
-                    MP3tunesApplication.getInstance().presentError(context,
-                            getResources().getString(R.string.ERROR_PLAYBACK_FAILED_TITLE),
-                            getResources().getString(R.string.ERROR_PLAYBACK_FAILED));
+        public void onReceive(Context context, Intent intent) 
+        {
+            try {
+                String action = intent.getAction();
+                if (action.equals(GuiNotifier.META_CHANGED)) {
+                    updateTrackInfo();
+                } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
+                    dismissDialog(BUFFERING_DIALOG);
+                    finish();
+                } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
+                    dismissDialog(BUFFERING_DIALOG);
+                    finish();
+                } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
+                    setPauseButtonImage();
                 }
-            } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
-                setPauseButtonImage();
+            } catch (IllegalArgumentException e) {
+                Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }
         }
     };
@@ -305,28 +248,6 @@ public class Player extends Activity
             int album_id = track.getAlbumId();
             mArtistName.setText(track.getArtistName());
             mTrackName.setText(track.getTitle());
-            //String[] metadata = Music.sService.getMetadata();
-            //String artistName = metadata[2];
-            //String trackName = metadata[0];
-            
-            
-            //int album_id;
-            //if (metadata[5].equals(Mp3tunesService.UNKNOWN)) {
-            //	album_id = 0;
-            //} else {
-            //	album_id = Integer.valueOf( metadata[5] );
-            //}
-            
-            //if(artistName.equals(Mp3tunesService.UNKNOWN)) {
-            //    mArtistName.setText("");
-            //} else {
-            //    mArtistName.setText(artistName);
-            //}
-            //if(trackName.equals(Mp3tunesService.UNKNOWN)) {
-            //    mTrackName.setText("");
-            //} else {
-            //    mTrackName.setText(trackName);
-            //}
 
             Bitmap bit = Music.getArtworkQuick( Player.this, album_id, mAlbum.getWidth(), mAlbum.getHeight() );
             mAlbum.setArtwork( bit );
@@ -339,9 +260,8 @@ public class Player extends Activity
             setPauseButtonImage();
         } catch (java.util.concurrent.RejectedExecutionException e) {
             e.printStackTrace();
-        } catch (RemoteException ex) {
-            // FIXME why do we finish() ?????
-            finish();
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
     
@@ -354,52 +274,53 @@ public class Player extends Activity
         }
     }
     
-    private void dismissDialog()
-    {
-        if (mProgressDialog != null) {
-            Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
-            mProgressDialog.dismiss();
-            mProgressDialog = null;
+    @Override
+    protected Dialog onCreateDialog(int id) {
+        Dialog d = null;
+        if(id == BUFFERING_DIALOG){
+            createBufferingDialog();
+            d = mBufferingDialog;
         }
+        return d;
+    }
+    
+    private void createBufferingDialog()
+    {
+        mBufferingDialog = new ProgressDialog(this);
+        mBufferingDialog.setTitle("");
+        mBufferingDialog.setMessage("Buffering");
+        mBufferingDialog.setIndeterminate(true);
+        mBufferingDialog.setCancelable(true);
     }
 
-    //TODO: Just  hunch but this looks way too complicated we should try to refactor this
     private long refreshNow() {
 
-        if (Music.sService== null)
-            return 500;
-        try {
-            mDuration = Music.sService.getDuration();
-            long pos = Music.sService.getPosition();
-            int buffpercent = Music.sService.getBufferPercent();
-            long remaining = 1000 - (pos % 1000);
-            if ((pos >= 0) && (mDuration > 0) && (pos <= mDuration)) {
-                mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
-                mTotalTime.setText(Music.makeTimeString(this, mDuration / 1000));
-                mProgress.setProgress( (int) ( 1000 * pos / mDuration ) );
-                mProgress.setSecondaryProgress( buffpercent * 10 );
-                if (mProgressDialog != null) {
-                    Log.w("Mp3Tunes", "dismissing progress dialog: " + mProgressDialog.toString());
-                    mProgressDialog.dismiss();
-                    mProgressDialog = null;
+        if (Music.sService != null) {
+            try {
+                mDuration = Music.sService.getDuration();
+                long pos  = Music.sService.getPosition();
+                int buffpercent = Music.sService.getBufferPercent();
+                long remaining = 1000 - (pos % 1000);
+                if (pos > 0 && mDuration > 0 && pos <= mDuration) {
+                    mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
+                    mTotalTime.setText(Music.makeTimeString(this, mDuration / 1000));
+                    mProgress.setProgress((int)(1000 * pos / mDuration));
+                    mProgress.setSecondaryProgress(buffpercent * 10);
+                    dismissDialog(BUFFERING_DIALOG);
+                } else {
+                    mCurrentTime.setText("--:--");
+                    mTotalTime.setText("--:--");
+                    mProgress.setProgress(0);
+                    if(pos < 1) showDialog(BUFFERING_DIALOG);
                 }
-                
-            } else {
-                mCurrentTime.setText("--:--");
-                mTotalTime.setText("--:--");
-                mProgress.setProgress(0);
-                if (mProgressDialog == null && pos < 1/*Music.sService.isPlaying()*/) {
-                    mProgressDialog = ProgressDialog.show(this, "", "Buffering", true, false);
-                    Log.w("Mp3Tunes", "created progress dialog: " + mProgressDialog.toString());
-                    mProgressDialog.setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
-                    mProgressDialog.setCancelable(true);
-                }
+                // return the number of milliseconds until the next full second, so
+                // the counter can be updated at just the right time
+                return remaining;
+            } catch (IllegalArgumentException e) {
+                Log.e("Mp3Tunes", Log.getStackTraceString(e));
+            } catch (RemoteException e) {
+                Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }
-            // return the number of milliseconds until the next full second, so
-            // the counter can be updated at just the right time
-            return remaining;
-        } catch (RemoteException ex) {
-            Log.e("Mp3Tunes", Log.getStackTraceString(ex));
         }
         return 500;
     }
@@ -417,13 +338,6 @@ public class Player extends Activity
                 case RemoteImageHandler.REMOTE_IMAGE_DECODED:
                     mAlbum.setArtwork((Bitmap) msg.obj);
                     mAlbum.invalidate();
-                    //try {
-                        //if (Music.sService!= null)
-                        //    Music.sService
-                        //            .setAlbumArt((Bitmap) msg.obj);
-                    //} catch (RemoteException e) {
-                    //    e.printStackTrace();
-                    //}
                     break;
     
                 default:
@@ -470,11 +384,8 @@ public class Player extends Activity
             if (result) {
                 System.out.println("Art url: " + artUrl);
                 if (artUrl != GuiNotifier.UNKNOWN) {
-                    mAlbumArtHandler
-                        .removeMessages(RemoteImageHandler.GET_REMOTE_IMAGE);
-                    mAlbumArtHandler.obtainMessage(
-                        RemoteImageHandler.GET_REMOTE_IMAGE, artUrl)
-                        .sendToTarget();
+                    mAlbumArtHandler.removeMessages(RemoteImageHandler.GET_REMOTE_IMAGE);
+                    mAlbumArtHandler.obtainMessage(RemoteImageHandler.GET_REMOTE_IMAGE, artUrl).sendToTarget();
                 }
             } else {
                 System.out.println("Art url: unknown"); 

@@ -20,7 +20,6 @@ package com.binaryelysium.mp3tunes.api;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
 
 public class Artist {
 	int mId;
@@ -53,52 +52,6 @@ public class Artist {
 	private Artist() {
 	}
 	
-//	public Album[] getAlbums() throws InvalidSessionException {
-//		if (mAlbums == null) { // we need to fetch the tracks
-//			try {
-//				mAlbums = Locker
-//						.fetchAlbums(Integer.toString(this.mId), "", "", null).getData();
-//			} catch (LockerException e) {
-//				mAlbums = new Album[0];
-//			}
-//		}
-//		return mAlbums;
-//	}
-
-	public static Artist artistFromResult(RestResult restResult) {
-		try {
-			Artist a = new Artist();
-			int event = restResult.getParser().nextTag();
-			boolean loop = true;
-			while (loop) {
-				String name = restResult.getParser().getName();
-				switch (event) {
-				case XmlPullParser.START_TAG:
-					if (name.equals("artistId")) {
-						a.mId = Integer.parseInt(restResult.getParser().nextText());
-					} else if (name.equals("artistSize")) {
-						a.mSize = Integer.parseInt(restResult.getParser().nextText());
-					} else if (name.equals("artistName")) {
-						a.mName = restResult.getParser().nextText();
-					} else if (name.equals("albumCount")) {
-						a.mAlbumCount = Integer.parseInt(restResult.getParser().nextText());
-					} else if (name.equals("trackCount")) {
-						a.mTrackCount = Integer.parseInt(restResult.getParser().nextText());
-					}
-					break;
-				case XmlPullParser.END_TAG:
-					if (name.equals("item"))
-						loop = false;
-					break;
-				}
-				event = restResult.getParser().next();
-			}
-			return a;
-		} catch (Exception e) {
-		}
-		return null;
-	}
-
     public static Artist artistFromJson(JSONObject obj)
     {
         Artist a = new Artist();

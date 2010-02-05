@@ -8,7 +8,7 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
-import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
+import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.activity.Login;
 

@@ -46,19 +46,13 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
-import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Playlist;
-import com.binaryelysium.mp3tunes.api.RemoteMethod;
-import com.binaryelysium.mp3tunes.api.Token;
 import com.binaryelysium.mp3tunes.api.Track;
-import com.binaryelysium.mp3tunes.api.results.DataResult;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.LockerCache;
-import com.mp3tunes.android.player.service.Logger;
-import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 /**
  * This class is essentially a wrapper for storing MP3tunes locker data in an
@@ -83,18 +77,15 @@ public class LockerDb
     private SQLiteStatement    mInsertArtist;
     private SQLiteStatement    mInsertAlbum;
     private SQLiteStatement    mInsertPlaylist;
-    private SQLiteStatement    mInsertToken;
 
     private SQLiteStatement    mUpdateArtist;
     private SQLiteStatement    mUpdateAlbum;
     private SQLiteStatement    mUpdatePlaylist;
-    private SQLiteStatement    mUpdateToken;
 
     private SQLiteStatement    mArtistExists;
     private SQLiteStatement    mAlbumExists;
     private SQLiteStatement    mTrackExists;
     private SQLiteStatement    mPlaylistExists;
-    private SQLiteStatement    mTokenExists;
 
     public static final String KEY_ID                 = "_id";
     public static final String KEY_PLAY_URL           = "play_url";
@@ -131,8 +122,9 @@ public class LockerDb
     public static final String TABLE_TOKEN            = "token";
     public static final String TABLE_CURRENT_PLAYLIST = "current_playlist";
 
-    public LockerDb(Context context, Locker locker)
+    public LockerDb(Context context)
     {
+        mLocker = new Locker();
         // Open the database
         mDb = (new LockerDbHelper(context, null)).getWritableDatabase();
         if (mDb == null) {
@@ -151,18 +143,14 @@ public class LockerDb
                 .compileStatement("INSERT INTO artist   (_id, artist_name, album_count, track_count) VALUES (?, ?, ?, ?)");
         mInsertPlaylist = mDb
                 .compileStatement("INSERT INTO playlist (_id, playlist_name, file_count, file_name, playlist_order) VALUES (?, ?, ?, ?, ?)");
-        mInsertToken = mDb
-                .compileStatement("INSERT INTO token    (type, token, count) VALUES (?, ?, ?)");
-
+        
         mUpdateArtist = mDb
                 .compileStatement("UPDATE artist   SET artist_name=?, album_count=?, track_count=? WHERE _id=?");
         mUpdateAlbum = mDb
                 .compileStatement("UPDATE album    SET album_name=?, artist_name=?, artist_id=?, year=?, track_count=?, cover_url=? WHERE _id=?");
         mUpdatePlaylist = mDb
                 .compileStatement("UPDATE playlist SET playlist_name=?, file_count=?, file_name=?, playlist_order=? WHERE _id=?");
-        mUpdateToken = mDb
-                .compileStatement("UPDATE token    SET count=? WHERE token=? AND type=?");
-
+        
         mArtistExists = mDb.compileStatement("SELECT " + KEY_ID
                 + " FROM artist   WHERE " + KEY_ID + "=?");
         mAlbumExists = mDb.compileStatement("SELECT " + KEY_ID
@@ -171,11 +159,7 @@ public class LockerDb
                 + " FROM track    WHERE " + KEY_ID + "=?");
         mPlaylistExists = mDb.compileStatement("SELECT " + KEY_ID
                 + " FROM playlist WHERE " + KEY_ID + "=?");
-        mTokenExists = mDb.compileStatement("SELECT " + KEY_COUNT + " FROM "
-                + KEY_TOKEN + " WHERE " + KEY_TOKEN + "=? AND " + KEY_TYPE
-                + "=?");
-
-        mLocker = locker;
+        
         mContext = context;
         mCache = LockerCache.loadCache(context, 86400000); // 1 day
     }
@@ -235,38 +219,6 @@ public class LockerDb
         });
     }
 
-//    public Token[] getTokens(final Music.Meta type)
-//    {
-//        Cursor c = getCursor(new GetCursorTask() {
-//            public Cursor run() throws IOException, LockerException {
-//                switch (type) {
-//                    case TRACK:
-//                        if (!mCache.isCacheValid(LockerCache.TRACK_TOKENS))
-//                            refreshTokens(type);
-//                        return queryTokens("track");
-//                    case ALBUM:
-//                        if (!mCache.isCacheValid(LockerCache.ALBUM_TOKENS))
-//                            refreshTokens(type);
-//                        return queryTokens("album");
-//                    case ARTIST:
-//                        if (!mCache.isCacheValid(LockerCache.ARTIST_TOKENS))
-//                            refreshTokens(type);
-//                        return queryTokens("artist");
-//                    default:
-//                        return null;
-//                }
-//            }});
-//        
-//            if (c == null) return null;
-//            
-//            Token[] t = new Token[c.getCount()];
-//            while (c.moveToNext()) {
-//                t[c.getPosition()] = new Token(c.getString(1), c.getInt(2));
-//            }
-//            c.close();
-//            return t;
-//    }
-
     /**
      * 
      * @param artist_id
@@ -278,7 +230,6 @@ public class LockerDb
         Cursor c = mDb.rawQuery("SELECT artist_name FROM artist WHERE _id="
                 + artist_id, null);
         if (!c.moveToNext()) {
-            // TODO fetch the artist?
             Log.e("Mp3tunes", "Error artist doesnt exist");
             return null;
         }
@@ -310,7 +261,6 @@ public class LockerDb
         Cursor c = mDb.rawQuery("SELECT album_name FROM album WHERE _id="
                 + album_id, null);
         if (!c.moveToNext()) {
-            // TODO fetch the album?
             Log.e("Mp3tunes", "Error album doesnt exist");
             return null;
         }
@@ -342,7 +292,6 @@ public class LockerDb
         Cursor c = mDb.rawQuery("SELECT artist_name FROM artist WHERE _id="
                 + artist_id, null);
         if (!c.moveToNext()) {
-            // TODO fetch the artist?
             Log.e("Mp3tunes", "Error album doesnt exist");
             return null;
         }
@@ -368,7 +317,6 @@ public class LockerDb
                 "SELECT playlist_name FROM playlist WHERE _id='" + playlist_id
                         + "'", null);
         if (!c.moveToNext()) {
-            // TODO fetch the playlist?
             Log.e("Mp3tunes", "Error playlist doesnt exist");
             return null;
         }
@@ -392,7 +340,6 @@ public class LockerDb
                 "SELECT radio_name FROM playlist WHERE _id='" + radio_id
                         + "'", null);
         if (!c.moveToNext()) {
-            // TODO fetch the playlist?
             Log.e("Mp3tunes", "Error playlist doesnt exist");
             return null;
         }
@@ -585,95 +532,6 @@ public class LockerDb
         }
     }
 
-    /*
-     * This function exists because it is quite slow to try to insert tracks one
-     * by onefor a big locker. This function removes the transaction overhead as
-     * well as thefunction call overhead
-     */
-    private void insertTracks(DataResult<Track> tracks) throws IOException,
-            SQLiteException
-    {
-        if (tracks == null) {
-            System.out.println("OMG TRACKS NULL");
-            return;
-        }
-        //mDb.execSQL("BEGIN TRANSACTION");
-        mDb.beginTransaction();
-        try {
-            for (Track track : tracks.getData()) {
-                // cache some values
-                int trackId = track.getId();
-                int number = track.getNumber();
-                int artistId = track.getArtistId();
-                int albumId = track.getAlbumId();
-                Double duration = track.getDuration();
-                String playUrl = track.getPlayUrl();
-                String downloadUrl = track.getDownloadUrl();
-                String title = track.getTitle();
-                String artistName = track.getArtistName();
-                String albumTitle = track.getAlbumTitle();
-                String albumArt = track.getAlbumArt();
-
-                // Insert artist info to the artist table
-                if (artistName.length() > 0) {
-                    try {
-                        mArtistExists.bindLong(1, artistId);
-                        mArtistExists.simpleQueryForLong();
-                    } catch (SQLiteDoneException e) {
-                        mInsertArtistFromTrack.bindLong(1, artistId);
-                        mInsertArtistFromTrack.bindString(2, artistName);
-                        mInsertArtistFromTrack.execute();
-                    }
-                }
-
-                // Insert album info to the album table
-                if (albumTitle.length() > 0) {
-                    try {
-                        mAlbumExists.bindLong(1, albumId);
-                        mAlbumExists.simpleQueryForLong();
-                    } catch (SQLiteDoneException e) {
-                        mInsertAlbumFromTrack.bindLong(1, albumId);
-                        mInsertAlbumFromTrack.bindString(2, albumTitle);
-                        mInsertAlbumFromTrack.bindLong(3, artistId);
-                        mInsertAlbumFromTrack.execute();
-                    }
-                }
-
-                // Insert track info
-                try {
-                    mTrackExists.bindLong(1, trackId);
-                    mTrackExists.simpleQueryForLong();
-                } catch (SQLiteDoneException e) {
-                    mInsertTrack.bindLong(1, trackId);
-                    mInsertTrack.bindString(2, playUrl);
-                    mInsertTrack.bindString(3, downloadUrl);
-                    mInsertTrack.bindString(4, title);
-                    mInsertTrack.bindLong(5, number);
-                    mInsertTrack.bindString(6, artistName);
-                    mInsertTrack.bindString(7, albumTitle);
-                    mInsertTrack.bindLong(8, artistId);
-                    mInsertTrack.bindLong(9, albumId);
-                    mInsertTrack.bindDouble(10, duration);
-                    if (albumArt != null)
-                        mInsertTrack.bindString(11, albumArt);
-                    else
-                        mInsertTrack.bindString(11, UNKNOWN_STRING);
-                    mInsertTrack.execute();
-                }
-
-            }
-            //mDb.execSQL("COMMIT TRANSACTION");
-            mDb.setTransactionSuccessful();
-        } finally {
-            mDb.endTransaction();
-        }
-        //catch (SQLiteException e) {
-        //    //mDb.execSQL("ROLLBACK");
-        //    mDb.
-        //    throw e;
-        //}
-    }
-
     /**
      * 
      * @param artist
@@ -787,54 +645,7 @@ public class LockerDb
     }
 
     
-    private void insertToken(Token token, String type) throws IOException,
-            SQLiteException
-    {
-        if (token == null) {
-            System.out.println("OMG Token NULL");
-            return;
-        }
-        try {
-            if (token.getToken().length() > 0) {
-                try {
-                    mTokenExists.bindString(1, token.getToken());
-                    mTokenExists.bindString(2, type);
-                    mTokenExists.simpleQueryForLong();
 
-                    mUpdateToken.bindLong(1, token.getCount());
-                    mUpdateToken.bindString(2, token.getToken());
-                    mUpdateToken.bindString(3, type);
-                    mUpdateToken.execute();
-                } catch (SQLiteDoneException e) {
-                    mInsertToken.bindString(1, type);
-                    mInsertToken.bindString(2, token.getToken());
-                    mInsertToken.bindLong(3, token.getCount());
-                    mInsertToken.execute();
-                }
-            }
-        } catch (SQLiteException e) {
-            throw e;
-        }
-    }
-
-//    private void refreshTracks() throws SQLiteException, IOException, LockerException
-//    {
-//        DataResult<Track> results = tryGetData(new Call<DataResult<Track>>() {
-//            public DataResult<Track> run() throws InvalidSessionException, LockerException {
-//                return mLocker.getTracks();
-//        }});
-//        
-//        if (results == null) return;
-//
-//        System.out.println("beginning insertion of " + results.getData().length
-//                + " tracks");
-//
-//        insertTracks(results);
-//
-//        System.out.println("insertion complete");
-//        mCache.setUpdate(System.currentTimeMillis(), LockerCache.TRACK);
-//        mCache.saveCache(mContext);
-//    }
     
     private void refreshPlaylists() throws SQLiteException, IOException, LockerException
     {
@@ -862,18 +673,7 @@ public class LockerDb
     }
 
     private void refreshArtists() throws SQLiteException, IOException, LockerException
-    {
-        
-        
-//        DataResult<Artist> results = tryGetData(new Call<DataResult<Artist>>() {
-//            public DataResult<Artist> run() throws InvalidSessionException, LockerException {
-//                return mLocker.getArtists();
-//        }});
-//
-//        if (results == null) return;
-//        System.out.println("beginning insertion of " + results.getData().length
-//                + " artists");
-        
+    {        
         List<Artist> artists;
         try {
             artists = mLocker.getArtistsFromJson();
@@ -883,7 +683,6 @@ public class LockerDb
             throw new LockerException("Sever Sent Corrupt Data");
         }
         
-        //for (Artist a : results.getData()) {
         for (Artist a : artists) {
             insertArtist(a);
         }
@@ -990,8 +789,7 @@ public class LockerDb
         
         int index = 0;
         for (Track t : tracks) {
-            ContentValues cv = new ContentValues(); // TODO move this outside
-                                                    // the loop?
+            ContentValues cv = new ContentValues(); 
             insertTrack(t);
             cv.put("playlist_id", playlist_id);
             cv.put("track_id", t.getId());
@@ -1020,8 +818,7 @@ public class LockerDb
                 null);
         int index = 0;
         for (Track t : tracks) {
-            ContentValues cv = new ContentValues(); // TODO move this outside
-                                            // the loop?
+            ContentValues cv = new ContentValues(); 
             insertTrack(t);
             cv.put("radio_id", radio_id);
             cv.put("track_id", t.getId());
@@ -1034,9 +831,7 @@ public class LockerDb
 
     private void refreshSearch(String query) throws SQLiteException, IOException, LockerException
     {
-        //FIXME bad repeated code
         SearchResult results = null;
-        List<Track> tracks;
         try {
             results = mLocker.search(query);
         } catch (InvalidSessionException e) {
@@ -1044,76 +839,17 @@ public class LockerDb
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
         }
-
-        //System.out.println("beginning insertion of " + results.getArtists().size() + " artists");
         for (Artist a : results.getArtists()) {
             insertArtist(a);
         }
-        //System.out.println("beginning insertion of " + results.getAlbums().size() + " albums");
         for (Album a : results.getAlbums()) {
             insertAlbum(a);
         }
-        //System.out.println("beginning insertion of " + results.getTracks().size() + " tracks");
         for (Track t : results.getTracks()) {
             insertTrack(t);
         }
         System.out.println("insertion complete");
     }
-
-//    private void refreshTokens(Music.Meta type) throws SQLiteException,
-//            IOException, LockerException
-//    {
-//        DataResult<Token> results = null;
-//        String typename;
-//        int cachetype;
-//        int tries = 0;
-//        switch (type) {
-//            case ARTIST:
-//                results = tryGetData(new Call<DataResult<Token>>() {
-//                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
-//                        return mLocker.getArtistTokens();
-//                }});
-//                if (results == null) return;
-//                typename = "artist";
-//                cachetype = LockerCache.ARTIST_TOKENS;
-//                break;
-//            case ALBUM:
-//                results = tryGetData(new Call<DataResult<Token>>() {
-//                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
-//                        return mLocker.getAlbumTokens();
-//                }});
-//                if (results == null) return;
-//                typename = "album";
-//                cachetype = LockerCache.ALBUM_TOKENS;
-//                break;
-//            case TRACK:
-//                results = tryGetData(new Call<DataResult<Token>>() {
-//                    public DataResult<Token> run() throws InvalidSessionException, LockerException {
-//                        return mLocker.getTrackTokens();
-//                }});
-//              
-//                if (results == null) return;
-//                typename = "track";
-//                cachetype = LockerCache.TRACK_TOKENS;
-//                break;
-//            default:
-//                return;
-//        }
-//        System.out.println("beginning insertion of " + results.getData().length
-//                + " tokens");
-//        for (Token t : results.getData()) {
-//            insertToken(t, typename);
-//        }
-//        System.out.println("insertion complete");
-//        mCache.setUpdate(System.currentTimeMillis(), cachetype);
-//        mCache.saveCache(mContext);
-//    }
-//
-//    private Cursor queryTokens(String type)
-//    {
-//        return mDb.query(TABLE_TOKEN, Music.TOKEN, "type='" + type + "'", null,
-//                null, null, KEY_TOKEN);
-//    }
 
     private Cursor queryRadio()
     {
@@ -1170,17 +906,6 @@ public class LockerDb
     {
         return mDb.query(TABLE_ALBUM, Music.ALBUM, KEY_ARTIST_ID + "="
                 + artist_id, null, null, null, "lower(" + KEY_ALBUM_NAME + ")");
-    }
-
-    
-    
-    private Cursor queryTracks()
-    {
-        Cursor c = mDb.query(TABLE_TRACK, Music.TRACK_FOR_BROWSER, null, null, null, null,
-                "lower(" + KEY_TITLE + ")");
-        Log.w("Mp3Tunes", c.toString());
-        c.getCount();
-        return c;
     }
 
     private Cursor queryTracksArtist(int artist_id)
@@ -1287,28 +1012,5 @@ public class LockerDb
             Log.w("Mp3Tunes", Log.getStackTraceString(e));
         }
         return null;
-    }
-    
-    private <T> T tryGetData(Call<T> func) throws LockerException
-    {
-        T results = null;
-        int tries = 0;
-        while (tries < 3) {
-            try {
-                results = func.run();
-                break;
-            } catch (InvalidSessionException e) {
-                RefreshSessionTask task = new RefreshSessionTask(mContext);
-                if (!task.doInForground())
-                    break;
-            }
-            tries++;
-        }
-        return results;
-    }
-    
-    interface Call<T>
-    {
-        public T run() throws InvalidSessionException, LockerException;
     }
 }

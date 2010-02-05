@@ -23,11 +23,9 @@ package com.mp3tunes.android.player.activity;
 
 import java.util.concurrent.ExecutionException;
 
-import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.LockerException;
-import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
+import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.MP3tunesApplication;
-import com.mp3tunes.android.player.PrivateAPIKey;
 import com.mp3tunes.android.player.R;
 
 import android.app.Activity;

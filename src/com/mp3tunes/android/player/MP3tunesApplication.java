@@ -27,13 +27,8 @@ import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.binaryelysium.mp3tunes.api.LockerContext.ContextRetriever;
 
-import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
 
 
 public class MP3tunesApplication extends Application

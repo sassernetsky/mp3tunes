@@ -52,7 +52,6 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class PlaylistBrowser extends ListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
@@ -82,9 +81,6 @@ public class PlaylistBrowser extends ListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-        if(! Music.connectToDb( this ) )
-            finish();
-
 
         setContentView(R.layout.media_picker_activity);
         ListView lv = getListView();
@@ -440,15 +436,9 @@ public class PlaylistBrowser extends ListActivity
         @Override
         public Boolean doInBackground( Void... params )
         {
-            try
-            {
-                if( Music.sDb!= null)
-                    cursor = Music.sDb.getTableList(mType);
-                else
-                    System.out.println("database null");
-            }
-            catch ( Exception e )
-            {
+            try {
+                cursor = Music.getDb(getBaseContext()).getTableList(mType);
+            } catch ( Exception e ) {
                 System.out.println("Fetching playlists failed");
                 e.printStackTrace();
                 return false;
@@ -485,15 +475,9 @@ public class PlaylistBrowser extends ListActivity
                 return false;
             String playlist_id = params[0];
             action = Integer.valueOf( params[1] );
-            try
-            {
-                if( Music.sDb!= null)
-                    cursor = Music.sDb.getTracksForPlaylist( playlist_id );
-                else
-                    System.out.println("database null");
-            }
-            catch ( Exception e )
-            {
+            try {
+                cursor = Music.getDb(getBaseContext()).getTracksForPlaylist( playlist_id );
+            } catch ( Exception e ) {
                 System.out.println("Fetching tracks failed");
                 e.printStackTrace();
                 return false;

@@ -47,7 +47,6 @@ import android.util.Log;
 import android.view.Window;
 import android.widget.Toast;
 
-import com.binaryelysium.mp3tunes.api.Locker;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.service.ITunesService;
@@ -209,34 +208,10 @@ public class Music
         }
     }
     
-    public static LockerDb        sDb = null;
-    public static CurrentPlaylist sCp = null;
+    private static LockerDb        sDb = null;
+    private static CurrentPlaylist sCp = null;
     private static ArrayList<Context> sDbConnectionMap = new ArrayList<Context>();
-    public static boolean connectToDb( Context context )
-    {
-        if( sDb == null ) {
-            Locker locker = MP3tunesApplication.getInstance().getLocker();
-            if(locker == null)
-                return false;
-            try
-            // establish a connection with the database
-            {
-                System.out.println("on create getting db");
-                sDb = new LockerDb(context.getApplicationContext(), locker);
-                sCp = new CurrentPlaylist( context.getApplicationContext());
-            }
-            catch ( Exception ex )
-            {
-                // database connection failed.
-                // Show an error and exit gracefully.
-                System.out.println( ex.getMessage() );
-                ex.printStackTrace();
-                return false;
-            }
-        }
-        sDbConnectionMap.add( context );
-        return true;
-    }
+
     
     public static boolean unconnectFromDb( Context context )
     {
@@ -655,5 +630,17 @@ public class Music
         @Override
         public void setColorFilter(ColorFilter cf) {
         }
+    }
+
+    public static LockerDb getDb(Context context)
+    {
+        if (sDb == null) {
+            try {
+                sDb = new LockerDb(context.getApplicationContext());
+            } catch ( Exception e) {
+                Log.e("Mp3tunes", Log.getStackTraceString(e));
+            }
+        }
+        return sDb;
     }
 }

@@ -26,25 +26,18 @@ import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
-
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.RemoteException;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -52,7 +45,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -273,7 +265,7 @@ public class LockerList extends ListActivity
         SharedPreferences.Editor editor = settings.edit();
         editor.putBoolean("auto_login", false);
         editor.commit();
-        Music.sDb.clearDB();
+        Music.getDb(this).clearDB();
         try {
             Music.sService.stop();
         } catch (RemoteException e) {

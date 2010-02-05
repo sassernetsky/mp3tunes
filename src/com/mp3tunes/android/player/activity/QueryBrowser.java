@@ -46,14 +46,6 @@ import com.mp3tunes.android.player.R;
 
 public class QueryBrowser extends ListActivity implements Music.Defs
 {
-    //private final static int PLAY_NOW = 0;
-    //private final static int ADD_TO_QUEUE = 1;
-    //private final static int PLAY_NEXT = 2;
-    //private final static int PLAY_ARTIST = 3;
-    //private final static int EXPLORE_ARTIST = 4;
-    //private final static int PLAY_ALBUM = 5;
-    //private final static int EXPLORE_ALBUM = 6;
-    //private final static int REQUERY = 3;
     private final static int PROGRESS = 7;
     private final static int NO_RESULTS = 8;
     
@@ -73,7 +65,6 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         super.onCreate(icicle);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-        Music.connectToDb( this );
         
         if (icicle == null) {
             Intent intent = getIntent();
@@ -483,13 +474,10 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         public Boolean doInBackground( String... params )
         {
             System.out.println("Searching for " + params[0]);
-            try
-            {
-                res = Music.sDb.search( Music.sDb.new DbSearchQuery( params[0], true, false, true ) );
-                
-            }
-            catch ( Exception e )
-            {
+            try {
+                LockerDb db = Music.getDb(getBaseContext());
+                res = db.search(db.new DbSearchQuery(params[0], true, false, true));
+            } catch ( Exception e ) {
                 e.printStackTrace();
                 return false;
             }

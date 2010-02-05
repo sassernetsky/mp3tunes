@@ -20,7 +20,6 @@ package com.binaryelysium.mp3tunes.api;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
 
 public class Album {
 	int mId;
@@ -92,52 +91,6 @@ public class Album {
 
 	public String getArtistName() {
 		return mArtistName;
-	}
-
-	public static Album albumFromResult(RestResult restResult) {
-		try {
-			Album a = new Album();
-			int event = restResult.getParser().nextTag();
-			boolean loop = true;
-			while (loop) {
-				String name = restResult.getParser().getName();
-				switch (event) {
-				case XmlPullParser.START_TAG:
-					if (name.equals("albumId")) {
-						a.mId = Integer.parseInt(restResult.getParser().nextText());
-					} else if (name.equals("albumSize")) {
-						a.mSize = Integer.parseInt(restResult.getParser()
-								.nextText());
-					} else if (name.equals("albumTitle")) {
-						a.mName = restResult.getParser().nextText();
-					} else if (name.equals("artistId")) {
-						a.mArtistId = Integer.parseInt(restResult.getParser()
-								.nextText());
-					} else if (name.equals("trackCount")) {
-						a.mTrackCount = Integer.parseInt(restResult.getParser()
-								.nextText());
-					} else if (name.equals("artistName")) {
-						a.mArtistName = restResult.getParser().nextText();
-					} else if (name.equals("hasArt")) {
-						a.mHasArt = Integer.parseInt(restResult.getParser()
-								.nextText());
-					} else if (name.equals("purchaseDate")) {
-						a.mPurhaseDate = restResult.getParser().nextText();
-					} else if (name.equals("releaseDate")) {
-						a.mReleaseDate = restResult.getParser().nextText();
-					}
-					break;
-				case XmlPullParser.END_TAG:
-					if (name.equals("item"))
-						loop = false;
-					break;
-				}
-				event = restResult.getParser().next();
-			}
-			return a;
-		} catch (Exception e) {
-		}
-		return null;
 	}
 
     public static Album albumFromJson(JSONObject obj)

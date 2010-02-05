@@ -56,7 +56,6 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class ArtistBrowser extends ListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
@@ -87,8 +86,8 @@ public class ArtistBrowser extends ListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-        if(! Music.connectToDb( this ) )
-            finish(); //TODO show error
+//        if(! Music.connectToDb( this ) )
+//            finish(); //TODO show error
         
         AlertDialog.Builder builder;
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
@@ -576,17 +575,9 @@ public class ArtistBrowser extends ListActivity
         @Override
         public Boolean doInBackground( Void... params )
         {
-            try
-            {
-                if( Music.sDb!= null)
-                cursor = Music.sDb.getTableList( Music.Meta.ARTIST );
-                else
-                    System.out.println("database null");
-//                Token[] t = Music.sDb.getTokens( Music.Meta.ARTIST );
-//                tokens = LockerDb.tokensToString( t );
-            }
-            catch ( Exception e )
-            {
+            try {
+                cursor = Music.getDb(getBaseContext()).getTableList( Music.Meta.ARTIST );
+            } catch ( Exception e ) {
                 System.out.println("Fetching artists failed");
                 e.printStackTrace();
                 return false;
@@ -624,15 +615,9 @@ public class ArtistBrowser extends ListActivity
                 return false;
             int artist_id = params[0];
             action = params[1];
-            try
-            {
-                if( Music.sDb!= null)
-                    cursor = Music.sDb.getTracksForArtist( artist_id );
-                else
-                    System.out.println("database null");
-            }
-            catch ( Exception e )
-            {
+            try {
+                    cursor = Music.getDb(getBaseContext()).getTracksForArtist( artist_id );
+            } catch ( Exception e ) {
                 System.out.println("Fetching tracks failed");
                 e.printStackTrace();
                 return false;
@@ -653,7 +638,7 @@ public class ArtistBrowser extends ListActivity
                 case QUEUE:
                     int[] ids = Music.getSongListForCursor( cursor );
                     System.out.println("queue got " +ids.length);
-                    Music.sCp.insertQueueItems( ids );
+                    //Music.sCp.insertQueueItems( ids );
                     break;
                 }
             } else

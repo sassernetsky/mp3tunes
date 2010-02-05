@@ -187,11 +187,6 @@ public class PlayerHandler
             if (mTrack.isPlaying()) 
                 mTrack.stop();
     }
-    
-    private void cleanOldTrack()
-    {
-        if (mTrack != null) mTrack.clean();
-    }
 
     public void tooglePlayback()
     {

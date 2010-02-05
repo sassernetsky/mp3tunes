@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 import android.app.Service;
@@ -249,7 +248,16 @@ public class MediaPlayerTrack
         
         private void tryRunBufferedCallback(int percent)
         {
-            if (percent == 100) {
+            if (mBuffered) return;
+            long duration = getDuration();            
+            if (duration <= 0) return;
+            
+            long bufferingPos = (duration * percent) / 100;
+            long pos = getPosition();
+            
+            //try to start buffering the next song once we get one minute
+            //ahead of our play back position
+            if ((bufferingPos - pos) > 60000) {
                 if (mBufferedCallback != null)
                     mBuffered = true;
                     mBufferedCallback.run();

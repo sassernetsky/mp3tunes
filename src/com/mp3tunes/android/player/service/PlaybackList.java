@@ -1,14 +1,6 @@
 package com.mp3tunes.android.player.service;
 
-import java.util.ArrayList;
 import java.util.Vector;
-
-import android.app.Service;
-import android.content.Context;
-
-import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.LockerDb;
-import com.mp3tunes.android.player.MP3tunesApplication;
 
 public class PlaybackList
 {
@@ -67,25 +59,25 @@ public class PlaybackList
     
     public class PlaybackListEmptyException extends Exception
     {
-        
+        private static final long serialVersionUID = -7907875229527554730L;   
     }
     
     public class PlaybackListFinishedException extends Exception
     {
-        
+        private static final long serialVersionUID = 418363165930331395L;
     }
     
     public class PlaybackListOutOfBounds extends Exception
     {
-        
+        private static final long serialVersionUID = 3760111211345101285L;
     }
     
-    private void getTracksForList(int[] trackIds, Context c)
-    {
-        LockerDb db = new LockerDb(c, MP3tunesApplication.getInstance().getLocker());
-        for (int id : trackIds) {
-            Track t = db.getTrack(id);
-            
-        }
-    }
+//    private void getTracksForList(int[] trackIds, Context c)
+//    {
+//        LockerDb db = new LockerDb(c);
+//        for (int id : trackIds) {
+//            Track t = db.getTrack(id);
+//            
+//        }
+//    }
 }

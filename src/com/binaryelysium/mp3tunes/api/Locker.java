@@ -28,7 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import android.util.Log;
 
-import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
+import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 
 public class Locker

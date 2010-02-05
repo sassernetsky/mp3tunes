@@ -59,7 +59,6 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.util.ImageDownloaderListener;
 
 public class AlbumBrowser extends ListActivity
@@ -94,10 +93,10 @@ public class AlbumBrowser extends ListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-        if(! Music.connectToDb( this ) ) {
-            //TODO show error
-            finish();
-        }
+//        if(! Music.connectToDb( this ) ) {
+//            //TODO show error
+//            finish();
+//        }
 
         AlertDialog.Builder builder;
         LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
@@ -591,9 +590,9 @@ public class AlbumBrowser extends ListActivity
             try
             {
                 if(mArtistId != null)
-                    cursor = Music.sDb.getAlbumsForArtist( Integer.valueOf( mArtistId ) );
+                    cursor = Music.getDb(getBaseContext()).getAlbumsForArtist(Integer.valueOf(mArtistId));
                 else
-                    cursor = Music.sDb.getTableList( Music.Meta.ALBUM );
+                    cursor = Music.getDb(getBaseContext()).getTableList(Music.Meta.ALBUM);
                 
                 //Music.sDb.getTokens( Music.Meta.ALBUM );
             }
@@ -646,18 +645,14 @@ public class AlbumBrowser extends ListActivity
         @Override
         public Boolean doInBackground( Void... params )
         {
-            try
-            {
+            try {
                 int lim = list.length;
-                for(int i = 0; i < lim; i++) 
-                {
+                for(int i = 0; i < lim; i++)  {
                     if ( isCancelled() ) break;
-                    Music.sDb.fetchArt( list[i] );
+                    Music.getDb(getBaseContext()).fetchArt(list[i]);
                     publishProgress( i, lim );
                 }
-            }
-            catch ( Exception e )
-            {
+            } catch ( Exception e ) {
             	Log.w("Mp3Tunes Player", "Exception: " + e.getMessage() + "\n" + Log.getStackTraceString(e));
                 return false;
             }
@@ -695,15 +690,9 @@ public class AlbumBrowser extends ListActivity
                 return false;
             int album_id = params[0];
             action = params[1];
-            try
-            {
-                if( Music.sDb!= null)
-                    cursor = Music.sDb.getTracksForAlbum( album_id );
-                else
-                    System.out.println("database null");
-            }
-            catch ( Exception e )
-            {
+            try {
+                    cursor = Music.getDb(getBaseContext()).getTracksForAlbum(album_id);
+            } catch ( Exception e ) {
                 System.out.println("Fetching tracks failed");
                 e.printStackTrace();
                 return false;
@@ -722,9 +711,6 @@ public class AlbumBrowser extends ListActivity
                     Music.playAll(AlbumBrowser.this, cursor, 0);
                     break;
                 case QUEUE:
-                    int[] ids = Music.getSongListForCursor( cursor );
-                    Music.sCp.insertQueueItems( ids );
-                    break;
                 }
             } else
                 System.out.println("CURSOR NULL");

@@ -19,14 +19,8 @@
 package com.binaryelysium.mp3tunes.api;
 
 
-import java.io.IOException;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
-
-import com.binaryelysium.mp3tunes.api.Authenticator.LoginException;
-
 import android.util.Log;
 
 public class Session {
@@ -59,45 +53,6 @@ public class Session {
 	    return session;
 	}
 	
-	public static Session sessionFromResult(RestResult restResult) throws LockerException
-	{
-		try {
-			if (restResult.getParser() == null)
-				return null;
-
-			if (!restResult.getParser().getName().equals("mp3tunes"))
-				return null;
-			Session s = new Session();
-			int event = restResult.getParser().nextTag();
-			boolean loop = true;
-			while (loop && event != XmlPullParser.END_DOCUMENT) {
-				String name = restResult.getParser().getName();
-				switch (event) {
-				case XmlPullParser.START_TAG:
-					if (name.equals("status")) {
-						String status = restResult.getParser().nextText();
-						if(status.equals("0")) // authentication failed
-						    throw (new LockerException("auth failure"));
-					} else if (name.equals("username")) {
-						s.mUsername = restResult.getParser().nextText();
-					} else if (name.equals("session_id")) {
-						s.mSessionId = restResult.getParser().nextText();
-					}
-					break;
-				case XmlPullParser.END_TAG:
-					if(name.equals("mp3tunes")) {
-						loop = false;
-						continue;
-					}
-				}
-				event = restResult.getParser().nextTag();
-			}
-			return s;
-		} catch (Exception e) {
-		}
-		return null;
-	}
-
 	public String getUsername() {
 		return mUsername;
 	}
@@ -114,4 +69,9 @@ public class Session {
 		mSessionId = sessionId;
 	}
 
+	public static class LoginException extends Exception
+	{
+        private static final long serialVersionUID = -3731217232625893463L;
+	}
+	
 }

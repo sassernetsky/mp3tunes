@@ -21,7 +21,6 @@ import android.app.Dialog;
 import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -29,12 +28,10 @@ import android.content.ServiceConnection;
 import android.database.CharArrayBuffer;
 import android.database.Cursor;
 import android.media.AudioManager; //import android.media.MediaFile;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
@@ -57,15 +54,12 @@ import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
-import com.mp3tunes.android.player.TouchInterceptor;
 import com.mp3tunes.android.player.service.GuiNotifier;
-import com.mp3tunes.android.player.service.Mp3tunesService;
 
 public class QueueBrowser extends ListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
 {
     private final static int PROGRESS = CHILD_MENU_BASE;
-    private boolean mDeletedOneRow = false;
     private boolean mEditMode = false;
     private boolean mAdapterSent = false;
     private ListView mTrackList;
@@ -117,8 +111,8 @@ public class QueueBrowser extends ListActivity implements
         mTrackList = getListView();
         mTrackList.setOnCreateContextMenuListener(this);
         if (mEditMode) {
-            ((TouchInterceptor) mTrackList).setDropListener(mDropListener);
-            ((TouchInterceptor) mTrackList).setRemoveListener(mRemoveListener);
+//            ((TouchInterceptor) mTrackList).setDropListener(mDropListener);
+//            ((TouchInterceptor) mTrackList).setRemoveListener(mRemoveListener);
             mTrackList.setCacheColorHint(0);
         } else {
             mTrackList.setTextFilterEnabled(true);
@@ -143,7 +137,6 @@ public class QueueBrowser extends ListActivity implements
             setListAdapter(mAdapter);
         }
         Music.bindToService(this, this);
-        Music.connectToDb(this);
     }
 
     public void onServiceConnected(ComponentName name, IBinder service)
@@ -364,44 +357,44 @@ public class QueueBrowser extends ListActivity implements
     {
     }
 
-    private TouchInterceptor.DropListener mDropListener = new TouchInterceptor.DropListener() {
+//    private TouchInterceptor.DropListener mDropListener = new TouchInterceptor.DropListener() {
+//
+//        public void drop(int from, int to)
+//        {
+//            moveQueueItem(from, to);
+//            ((TrackListAdapter) getListAdapter()).notifyDataSetChanged();
+//            getListView().invalidateViews();
+//            mDeletedOneRow = true;
+//        }
+//    };
 
-        public void drop(int from, int to)
-        {
-            moveQueueItem(from, to);
-            ((TrackListAdapter) getListAdapter()).notifyDataSetChanged();
-            getListView().invalidateViews();
-            mDeletedOneRow = true;
-        }
-    };
+//    private TouchInterceptor.RemoveListener mRemoveListener = new TouchInterceptor.RemoveListener() {
+//
+//        public void remove(int which)
+//        {
+//            removePlaylistItem(which);
+//        }
+//    };
 
-    private TouchInterceptor.RemoveListener mRemoveListener = new TouchInterceptor.RemoveListener() {
-
-        public void remove(int which)
-        {
-            removePlaylistItem(which);
-        }
-    };
-
-    private void removePlaylistItem(int which)
-    {
-        View v = mTrackList.getChildAt(which
-                - mTrackList.getFirstVisiblePosition());
-        try {
-            if (Music.sService != null
-                    && which != Music.sService.getQueuePosition()) {
-                mDeletedOneRow = true;
-            }
-        } catch (RemoteException e) {
-            // Service died, so nothing playing.
-            mDeletedOneRow = true;
-        }
-        v.setVisibility(View.GONE);
-        mTrackList.invalidateViews();
-        Music.sCp.removeQueueItem(which, which);
-        v.setVisibility(View.VISIBLE);
-        mTrackList.invalidateViews();
-    }
+//    private void removePlaylistItem(int which)
+//    {
+//        View v = mTrackList.getChildAt(which
+//                - mTrackList.getFirstVisiblePosition());
+//        try {
+//            if (Music.sService != null
+//                    && which != Music.sService.getQueuePosition()) {
+//                mDeletedOneRow = true;
+//            }
+//        } catch (RemoteException e) {
+//            // Service died, so nothing playing.
+//            mDeletedOneRow = true;
+//        }
+//        v.setVisibility(View.GONE);
+//        mTrackList.invalidateViews();
+//        Music.sCp.removeQueueItem(which, which);
+//        v.setVisibility(View.VISIBLE);
+//        mTrackList.invalidateViews();
+//    }
 
     private BroadcastReceiver mTrackListListener = new BroadcastReceiver() {
 
@@ -420,18 +413,18 @@ public class QueueBrowser extends ListActivity implements
             if (intent.getAction().equals(GuiNotifier.META_CHANGED)) {
                 getListView().invalidateViews();
             } else if (intent.getAction().equals(GuiNotifier.QUEUE_CHANGED)) {
-                if (mDeletedOneRow) {
-                    // This is the notification for a single row that was deleted
-                    //previously, which is already reflected in the UI.
-                    mDeletedOneRow = false;
-                    return;
-                }
-                Cursor c = Music.sCp.getQueueCursor();
-                if (c.getCount() == 0) {
-                    finish();
-                    return;
-                }
-                mAdapter.changeCursor(c);
+//                if (mDeletedOneRow) {
+//                    // This is the notification for a single row that was deleted
+//                    //previously, which is already reflected in the UI.
+//                    mDeletedOneRow = false;
+//                    return;
+//                }
+//                Cursor c = Music.sCp.getQueueCursor();
+//                if (c.getCount() == 0) {
+//                    finish();
+//                    return;
+//                }
+//                mAdapter.changeCursor(c);
             }
         }
     };
@@ -458,13 +451,13 @@ public class QueueBrowser extends ListActivity implements
                 && event.getAction() == KeyEvent.ACTION_DOWN) {
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_DPAD_UP:
-                    moveItem(true);
+                    //moveItem(true);
                     return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
-                    moveItem(false);
+                    //moveItem(false);
                     return true;
                 case KeyEvent.KEYCODE_DEL:
-                    removeItem();
+                    //removeItem();
                     return true;
             }
         }
@@ -472,70 +465,70 @@ public class QueueBrowser extends ListActivity implements
         return super.dispatchKeyEvent(event);
     }
 
-    private void removeItem()
-    {
-        int curcount = mTrackCursor.getCount();
-        int curpos = mTrackList.getSelectedItemPosition();
-        if (curcount == 0 || curpos < 0) {
-            return;
-        }
+//    private void removeItem()
+//    {
+//        int curcount = mTrackCursor.getCount();
+//        int curpos = mTrackList.getSelectedItemPosition();
+//        if (curcount == 0 || curpos < 0) {
+//            return;
+//        }
+//
+//        if ("nowplaying".equals(mPlaylist)) {
+//            // remove track from queue
+//
+//            // Work around bug 902971. To get quick visual feedback
+//            // of the deletion of the item, hide the selected view.
+//            try {
+//                if (curpos != Music.sService.getQueuePosition()) {
+//                    mDeletedOneRow = true;
+//                }
+//            } catch (RemoteException ex) {
+//            }
+//            View v = mTrackList.getSelectedView();
+//            v.setVisibility(View.GONE);
+//            mTrackList.invalidateViews();
+//            Music.sCp.removeQueueItem(curpos, curpos);
+//            v.setVisibility(View.VISIBLE);
+//            mTrackList.invalidateViews();
+//        } else {
+//            // remove track from playlist
+//            int colidx = mTrackCursor
+//                    .getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members._ID);
+//            mTrackCursor.moveToPosition(curpos);
+//            long id = mTrackCursor.getLong(colidx);
+//            Uri uri = MediaStore.Audio.Playlists.Members.getContentUri(
+//                    "external", Long.valueOf(mPlaylist));
+//            getContentResolver().delete(ContentUris.withAppendedId(uri, id),
+//                    null, null);
+//            curcount--;
+//            if (curcount == 0) {
+//                finish();
+//            } else {
+//                mTrackList.setSelection(curpos < curcount ? curpos : curcount);
+//            }
+//        }
+//    }
 
-        if ("nowplaying".equals(mPlaylist)) {
-            // remove track from queue
-
-            // Work around bug 902971. To get quick visual feedback
-            // of the deletion of the item, hide the selected view.
-            try {
-                if (curpos != Music.sService.getQueuePosition()) {
-                    mDeletedOneRow = true;
-                }
-            } catch (RemoteException ex) {
-            }
-            View v = mTrackList.getSelectedView();
-            v.setVisibility(View.GONE);
-            mTrackList.invalidateViews();
-            Music.sCp.removeQueueItem(curpos, curpos);
-            v.setVisibility(View.VISIBLE);
-            mTrackList.invalidateViews();
-        } else {
-            // remove track from playlist
-            int colidx = mTrackCursor
-                    .getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members._ID);
-            mTrackCursor.moveToPosition(curpos);
-            long id = mTrackCursor.getLong(colidx);
-            Uri uri = MediaStore.Audio.Playlists.Members.getContentUri(
-                    "external", Long.valueOf(mPlaylist));
-            getContentResolver().delete(ContentUris.withAppendedId(uri, id),
-                    null, null);
-            curcount--;
-            if (curcount == 0) {
-                finish();
-            } else {
-                mTrackList.setSelection(curpos < curcount ? curpos : curcount);
-            }
-        }
-    }
-
-    private void moveItem(boolean up)
-    {
-        int curcount = mTrackCursor.getCount();
-        int curpos = mTrackList.getSelectedItemPosition();
-        if ((up && curpos < 1) || (!up && curpos >= curcount - 1)) {
-            return;
-        }
-        if (mPlaylist == "nowplaying") {
-            moveQueueItem(curpos, up ? curpos - 1 : curpos + 1);
-            ((TrackListAdapter) getListAdapter()).notifyDataSetChanged();
-            getListView().invalidateViews();
-            mDeletedOneRow = true;
-            if (up) {
-                mTrackList.setSelection(curpos - 1);
-            } else {
-                mTrackList.setSelection(curpos + 1);
-            }
-        } else {
-        }
-    }
+//    private void moveItem(boolean up)
+//    {
+//        int curcount = mTrackCursor.getCount();
+//        int curpos = mTrackList.getSelectedItemPosition();
+//        if ((up && curpos < 1) || (!up && curpos >= curcount - 1)) {
+//            return;
+//        }
+//        if (mPlaylist == "nowplaying") {
+//            moveQueueItem(curpos, up ? curpos - 1 : curpos + 1);
+//            ((TrackListAdapter) getListAdapter()).notifyDataSetChanged();
+//            getListView().invalidateViews();
+//            mDeletedOneRow = true;
+//            if (up) {
+//                mTrackList.setSelection(curpos - 1);
+//            } else {
+//                mTrackList.setSelection(curpos + 1);
+//            }
+//        } else {
+//        }
+//    }
 
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id)
@@ -597,25 +590,25 @@ public class QueueBrowser extends ListActivity implements
     {
         Cursor ret = null;
 
-        if (mPlaylist != null && mPlaylist.equals("nowplaying")) {
-            if (Music.sService != null) {
-                ret = Music.sCp.getQueueCursor();
-                if (ret.getCount() == 0) {
-                    finish();
-                }
-            } else {
-                // Nothing is playing.
-            }
-        } else {
+//        if (mPlaylist != null && mPlaylist.equals("nowplaying")) {
+//            if (Music.sService != null) {
+//                ret = Music.sCp.getQueueCursor();
+//                if (ret.getCount() == 0) {
+//                    finish();
+//                }
+//            } else {
+//                // Nothing is playing.
+//            }
+//        } else {
             mTrackTask = new FetchTracksTask().execute();
-        }
+        //}
 
         // This special case is for the "nowplaying" cursor, which cannot be
         // handled asynchronously
-        if (ret != null) {
-            init(ret);
-            setTitle();
-        }
+//        if (ret != null) {
+//            init(ret);
+//            setTitle();
+//        }
         return ret;
 
     }
@@ -857,17 +850,13 @@ public class QueueBrowser extends ListActivity implements
         public Boolean doInBackground(Void... params)
         {
             try {
-
+                LockerDb db = Music.getDb(getBaseContext());
                 if (mAlbumId != null)
-                    cursor = Music.sDb.getTracksForAlbum(Integer
-                            .valueOf(mAlbumId));
+                    cursor = db.getTracksForAlbum(Integer.valueOf(mAlbumId));
                 else if (mPlaylist != null)
-                    cursor = Music.sDb.getTracksForPlaylist(mPlaylist);
+                    cursor = db.getTracksForPlaylist(mPlaylist);
                 else
-                    cursor = Music.sDb.getTableList(Music.Meta.TRACK);
-
-                //Music.sDb.getTokens(Music.Meta.TRACK);
-                // tokens = LockerDb.tokensToString( t );
+                    cursor = db.getTableList(Music.Meta.TRACK);
             } catch (Exception e) {
                 Log.w("Mp3Tunes Player", "Exception: " + e.getMessage() + "\n"
                         + Log.getStackTraceString(e));

@@ -4,19 +4,14 @@ import java.util.Vector;
 
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.LockerDb;
-import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.ITunesService;
-import com.mp3tunes.android.player.service.MediaPlayerTrack.TrackFinishedHandler;
-
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
-import android.telephony.TelephonyManager;
 
 public class Mp3tunesService extends Service
 {
@@ -223,7 +218,7 @@ public class Mp3tunesService extends Service
     private Vector<MediaPlayerTrack> getTracksForList(int[] trackIds)
     {
         Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
-        LockerDb db = new LockerDb(getBaseContext(), MP3tunesApplication.getInstance().getLocker());
+        LockerDb db = new LockerDb(getBaseContext());
         for (int id : trackIds) {
             Track t = db.getTrack(id);
             MediaPlayerTrack track = new MediaPlayerTrack(t, this, getBaseContext());

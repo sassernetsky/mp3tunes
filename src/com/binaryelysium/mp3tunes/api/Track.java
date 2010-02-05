@@ -21,25 +21,9 @@ package com.binaryelysium.mp3tunes.api;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParser;
-
-import android.os.Debug;
 
 public class Track
 {
-
-    public static int trackFromResultCalls = 0;
-    public static int trackAllocs = 0;
-    public static int setDataAllocs = 0;
-    public static int trackAllocsSize = 0;
-    public static int setDataAllocsSize = 0;
-    public static int nextAllocs = 0;
-    public static int nextAllocsSize = 0;
-    public static int nextTextAllocs = 0;
-    public static int nextTextAllocsSize = 0;
-    public static int getNameAllocs = 0;
-    public static int getNameAllocsSize = 0;
-
     private int mId;
     private String mTitle;
     int mNumber;
@@ -129,90 +113,6 @@ public class Track
         builder.append(" by: ");
         builder.append(mArtistName);
         return builder.toString();
-    }
-
-    public static Track trackFromResult(RestResult restResult,
-            String partner_token)
-    {
-        trackFromResultCalls++;
-        try {
-            Debug.startAllocCounting();
-            Track t = new Track();
-            Debug.stopAllocCounting();
-            trackAllocs += Debug.getThreadAllocCount();
-            trackAllocsSize += Debug.getThreadAllocSize();
-
-            int event = restResult.getParser().nextTag();
-            boolean loop = true;
-            while (loop) {
-                Debug.startAllocCounting();
-                String name = restResult.getParser().getName();
-                Debug.stopAllocCounting();
-                getNameAllocs     += Debug.getThreadAllocCount();
-                getNameAllocsSize += Debug.getThreadAllocSize();
-                switch (event) {
-                    case XmlPullParser.START_TAG:
-                        
-                        Debug.startAllocCounting();
-                        String text = restResult.getParser().nextText();
-                        Debug.stopAllocCounting();
-                        nextTextAllocs     += Debug.getThreadAllocCount();
-                        nextTextAllocsSize += Debug.getThreadAllocSize();
-                        
-                        Debug.startAllocCounting();
-                        if (name.equals("trackId")) {
-                            t.mId = Integer.parseInt(text);
-                        } else if (name.equals("trackFileSize")) {
-                            t.mFileSize = Integer.parseInt(text);
-                        } else if (name.equals("trackTitle")) {
-                            t.mTitle = text;
-                        } else if (name.equals("trackFileName")) {
-                            t.mFileName = text;
-                        } else if (name.equals("trackFileKey")) {
-                            t.mFileKey = text;
-                        } else if (name.equals("trackNumber")) {
-                            t.mNumber = Integer.parseInt(text);
-                        } else if (name.equals("trackLength")) {
-                            t.mDuration = Double.parseDouble(text);
-                        } else if (name.equals("albumTitle")) {
-                            t.mAlbumTitle = text;
-                        } else if (name.equals("albumYear")) {
-                            t.mAlbumYear = text;
-                        } else if (name.equals("albumId")) {
-                            t.mAlbumId = Integer.parseInt(text);
-                        } else if (name.equals("artistId")) {
-                            t.mArtistId = Integer.parseInt(text);
-                        } else if (name.equals("artistName")) {
-                            t.mArtistName = text;
-                        } else if (name.equals("albumArtURL")) {
-                            t.mAlbumArt = text;
-                        } else if (name.equals("downloadURL")) {
-                            t.mDownloadUrl = text;
-                            t.mDownloadUrl += partner_token;
-                        } else if (name.equals("playURL")) {
-                            t.mPlayUrl = text;
-                            t.mPlayUrl += partner_token;
-                        }
-                        Debug.stopAllocCounting();
-                        setDataAllocs     += Debug.getThreadAllocCount();
-                        setDataAllocsSize += Debug.getThreadAllocSize();
-                        break;
-                    case XmlPullParser.END_TAG:
-                        if (name.equals("item"))
-                            loop = false;
-                        break;
-                }
-                Debug.startAllocCounting();
-                event = restResult.getParser().next();
-                Debug.stopAllocCounting();
-                nextAllocs     += Debug.getThreadAllocCount();
-                nextAllocsSize += Debug.getThreadAllocSize();
-            }
-            return t;
-        } catch (Exception e) {
-            Debug.stopAllocCounting();
-        }
-        return null;
     }
 
     public int getId()
@@ -338,7 +238,6 @@ public class Track
             t.mAlbumTitle  = obj.getString("albumTitle");
             t.mAlbumYear   = obj.getString("albumYear");
             t.mArtistName  = obj.getString("artistName");
-            //t.mAlbumArt    = obj.getString("albumArtURL");
             t.mDownloadUrl = obj.getString("downloadURL");
             t.mPlayUrl     = obj.getString("playURL");
             t.mDuration    = obj.getDouble("trackLength");
