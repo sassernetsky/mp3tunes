@@ -2,6 +2,7 @@ package com.mp3tunes.android.player.service;
 
 import java.io.IOException;
 
+import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
@@ -142,12 +143,17 @@ public class MediaPlayerTrack
     synchronized private boolean prepare(boolean async)
     {
         try {
-            RemoteMethod method 
-                = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+            RemoteMethod method;
+            try {
+                method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
                     .addFileKey(mTrack.getFileKey())
                     .addParam("fileformat", "mp3")
                     .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
                     .create();
+            } catch (InvalidSessionException e) {
+                e.printStackTrace();
+                return false;
+            }
             
             //State Idle
             mMp = new MediaPlayer();
@@ -320,13 +326,14 @@ public class MediaPlayerTrack
         {
             Logger.log("MediaPlayer got error");
             //State error
+            if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
+                if (handleUnknownErrors(extra)) return true;
+            }
+            
             mIsInitialized = false;
             mErroredOut    = true;
             mErrorCode     = what;
             mErrorValue    = extra;
-            if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
-                if (handleUnknownErrors(extra)) return true;
-            }
             
             //state idle
             mMp.reset();
@@ -341,7 +348,7 @@ public class MediaPlayerTrack
             //Error 26 is an authentication error it most likely means that the session
             //for the user has expired.  Here we will want to try to refresh the session
             //and try the song again.
-            if (extra == -26) {
+            if (extra == -26 && !mIsInitialized) {
                 RefreshSessionTask task = new RefreshSessionTask(mContext);
                 if (task.doInForground()) {
                     if (prepare(false)) {

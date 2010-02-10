@@ -115,4 +115,12 @@ public class Playlist {
         return p;
     }
 
+    public static boolean isDynamicPlaylist(String playlistId)
+    {
+        return (playlistId.equals(RANDOM_TRACKS)   ||
+                playlistId.equals(NEWEST_TRACKS)   ||
+                playlistId.equals(RECENTLY_PLAYED) ||
+                playlistId.equals(INBOX));
+    }
+
 }

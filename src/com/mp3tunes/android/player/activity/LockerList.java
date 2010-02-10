@@ -187,6 +187,10 @@ public class LockerList extends ListActivity
         case R.id.menu_opt_about:
             showDialog(ABOUT_DIALOG);
             return true;
+        case R.id.menu_opt_player:
+            intent = new Intent("com.mp3tunes.android.player.PLAYER");
+            startActivity(intent);
+            return true;
         }
         return false;
     }

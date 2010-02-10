@@ -14,15 +14,19 @@ public class LockerContext
     
     synchronized public Session getSession()
     {
-        LockerContext c = sRetriever.get();
-        return c.mSession;
+            LockerContext c = sRetriever.get();
+            return c.mSession;
     }
     
-    synchronized public String getSessionId()
+    synchronized public String getSessionId() throws InvalidSessionException
     {
         LockerContext c = sRetriever.get();
         Session s = c.mSession;
-        return s.getSessionId();
+        try {
+            return s.getSessionId();
+        } catch (NullPointerException e) {
+            throw new InvalidSessionException();
+        }
     }
     
     synchronized public void setSession(Session session)
@@ -43,6 +47,16 @@ public class LockerContext
         c.mPartnerToken = token;
     }
     
+    synchronized public String getUserName()
+    {
+        return sRetriever.getUserName();
+    }
+    
+    synchronized public String getPassword()
+    {
+        return sRetriever.getPassword();
+    }
+    
     synchronized public static LockerContext instance()
     {
         return sRetriever.get();
@@ -57,10 +71,14 @@ public class LockerContext
         sRetriever = retriever;
     }
     
+    
+    //We provide the getUserName and getPassword methods so that we do not
+    //force our security policy on the library user. 
     public interface ContextRetriever
     {
         public LockerContext get();
-        
+        public String getUserName();
+        public String getPassword();
     }
     
     static private class Retriever implements ContextRetriever 
@@ -69,6 +87,14 @@ public class LockerContext
         public LockerContext get()
         {
             return sContext;
+        }
+        public String getPassword()
+        {
+            return null;
+        }
+        public String getUserName()
+        {
+            return null;
         }
         
     }

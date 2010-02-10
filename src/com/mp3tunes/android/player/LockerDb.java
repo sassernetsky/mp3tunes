@@ -51,6 +51,7 @@ import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.LockerCache;
 
@@ -218,7 +219,52 @@ public class LockerDb
             }
         });
     }
-
+    
+    public Cursor getRadioDataForBrowser(String[] from)throws IOException, LockerException
+    {
+        if (!mCache.isCacheValid(LockerCache.PLAYLIST))
+            refreshPlaylists();
+        
+        return mDb.query(TABLE_PLAYLIST, from, KEY_ID + " like 'PLAYMIX_GENRE_D%'", null, null,
+                null, KEY_PLAYLIST_ORDER);
+    }
+    
+    public Cursor getPlaylistDataForBrowser(String[] from)throws IOException, LockerException
+    {
+        if (!mCache.isCacheValid(LockerCache.PLAYLIST))
+            refreshPlaylists();
+        
+        return mDb.query(TABLE_PLAYLIST, from, KEY_ID + " not like 'PLAYMIX_GENRE_D%'", null, null,
+                null, KEY_PLAYLIST_ORDER);
+    }
+    
+    public Cursor getArtistDataForBrowser(String[] from)throws IOException, LockerException
+    {
+        if (!mCache.isCacheValid(LockerCache.ARTIST)) {
+            System.out.println("artist cache not valid refreshing");
+            refreshArtists();
+        }
+        
+        return mDb.query(TABLE_ARTIST, from, null, null, null, null,
+                "lower(" + KEY_ARTIST_NAME + ")");
+    }
+    
+    public Cursor getAlbumDataForBrowser(String[] from, String artistId) throws SQLiteException, IOException, LockerException
+    {
+        if (artistId != null) {
+            refreshAlbumsForArtist(Integer.parseInt(artistId));
+            return mDb.query(TABLE_ALBUM, from, KEY_ARTIST_ID + "=" + artistId, null, null, null,
+                    "lower(" + KEY_ALBUM_NAME + ")");
+        } else {
+            if (!mCache.isCacheValid(LockerCache.ALBUM)) {
+                System.out.println("artist cache not valid refreshing");
+                refreshAlbums();
+            }
+            return mDb.query(TABLE_ALBUM, from, null, null, null, null,
+                    "lower(" + KEY_ALBUM_NAME + ")");
+        }
+    }
+    
     /**
      * 
      * @param artist_id
@@ -321,39 +367,19 @@ public class LockerDb
             return null;
         }
         c.close();
-        c = queryPlaylists(playlist_id);
-        if (c.getCount() > 0)
-            return c;
-        else
-            c.close();
+        
+        if (!Playlist.isDynamicPlaylist(playlist_id)) {
+            c = queryPlaylists(playlist_id);
+            if (c.getCount() > 0)
+                return c;
+            else
+                c.close();
+        }
         
         return getCursor(new GetCursorTask() {
             public Cursor run() throws IOException, LockerException {
                 refreshTracksforPlaylist(playlist_id);
                 return queryPlaylists(playlist_id);
-            }});
-    }
-    
-    public Cursor getTracksForRadio(final String radio_id)
-    {
-        Cursor c = mDb.rawQuery(
-                "SELECT radio_name FROM playlist WHERE _id='" + radio_id
-                        + "'", null);
-        if (!c.moveToNext()) {
-            Log.e("Mp3tunes", "Error playlist doesnt exist");
-            return null;
-        }
-        c.close();
-        c = queryPlaylists(radio_id);
-        if (c.getCount() > 0)
-            return c;
-        else
-            c.close();
-        
-        return getCursor(new GetCursorTask() {
-            public Cursor run() throws IOException, LockerException {
-                refreshTracksforRadio(radio_id);
-                return queryPlaylists(radio_id);
             }});
     }
     
@@ -656,6 +682,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
         
         System.out.println("beginning insertion of " +playlists.size()
@@ -681,6 +709,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
         
         for (Artist a : artists) {
@@ -700,6 +730,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
         System.out.println("beginning insertion of " + albums.size()
                 + " albums");
@@ -721,6 +753,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
 
         System.out.println("beginning insertion of " + albums.size()
@@ -741,6 +775,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
 
         System.out.println("beginning insertion of " + tracks.size()
@@ -761,6 +797,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
 
         System.out.println("beginning insertion of " + tracks.size()
@@ -781,6 +819,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for playlist id " + playlist_id);
@@ -800,34 +840,37 @@ public class LockerDb
         System.out.println("insertion complete");
     }
     
-    private void refreshTracksforRadio(final String radio_id)
-    throws SQLiteException, IOException, LockerException
-    {
-        List<Track> tracks;
-        try {
-            tracks = mLocker.getTracksForPlaylistFromJson(radio_id);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        }
-        System.out.println("beginning insertion of " + tracks.size()
-                + " tracks for playlist id " + radio_id);
-
-        mDb.delete("radio_tracks", "radio_id='" + radio_id + "'",
-                null);
-        int index = 0;
-        for (Track t : tracks) {
-            ContentValues cv = new ContentValues(); 
-            insertTrack(t);
-            cv.put("radio_id", radio_id);
-            cv.put("track_id", t.getId());
-            cv.put("radio_index", index);
-            mDb.insert("radio_tracks", UNKNOWN_STRING, cv);
-            index++;
-        }
-        System.out.println("insertion complete");
-    }
+//    private void refreshTracksforRadio(final String radio_id)
+//    throws SQLiteException, IOException, LockerException
+//    {
+//        List<Track> tracks;
+//        try {
+//            tracks = mLocker.getTracksForPlaylistFromJson(radio_id);
+//        } catch (InvalidSessionException e) {
+//            throw new LockerException("Bad Session Data");
+//        } catch (JSONException e) {
+//            throw new LockerException("Sever Sent Corrupt Data");
+//        } catch (LoginException e) {
+//            throw new LockerException("Unable to refresh session");
+//        }
+//        
+//        System.out.println("beginning insertion of " + tracks.size()
+//                + " tracks for playlist id " + radio_id);
+//
+//        mDb.delete("radio_tracks", "radio_id='" + radio_id + "'",
+//                null);
+//        int index = 0;
+//        for (Track t : tracks) {
+//            ContentValues cv = new ContentValues(); 
+//            insertTrack(t);
+//            cv.put("radio_id", radio_id);
+//            cv.put("track_id", t.getId());
+//            cv.put("radio_index", index);
+//            mDb.insert("radio_tracks", UNKNOWN_STRING, cv);
+//            index++;
+//        }
+//        System.out.println("insertion complete");
+//    }
 
     private void refreshSearch(String query) throws SQLiteException, IOException, LockerException
     {
@@ -838,6 +881,8 @@ public class LockerDb
             throw new LockerException("Bad Session Data");
         } catch (JSONException e) {
             throw new LockerException("Sever Sent Corrupt Data");
+        } catch (LoginException e) {
+            throw new LockerException("Unable to refresh session");
         }
         for (Artist a : results.getArtists()) {
             insertArtist(a);

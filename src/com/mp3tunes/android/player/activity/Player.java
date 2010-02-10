@@ -23,6 +23,7 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.Music;
@@ -350,7 +351,7 @@ public class Player extends Activity
     {
         String artUrl;
 
-        private void setArtUrl(Track t) {
+        private void setArtUrl(Track t) throws InvalidSessionException {
             RemoteMethod method 
             = new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
                     .addFileKey(t.getFileKey())

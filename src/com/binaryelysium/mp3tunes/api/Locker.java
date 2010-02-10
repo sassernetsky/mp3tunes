@@ -20,12 +20,18 @@
 package com.binaryelysium.mp3tunes.api;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringBufferInputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.http.client.HttpResponseException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
@@ -93,7 +99,7 @@ public class Locker
         return 0;
     }
     
-    public List<Artist> getArtist(int id) throws LockerException, InvalidSessionException, JSONException
+    public List<Artist> getArtist(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getArtistsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
         .addParam("type", "artist")
@@ -101,7 +107,7 @@ public class Locker
         .create());
     }
     
-    public List<Artist> getArtistsFromJson() throws LockerException, InvalidSessionException, JSONException
+    public List<Artist> getArtistsFromJson() throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getArtistsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "artist")
@@ -110,7 +116,7 @@ public class Locker
                 .create());
     }
     
-    public List<Artist> getArtistsList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException
+    public List<Artist> getArtistsList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         String text;
         try {
@@ -133,7 +139,7 @@ public class Locker
         return artists;
     }
     
-    public List<Album> getAlbum(int id) throws LockerException, InvalidSessionException, JSONException
+    public List<Album> getAlbum(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getAlbumsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
         .addParam("type", "album")
@@ -141,7 +147,7 @@ public class Locker
         .create());
     }
     
-    public List<Album> getAlbumsForArtist(int id) throws LockerException, InvalidSessionException, JSONException
+    public List<Album> getAlbumsForArtist(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getAlbumsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
         .addParam("type", "album")
@@ -149,7 +155,7 @@ public class Locker
         .create());
     }
 
-    public List<Album> getAlbumsFromJson() throws LockerException, InvalidSessionException, JSONException
+    public List<Album> getAlbumsFromJson() throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getAlbumsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                             .addParam("type", "album")
@@ -158,7 +164,7 @@ public class Locker
                             .create());
     }
     
-    public List<Album> getAlbumsList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException
+    public List<Album> getAlbumsList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         String text;
         try {
@@ -181,7 +187,7 @@ public class Locker
         return albums;
     }
 
-    public List<Track> getTrackList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException
+    public List<Track> getTrackList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         String text;
         try {
@@ -206,7 +212,7 @@ public class Locker
         return tracks;
     }
     
-    public List<Track> getTracksForArtistFromJson(int id) throws LockerException, InvalidSessionException, JSONException
+    public List<Track> getTracksForArtistFromJson(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "track")
@@ -214,7 +220,7 @@ public class Locker
                 .create());
     }
     
-    public List<Track> getTracksForAlbumFromJson(int id) throws LockerException, InvalidSessionException, JSONException
+    public List<Track> getTracksForAlbumFromJson(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "track")
@@ -222,7 +228,7 @@ public class Locker
                 .create());
     }
     
-    public List<Track> getTracksForPlaylistFromJson(String id) throws LockerException, InvalidSessionException, JSONException
+    public List<Track> getTracksForPlaylistFromJson(String id) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "track")
@@ -230,7 +236,7 @@ public class Locker
                 .create());
     }
 
-    public List<Playlist> getPlaylistList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException
+    public List<Playlist> getPlaylistList(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         String text;
         try {
@@ -255,14 +261,14 @@ public class Locker
         return playlists;
     }
     
-    public List<Playlist> getPlaylists() throws LockerException, InvalidSessionException, JSONException
+    public List<Playlist> getPlaylists() throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getPlaylistList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "playlist")
                 .create());
     }
     
-    public SearchResult search(String query) throws LockerException, InvalidSessionException, JSONException
+    public SearchResult search(String query) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return search(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_SEARCH)
         .addParam("type", "artist,album,track")
@@ -272,7 +278,7 @@ public class Locker
         .create());
     }
 
-    public SearchResult search(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException
+    public SearchResult search(RemoteMethod method) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         String text;
         try {
@@ -336,4 +342,19 @@ public class Locker
         return result;
     }
 
+    public Bitmap getAlbumArtFromFileKey(String key) throws InvalidSessionException, LockerException, LoginException
+    {
+        RemoteMethod method = 
+            new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
+                                     .addFileKey(key)
+                                     .create();     
+        try {
+            byte[] data = HttpClientCaller.getInstance().callBytes(method);
+            Bitmap bm = BitmapFactory.decodeByteArray(data, 0, data.length); 
+            return bm;
+        } catch (IOException e) {
+            throw new LockerException("download failed");
+        }
+    }
+    
 }

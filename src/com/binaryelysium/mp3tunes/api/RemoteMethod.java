@@ -48,7 +48,13 @@ public class RemoteMethod
     {
         mCall = call;
     }
-    
+
+    public void updateSession() throws InvalidSessionException
+    {
+        String sessionId = LockerContext.instance().getSessionId();
+        mCall = mCall.replaceFirst("&sid=\\w+(&|$)", "&sid=" + sessionId + "$1");
+    }
+   
     public static class Builder {
         private String mMethod;
         private String mFileKey;
@@ -79,7 +85,7 @@ public class RemoteMethod
             return this;
         }
         
-        public RemoteMethod create()
+        public RemoteMethod create() throws InvalidSessionException
         {
             String site = getSiteForCall(mMethod);
             
@@ -146,5 +152,11 @@ public class RemoteMethod
             }
             return s;
         }
+    }
+
+    public boolean isLogin()
+    {
+        if (mCall.startsWith(API_LOGIN)) return true;
+        return false;
     }
 }

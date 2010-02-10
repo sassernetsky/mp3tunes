@@ -54,30 +54,41 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
+import com.mp3tunes.android.player.AlbumArtImageView;
 import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.RemoteImageView;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.ImageDownloaderListener;
 
-public class AlbumBrowser extends ListActivity
+public class AlbumBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
     private String mCurrentAlbumId;
     private String mCurrentAlbumName;
-    //private String mCurrentArtistNameForAlbum;
     private Cursor mAlbumCursor;
     private String mArtistId;
-    private AlbumListAdapter mAdapter;
+    private SimpleCursorAdapter mAdapter;
     private AsyncTask<Void, Integer, Boolean> mArtFetcher;
     private AsyncTask<Void, Void, Boolean>    mAlbumFetcher;
     private AsyncTask<Integer, Void, Boolean> mTracksTask;
     private boolean mAdapterSent;
     private final static int SEARCH = CHILD_MENU_BASE;
-    private final static int PROGRESS = CHILD_MENU_BASE + 1;
     
-    private AlertDialog mProgDialog;
+    String[] mFrom = new String[] {
+            LockerDb.KEY_ID,
+            LockerDb.KEY_ALBUM_NAME,
+            LockerDb.KEY_ARTIST_NAME,
+      };
+    
+    int[] mTo = new int[] {
+            R.id.icon,
+            R.id.line1,
+            R.id.line2,
+    };
 
     /** Called when the activity is first created. */
     @Override
@@ -93,22 +104,9 @@ public class AlbumBrowser extends ListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
-//        if(! Music.connectToDb( this ) ) {
-//            //TODO show error
-//            finish();
-//        }
 
-        AlertDialog.Builder builder;
-        LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
-        View layout = inflater.inflate(R.layout.progress_dialog,
-                                       (ViewGroup) findViewById(R.id.layout_root));
-
-        TextView text = (TextView) layout.findViewById(R.id.progress_text);
-        text.setText(R.string.loading_albums);
-
-        builder = new AlertDialog.Builder(this);
-        builder.setView(layout);
-        mProgDialog = builder.create();
+        buildErrorDialog(R.string.ablum_browser_error);
+        buildProgressDialog(R.string.loading_albums);
 
         setContentView(R.layout.media_picker_activity);
         ListView lv = getListView();
@@ -116,29 +114,21 @@ public class AlbumBrowser extends ListActivity
         lv.setOnCreateContextMenuListener(this);
         lv.setTextFilterEnabled(true);
 
-        mAdapter = (AlbumListAdapter) getLastNonConfigurationInstance();
+        mAdapter = (SimpleCursorAdapter) getLastNonConfigurationInstance();
+        
         if (mAdapter == null) {
-            //Log.i("@@@", "starting query");
-            mAdapter = new AlbumListAdapter(
-                    getApplication(),
-                    this,
-                    R.layout.track_list_item,
-                    mAlbumCursor,
-                    new String[] {},
-                    new int[] {});
+            mAdapter = new SimpleCursorAdapter(this, R.layout.album_list_item, mAlbumCursor, mFrom, mTo);
             setListAdapter(mAdapter);
             setTitle(R.string.title_working_albums);
-            mAlbumFetcher = new FetchAlbumsTask();
-            mAlbumFetcher.execute();
+            mAdapter.setViewBinder(new Binder());
+            fetch(new FetchAlbumsTask());
         } else {
-            mAdapter.setActivity(this);
             setListAdapter(mAdapter);
             mAlbumCursor = mAdapter.getCursor();
             if (mAlbumCursor != null) {
                 init(mAlbumCursor);
             } else {
-                mAlbumFetcher = new FetchAlbumsTask();
-                mAlbumFetcher.execute();
+                fetch(new FetchAlbumsTask());
             }
         }
     }
@@ -152,16 +142,7 @@ public class AlbumBrowser extends ListActivity
     @Override
     public void onSaveInstanceState(Bundle outcicle) 
     {
-        if( mAlbumFetcher != null && mAlbumFetcher.getStatus() == AsyncTask.Status.RUNNING)
-            mAlbumFetcher.cancel(true);
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel( true );
-        if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING)
-        {
-            mArtFetcher.cancel(true);
-            outcicle.putBoolean( "artfetch_in_progress", true );
-            mArtFetcher = null;
-        }
+        killTasks(outcicle);
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
@@ -172,15 +153,7 @@ public class AlbumBrowser extends ListActivity
 
     @Override
     public void onDestroy() {
-        if( mAlbumFetcher != null && mAlbumFetcher.getStatus() == AsyncTask.Status.RUNNING)
-            mAlbumFetcher.cancel(true);
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel( true );
-        if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING)
-        {
-            mArtFetcher.cancel(true);
-            mArtFetcher = null;
-        }
+        killTasks(null);
         Music.unbindFromService(this);
         Music.unconnectFromDb( this );
         if (!mAdapterSent) {
@@ -213,18 +186,6 @@ public class AlbumBrowser extends ListActivity
     public void onPause() {
         unregisterReceiver(mTrackListListener);
         super.onPause();
-    }
-    
-    @Override
-    protected Dialog onCreateDialog( int id )
-    {
-        switch ( id )
-        {
-        case PROGRESS:
-            return mProgDialog;
-        default:
-            return null;
-        }
     }
 
     public void init(Cursor c) {
@@ -286,7 +247,6 @@ public class AlbumBrowser extends ListActivity
 
             case NEW_PLAYLIST: {
                 Intent intent = new Intent();
-//                intent.setClass(this, CreatePlaylist.class);
                 startActivityForResult(intent, NEW_PLAYLIST);
                 return true;
             }
@@ -312,11 +272,8 @@ public class AlbumBrowser extends ListActivity
         i.setAction(MediaStore.INTENT_ACTION_MEDIA_SEARCH);
         
         title = mCurrentAlbumName;
-//        query = mCurrentArtistNameForAlbum + " " + mCurrentAlbumName;
-//        i.putExtra(MediaStore.EXTRA_MEDIA_ARTIST, mCurrentArtistNameForAlbum);
         i.putExtra(MediaStore.EXTRA_MEDIA_ALBUM, mCurrentAlbumName);
         i.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE);
-//        title = getString(R.string.mediasearch, title);
         i.putExtra(SearchManager.QUERY, query);
 
         startActivity(Intent.createChooser(i, title));
@@ -328,18 +285,12 @@ public class AlbumBrowser extends ListActivity
             case SCAN_DONE:
                 if (resultCode == RESULT_CANCELED) {
                     finish();
-                } else {
-//                    getAlbumCursor(mAdapter.getQueryHandler(), null);
                 }
                 break;
 
             case NEW_PLAYLIST:
                 if (resultCode == RESULT_OK) {
                     Uri uri = intent.getData();
-                    if (uri != null) {
-//                        int [] list = Music.getSongListForAlbum(this, Integer.parseInt(mCurrentAlbumId));
-//                        Music.addToPlaylist(this, list, Integer.parseInt(uri.getLastPathSegment()));
-                    }
                 }
                 break;
         }
@@ -394,282 +345,75 @@ public class AlbumBrowser extends ListActivity
         }
         return super.onOptionsItemSelected(item);
     }    
-    static class AlbumListAdapter extends SimpleCursorAdapter implements SectionIndexer, ImageDownloaderListener{
-        
-        private final Drawable mNowPlayingOverlay;
-        private final BitmapDrawable mDefaultAlbumIcon;
-        private int mAlbumNameIdx;
-        private int mAlbumIdIdx;
-        private int mArtistNameIdx;
-        private final Resources mResources;
-        private final String mUnknownArtist;
-        private final String mUnknownAlbum;
-        private AlphabetIndexer mIndexer;
-        private AlbumBrowser mActivity;
-        private AsyncQueryHandler mQueryHandler;
-        
-        class ViewHolder {
-            TextView line1;
-            TextView line2;
-            TextView duration;
-            ImageView play_indicator;
-            ImageView icon;
-        }
-
-        class QueryHandler extends AsyncQueryHandler {
-            QueryHandler(ContentResolver res) {
-                super(res);
-            }
-            
-            @Override
-            protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
-                //Log.i("@@@", "query complete");
-                mActivity.init(cursor);
-            }
-        }
-
-        AlbumListAdapter(Context context, AlbumBrowser currentactivity,
-                int layout, Cursor cursor, String[] from, int[] to) {
-            super(context, layout, cursor, from, to);
-
-            mActivity = currentactivity;
-            mQueryHandler = new QueryHandler(context.getContentResolver());
-            
-            mUnknownAlbum = context.getString(R.string.unknown_album_name);
-            mUnknownArtist = context.getString(R.string.unknown_artist_name);
-//            mAlbumSongSeparator = context.getString(R.string.albumsongseparator);
-
-            Resources r = context.getResources();
-            mNowPlayingOverlay = r.getDrawable(R.drawable.indicator_ic_mp_playing_list);
-
-            Bitmap b = BitmapFactory.decodeResource(r, R.drawable.albumart_mp_unknown_list);
-            mDefaultAlbumIcon = new BitmapDrawable(b);
-            // no filter or dither, it's a lot faster and we can't tell the difference
-            mDefaultAlbumIcon.setFilterBitmap(false);
-            mDefaultAlbumIcon.setDither(false);
-            getColumnIndices(cursor);
-            mResources = context.getResources();
-        }
-
-        private void getColumnIndices(Cursor cursor) {
-            if (cursor != null) {
-                mAlbumNameIdx = Music.ALBUM_MAPPING.ALBUM_NAME;
-                mAlbumIdIdx = Music.ALBUM_MAPPING.ID;
-                mArtistNameIdx = Music.ALBUM_MAPPING.ARTIST_NAME;
-                //mArtistIdIdx  = Music.ALBUM_MAPPING.ID;
-                //mNumSongsIdx = Music.ALBUM_MAPPING.TRACK_COUNT;
-//                mAlbumArtIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ART);
-                
-                if (mIndexer != null) {
-                    mIndexer.setCursor(cursor);
-                } else {
-//                    mIndexer = new MusicAlphabetIndexer(cursor, mAlbumIdx, mResources.getString(
-//                            R.string.alphabet));
-                    mIndexer = new MusicAlphabetIndexer(cursor, mArtistNameIdx, mResources.getString(
-                            R.string.alphabet));
-                }
-            }
-        }
-        
-        public void setActivity(AlbumBrowser newactivity) {
-            mActivity = newactivity;
-        }
-        
-        public AsyncQueryHandler getQueryHandler() {
-            return mQueryHandler;
-        }
-
-        @Override
-        public View newView(Context context, Cursor cursor, ViewGroup parent) {
-           View v = super.newView(context, cursor, parent);
-           ViewHolder vh = new ViewHolder();
-           vh.line1 = (TextView) v.findViewById(R.id.line1);
-           vh.line2 = (TextView) v.findViewById(R.id.line2);
-           vh.duration = (TextView) v.findViewById(R.id.duration);
-           vh.play_indicator = (ImageView) v.findViewById(R.id.play_indicator);
-           vh.icon = (ImageView) v.findViewById(R.id.icon);
-           vh.icon.setBackgroundDrawable(mDefaultAlbumIcon);
-           vh.icon.setPadding(0, 0, 1, 0);
-           v.setTag(vh);
-           return v;
-        }
-
-        @Override
-        public void bindView(View view, Context context, Cursor cursor) {
-            
-            ViewHolder vh = (ViewHolder) view.getTag();
-
-            String name = cursor.getString(mAlbumNameIdx);
-            String displayname = name;
-            boolean unknown = name == null || name.equals(LockerDb.UNKNOWN_STRING); 
-            if (unknown) {
-                displayname = mUnknownAlbum;
-            }
-            vh.line1.setText(displayname);
-            
-            name = cursor.getString(mArtistNameIdx);
-            displayname = name;
-            if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
-                displayname = mUnknownArtist;
-            }
-            vh.line2.setText(displayname);
-
-            ImageView iv = vh.icon;
-            iv.setImageDrawable( null );
-            name = cursor.getString(mAlbumIdIdx);
-            Drawable d = Music.getCachedArtwork(context, Integer.valueOf( name ), mDefaultAlbumIcon);
-            iv.setImageDrawable( d );
-            
-            int currentartistid = Music.getCurrentAlbumId();
-            int aid = cursor.getInt(mAlbumIdIdx);
-            iv = vh.play_indicator;
-            if (currentartistid == aid) {
-                iv.setImageDrawable(mNowPlayingOverlay);
-            } else {
-                iv.setImageDrawable(null);
-            }
-        }
-        
-        @Override
-        public void changeCursor(Cursor cursor) {
-            if (cursor != mActivity.mAlbumCursor) {
-                mActivity.mAlbumCursor = cursor;
-                getColumnIndices(cursor);
-                super.changeCursor(cursor);
-            }
-        }
-        
-        public Object[] getSections() {
-            return mIndexer.getSections();
-        }
-        
-        public int getPositionForSection(int section) {
-            //TODO This is ocasionally causing the gui to freeze
-            return mIndexer.getPositionForSection(section);
-        }
-        
-        public int getSectionForPosition(int position) {
-            return 0;
-        }
-
-        public void imageDownloadProgress( int imageDownloaded, int imageCount )
-        {
-            System.out.println("fetched " + imageDownloaded + " / " + imageCount );
-            notifyDataSetChanged();
-        }
-
-        public void asynOperationEnded()
-        {
-            notifyDataSetChanged();
-        }
-
-        public void asynOperationStarted()
-        {
-            System.out.println("image fetch started");
-        }        
-    }
-
-    /**
-     * Fetches albums async
-     * @author ramblurr
-     *
-     */
-    private class FetchAlbumsTask extends AsyncTask<Void, Void, Boolean>
+    
+    
+    //TODO need to implement caching system for album art this is killing performance
+    class Binder implements SimpleCursorAdapter.ViewBinder
     {
-        Cursor cursor;
-        @Override
-        public void onPreExecute()
+        private final BitmapDrawable mDefaultIcon;
+        private static final int  mUnknownArtist = R.string.unknown_artist_name;
+        private static final int  mUnknownAlbum  = R.string.unknown_album_name;
+        
+        public Binder ()
         {
-            AlbumBrowser.this.showDialog( PROGRESS );
-            Music.setSpinnerState(AlbumBrowser.this, true);
+            Bitmap b = BitmapFactory.decodeResource(getResources(), R.drawable.albumart_mp_unknown_list);
+            mDefaultIcon = new BitmapDrawable(b);
+             //no filter or dither, it's a lot faster and we can't tell the difference
+            mDefaultIcon.setFilterBitmap(false);
+            mDefaultIcon.setDither(false);
         }
-
-        @Override
-        public Boolean doInBackground( Void... params )
+        public boolean setViewValue(View v, Cursor cursor, int columnIndex)
         {
-            try
-            {
-                if(mArtistId != null)
-                    cursor = Music.getDb(getBaseContext()).getAlbumsForArtist(Integer.valueOf(mArtistId));
-                else
-                    cursor = Music.getDb(getBaseContext()).getTableList(Music.Meta.ALBUM);
-                
-                //Music.sDb.getTokens( Music.Meta.ALBUM );
-            }
-            catch ( Exception e )
-            {
-            	Log.w("Mp3Tunes Player", "Exception: " + e.getMessage() + "\n" + Log.getStackTraceString(e));
-                return false;
+            if (columnIndex == 1) {
+                TextView view = (TextView)v.findViewById(R.id.line1);
+                String val = cursor.getString(columnIndex);
+                if (val == null) view.setText(mUnknownAlbum);
+                view.setText(val);
+            } else if (columnIndex == 2) {
+                TextView view = ((TextView)v.findViewById(R.id.line2));
+                String val = cursor.getString(columnIndex);
+                if (val == null) view.setText(mUnknownArtist);
+                view.setText(val);
+            } else if (columnIndex == 0) {
+                AlbumArtImageView view = (AlbumArtImageView)v.findViewById(R.id.icon);
+                view.setDefaultImage(mDefaultIcon);
+                view.setPadding(0, 0, 1, 0);
+                int albumId = cursor.getInt(columnIndex);
+                String id   = Integer.toString(albumId);
+                view.getRemoteArtwork(id);
             }
             return true;
         }
-
-        @Override
-        public void onPostExecute( Boolean result )
-        {
-            dismissDialog( PROGRESS );
-            Music.setSpinnerState(AlbumBrowser.this, false);
-            if( cursor != null)
-                AlbumBrowser.this.init(cursor);
-            else
-                System.out.println("CURSOR NULL");
-            mArtFetcher = new FetchArtTask();
-            mArtFetcher.execute();
-        }
     }
     
-    private class FetchArtTask extends AsyncTask<Void, Integer, Boolean>
-    {
-        int[] list;
-        @Override
-        public void onPreExecute()
-        {
-            mAdapter.asynOperationStarted();
-            System.out.println("fetch art");
-            Music.setSpinnerState(AlbumBrowser.this, true);
-            if( mAlbumCursor != null )
-            {
-                list = new int[mAlbumCursor.getCount()];
-                mAlbumCursor.moveToFirst();
-                for( int i=0; i < list.length; i++ ) {
-                    list[i] = mAlbumCursor.getInt( Music.ALBUM_MAPPING.ID );
-                    mAlbumCursor.moveToNext();
-                }
-                mAlbumCursor.moveToFirst();
-                System.out.println("gonna fetch " + list.length);
-            }else
-                System.out.println("album cursor == null");
-                
-        }
 
+    
+    private void killTasks(Bundle state)
+    {
+        if( mAlbumFetcher != null && mAlbumFetcher.getStatus() == AsyncTask.Status.RUNNING)
+            mAlbumFetcher.cancel(true);
+        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+            mTracksTask.cancel( true );
+        if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING) {
+            mArtFetcher.cancel(true);
+            if (state != null)
+                state.putBoolean( "artfetch_in_progress", true );
+            mArtFetcher = null;
+        }
+    }
+
+    private class FetchAlbumsTask extends FetchBrowserCursor
+    {
         @Override
         public Boolean doInBackground( Void... params )
         {
             try {
-                int lim = list.length;
-                for(int i = 0; i < lim; i++)  {
-                    if ( isCancelled() ) break;
-                    Music.getDb(getBaseContext()).fetchArt(list[i]);
-                    publishProgress( i, lim );
-                }
-            } catch ( Exception e ) {
-            	Log.w("Mp3Tunes Player", "Exception: " + e.getMessage() + "\n" + Log.getStackTraceString(e));
+                mCursor = Music.getDb(getBaseContext()).getAlbumDataForBrowser(mFrom, mArtistId);
+            } catch (Exception e) {
+            	Log.w("Mp3Tunes", Log.getStackTraceString(e));
                 return false;
             }
             return true;
-        }
-        
-        @Override
-        protected void onProgressUpdate( Integer... values )
-        {
-            mAdapter.imageDownloadProgress( values[0], values[1] );
-        }
-
-        @Override
-        public void onPostExecute( Boolean result )
-        {
-            Music.setSpinnerState(AlbumBrowser.this, false);
-            mAdapter.asynOperationEnded();
         }
     }
     

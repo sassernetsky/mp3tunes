@@ -287,9 +287,9 @@ public class Music
      *  makeTimeString().
      *  This Formatter/StringBuilder are also used by makeAlbumSongsLabel()
      */
-    private static StringBuilder sFormatBuilder = new StringBuilder();
-    private static Formatter sFormatter = new Formatter(sFormatBuilder, Locale.getDefault());
-    private static final Object[] sTimeArgs = new Object[5];
+    private static StringBuilder  sFormatBuilder = new StringBuilder();
+    private static Formatter      sFormatter     = new Formatter(sFormatBuilder, Locale.getDefault());
+    private static final Object[] sTimeArgs      = new Object[5];
 
     public static String makeTimeString(Context context, long secs) {
         String durationformat = context.getString(R.string.durationformat);
@@ -388,9 +388,6 @@ public class Music
     public static int getCurrentAlbumId() {
         if (sService != null) {
             try {
-                //String id = sService.getMetadata()[5];
-                //if( id != Mp3tunesService.UNKNOWN )
-                //    return Integer.parseInt( id );
                 return sService.getTrack().getAlbumId();
             } catch (RemoteException ex) {
             }
@@ -400,9 +397,6 @@ public class Music
     public static int getCurrentArtistId() {
         if (sService != null) {
             try {
-                //String id = sService.getMetadata()[3];
-                //if( id != Mp3tunesService.UNKNOWN )
-                //    return Integer.parseInt( id );
                 return sService.getTrack().getArtistId();
             } catch (RemoteException ex) {
             }
@@ -412,9 +406,6 @@ public class Music
     public static int getCurrentTrackId() {
         if (sService != null) {
             try {
-                //String id = sService.getMetadata()[1];
-                //if( id != Mp3tunesService.UNKNOWN )
-                //    return Integer.parseInt( id );
                 return sService.getTrack().getId();
             } catch (RemoteException ex) {
             }

@@ -24,15 +24,15 @@ import org.json.JSONObject;
 
 public class Track
 {
-    private int mId;
-    private String mTitle;
-    int mNumber;
+    private int      mId;
+    private String   mTitle;
+    int              mNumber;
     protected double mDuration;
     protected String mFileName;
     protected String mFileKey;
-    protected int mFileSize;
-    String mDownloadUrl;
-    String mPlayUrl;
+    protected int    mFileSize;
+    String           mDownloadUrl;
+    String           mPlayUrl;
 
     int mAlbumId;
     String mAlbumTitle;

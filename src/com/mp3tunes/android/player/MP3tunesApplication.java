@@ -26,9 +26,11 @@ import java.util.WeakHashMap;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.binaryelysium.mp3tunes.api.LockerContext.ContextRetriever;
+import com.mp3tunes.android.player.activity.Login;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.SharedPreferences;
 
 
 public class MP3tunesApplication extends Application
@@ -110,6 +112,18 @@ public class MP3tunesApplication extends Application
         {
             LockerContext l = (LockerContext)map.get(LOCKER_CONTEXT_KEY);
             return l;
+        }
+
+        public String getPassword()
+        {
+            SharedPreferences settings = getSharedPreferences(Login.PREFS, 0);
+            return settings.getString("mp3tunes_pass", null);
+        }
+
+        public String getUserName()
+        {
+            SharedPreferences settings = getSharedPreferences(Login.PREFS, 0);
+            return  settings.getString("mp3tunes_user", null);
         }
         
     }
