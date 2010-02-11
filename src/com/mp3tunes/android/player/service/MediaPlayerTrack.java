@@ -252,9 +252,20 @@ public class MediaPlayerTrack
             }
         }
         
+        private void runBufferedCallback()
+        {
+            if (mBufferedCallback != null) {
+                mBuffered = true;
+                mBufferedCallback.run();
+            }
+        }
+
         private void tryRunBufferedCallback(int percent)
         {
             if (mBuffered) return;
+            if (percent == 100) {
+                runBufferedCallback();
+            }
             long duration = getDuration();            
             if (duration <= 0) return;
             
@@ -264,9 +275,7 @@ public class MediaPlayerTrack
             //try to start buffering the next song once we get one minute
             //ahead of our play back position
             if ((bufferingPos - pos) > 60000) {
-                if (mBufferedCallback != null)
-                    mBuffered = true;
-                    mBufferedCallback.run();
+                runBufferedCallback();
             }
         }
         

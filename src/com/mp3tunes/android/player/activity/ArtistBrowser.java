@@ -146,7 +146,11 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
                 view.setText(val);
             } else if (columnIndex == 2) {
                 boolean unknown = false;
-                ((TextView)v.findViewById(R.id.line2)).setText(Music.makeAlbumsLabel(getBaseContext(), cursor.getInt(columnIndex), 0, unknown));
+		int num = cursor.getInt(columnIndex);
+                String text = Music.makeAlbumsLabel(getBaseContext(), num, 0, unknown);
+                if (num <= 0)
+                    text = "";
+                ((TextView)v.findViewById(R.id.line2)).setText(text);
             } else if (columnIndex == 0) {
                 ImageView view = (ImageView)v.findViewById(R.id.icon);
                 view.setBackgroundDrawable(mDefaultArtistIcon);
