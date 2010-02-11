@@ -195,6 +195,10 @@ public class Login extends Activity
         {
             user = params[0];
             pass = params[1];
+            if (!user.matches(".*@.*")) {
+                Log.w("Mp3Tunes", "No site assuming mp3tunes.com");
+                user += "@mp3tunes.com";
+            }
             try 
             {
                 locker = new com.binaryelysium.mp3tunes.api.Locker(user, pass);

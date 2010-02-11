@@ -322,7 +322,12 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         
         public Binder ()
         {
-            Bitmap b = BitmapFactory.decodeResource(getResources(), R.drawable.playlist_icon);
+            Bitmap b;
+            if (mIsRadio)
+                b = BitmapFactory.decodeResource(getResources(), R.drawable.radio_icon);
+            else 
+                b = BitmapFactory.decodeResource(getResources(), R.drawable.playlist_icon);
+
             mDefaultIcon = new BitmapDrawable(b);
              //no filter or dither, it's a lot faster and we can't tell the difference
             mDefaultIcon.setFilterBitmap(false);

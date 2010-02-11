@@ -78,16 +78,22 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     private boolean mAdapterSent;
     private final static int SEARCH = CHILD_MENU_BASE;
     
-    String[] mFrom = new String[] {
+    static final String[] mFrom = new String[] {
             LockerDb.KEY_ID,
             LockerDb.KEY_ALBUM_NAME,
             LockerDb.KEY_ARTIST_NAME,
       };
     
-    int[] mTo = new int[] {
+    static final int[] mTo = new int[] {
             R.id.icon,
             R.id.line1,
             R.id.line2,
+    };
+
+    static class FROM_MAPPING {
+        static final int ID          = 0;
+        static final int NAME        = 1;
+        static final int ARTIST_NAME = 2;
     };
 
     /** Called when the activity is first created. */
@@ -201,17 +207,17 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     }
 
     private void setTitle() {
-        CharSequence fancyName = "";
-        if (mAlbumCursor != null && mAlbumCursor.getCount() > 0) {
-            mAlbumCursor.moveToFirst();
-            fancyName = mAlbumCursor.getString(Music.ALBUM_MAPPING.ARTIST_NAME);
-            if (fancyName == null || fancyName.equals(LockerDb.UNKNOWN_STRING))
-                fancyName = getText(R.string.unknown_artist_name);
-        }
+        //CharSequence fancyName = "";
+        //if (mAlbumCursor != null && mAlbumCursor.getCount() > 0) {
+        //    mAlbumCursor.moveToFirst();
+        //    fancyName = mAlbumCursor.getString(Music.ALBUM_MAPPING.ARTIST_NAME);
+        //    if (fancyName == null || fancyName.equals(LockerDb.UNKNOWN_STRING))
+        //        fancyName = getText(R.string.unknown_artist_name);
+        //}
 
-        if (mArtistId != null && fancyName != null)
-            setTitle(fancyName);
-        else
+        //if (mArtistId != null && fancyName != null)
+        //    setTitle(fancyName);
+        //else
             setTitle(R.string.title_albums);
     }
     

@@ -533,13 +533,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             vh.buffer1 = new CharArrayBuffer(100);
             vh.buffer2 = new char[200];
 
-            if (mActivity.mEditMode) {
-                vh.icon.setVisibility(View.VISIBLE);
-                vh.icon.setImageResource(R.drawable.ic_mp_move);
-            } else {
+            //if (mActivity.mEditMode) {
+            //    vh.icon.setVisibility(View.VISIBLE);
+            //    vh.icon.setImageResource(R.drawable.ic_mp_move);
+            //} else {
                 vh.icon.setImageResource(R.drawable.song_icon);
                 vh.icon.setVisibility(View.VISIBLE);
-            }
+            //}
 
             v.setTag(vh);
             return v;

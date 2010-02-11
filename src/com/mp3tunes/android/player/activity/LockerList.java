@@ -72,7 +72,7 @@ public class LockerList extends ListActivity
         new Option(R.string.artists, R.drawable.artist_icon),
         new Option(R.string.albums, R.drawable.album_icon),
         new Option(R.string.playlists, R.drawable.playlist_icon),
-        new Option(R.string.radio, R.drawable.playlist_icon),
+        new Option(R.string.radio, R.drawable.radio_icon),
         new Option(R.string.search, R.drawable.search_icon)
     };
     
