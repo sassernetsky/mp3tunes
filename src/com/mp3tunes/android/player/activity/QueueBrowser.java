@@ -85,6 +85,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         super.onCreate(icicle);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        Music.ensureSession(this);
         if (icicle != null) {
             mSelectedId = icicle.getLong("selectedtrack");
             mAlbumId = icicle.getString("album");

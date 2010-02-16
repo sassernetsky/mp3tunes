@@ -112,7 +112,7 @@ public class Mp3tunesService extends Service
         public int getBufferPercent() throws RemoteException
         {
             try {
-                return mPlayerHandler.getTrack().getBufferPercent();
+                return mPlayerHandler.getMediaPlayerTrack().getBufferPercent();
             } catch (Exception e) {
                 return 0;
             } 
@@ -121,7 +121,7 @@ public class Mp3tunesService extends Service
         public long getDuration() throws RemoteException
         {
             try {
-                return mPlayerHandler.getTrack().getDuration();
+                return mPlayerHandler.getMediaPlayerTrack().getDuration();
             } catch (Exception e) {
                 return 0;
             }  
@@ -130,7 +130,7 @@ public class Mp3tunesService extends Service
         public long getPosition() throws RemoteException
         {
             try {
-                return mPlayerHandler.getTrack().getPosition();
+                return mPlayerHandler.getMediaPlayerTrack().getPosition();
             } catch (Exception e) {
                 return 0;
             } 
@@ -139,7 +139,7 @@ public class Mp3tunesService extends Service
         public boolean isPlaying() throws RemoteException
         {
             try {
-                return mPlayerHandler.getTrack().isPlaying();
+                return mPlayerHandler.getMediaPlayerTrack().isPlaying();
             } catch (Exception e) {
                 return false;
             }
@@ -178,7 +178,7 @@ public class Mp3tunesService extends Service
         public ParcelableTrack getTrack() throws RemoteException
         {
             try {
-                return new ParcelableTrack(mPlayerHandler.getTrack().getTrack());
+                return new ParcelableTrack(mPlayerHandler.getTrack());
             } catch (Exception e) {
                 throw new RemoteException();
             }
@@ -187,7 +187,7 @@ public class Mp3tunesService extends Service
         public boolean isPaused() throws RemoteException
         {
             try {
-                return mPlayerHandler.getTrack().isPaused();
+                return mPlayerHandler.getMediaPlayerTrack().isPaused();
             } catch (Exception e) {
                 throw new RemoteException();
             }     

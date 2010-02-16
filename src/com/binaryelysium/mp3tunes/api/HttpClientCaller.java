@@ -48,6 +48,31 @@ public class HttpClientCaller
     public static HttpClientCaller getInstance() {
         return instance;
     }
+    
+    
+    
+    public String callNoFixSession(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 
+    {
+        try {
+            HttpClient client = new DefaultHttpClient();
+            String url = method.getCall();
+            Log.w("Mp3tunes", "Calling: " + url);
+            HttpGet get = new HttpGet(url);
+            ResponseHandler<String> responseHandler = new BasicResponseHandler();
+            String response = client.execute(get, responseHandler);
+            client.getConnectionManager().shutdown();
+            return response;
+        } catch (UnknownHostException e) {
+            Log.e("Mp3Tunes", "UnknownHostException: what do we do?");
+            throw e;
+        } catch (SocketException e) {
+            Log.e("Mp3Tunes", "SocketException: what do we do?");
+            throw e;
+        } catch (IOException e) {
+            Log.e("Mp3Tunes", Log.getStackTraceString(e));
+            throw e;
+        }
+    }
 
     public String call(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 
     {

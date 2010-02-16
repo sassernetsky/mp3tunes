@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.telephony.TelephonyManager;
 
+import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.service.MediaPlayerTrack.BufferedCallback;
 import com.mp3tunes.android.player.service.MediaPlayerTrack.TrackFinishedHandler;
 import com.mp3tunes.android.player.service.PlaybackList.PlaybackListEmptyException;
@@ -42,7 +43,7 @@ public class PlayerHandler
             mCacher.cleanPostCache();
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
-            mGuiNotifier.nextTrack(mTrack.getTrack());
+            mGuiNotifier.nextTrack(getTrack());
             mCacher.tryPreCache();
             return mTrack.play();
         } catch (PlaybackListEmptyException e) {
@@ -61,7 +62,7 @@ public class PlayerHandler
             mTrack = mPlaybackList.getPrevious();
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
-            mGuiNotifier.prevTrack(mTrack.getTrack());
+            mGuiNotifier.prevTrack(getTrack());
             return mTrack.play();
         } catch (PlaybackListEmptyException e) {
             mGuiNotifier.sendPlaybackError(null, "Tried to play an empty playlist");
@@ -86,7 +87,7 @@ public class PlayerHandler
             mTrack = mPlaybackList.getAt(position);
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(position));
-            mGuiNotifier.play(mTrack.getTrack());
+            mGuiNotifier.play(getTrack());
             return mTrack.play();
         } catch (PlaybackListEmptyException e) {
             mGuiNotifier.sendPlaybackError(null, "Tried to play an empty playlist");
@@ -98,19 +99,19 @@ public class PlayerHandler
 
     public boolean pause()
     {
-        mGuiNotifier.pause(mTrack.getTrack());
+        mGuiNotifier.pause(getTrack());
         return mTrack.pause();
     }
     
     public boolean unpause()
     {
-        mGuiNotifier.play(mTrack.getTrack());
+        mGuiNotifier.play(getTrack());
         return mTrack.unpause();
     }
     
     public boolean stop()
     {
-        mGuiNotifier.stop(mTrack.getTrack());
+        mGuiNotifier.stop(getTrack());
         return mTrack.stop();
     }
     
@@ -120,7 +121,14 @@ public class PlayerHandler
         mCacher.setPlaybackList(list);
     }
     
-    public MediaPlayerTrack getTrack()
+    public Track getTrack()
+    {
+        if (mTrack != null)
+            return mTrack.getTrack();
+        return null;
+    }
+    
+    public MediaPlayerTrack getMediaPlayerTrack()
     {
         return mTrack;
     }

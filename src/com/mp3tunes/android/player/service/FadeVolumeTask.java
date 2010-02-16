@@ -65,7 +65,7 @@ public abstract class FadeVolumeTask extends TimerTask
             volumeValue *= (float) (mCurrentStep) / (float) mSteps;
         }
 
-        mPlayerHandler.getTrack().setVolume(volumeValue, volumeValue);
+        mPlayerHandler.getMediaPlayerTrack().setVolume(volumeValue, volumeValue);
 
         if (mCurrentStep >= mSteps) {
             this.onPostExecute();

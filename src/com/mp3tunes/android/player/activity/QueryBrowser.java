@@ -65,6 +65,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         super.onCreate(icicle);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
+        Music.ensureSession(this);
         
         if (icicle == null) {
             Intent intent = getIntent();

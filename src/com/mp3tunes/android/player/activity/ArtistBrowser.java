@@ -15,50 +15,37 @@
  */
 package com.mp3tunes.android.player.activity;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ListActivity;
-import android.app.SearchManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.util.Log;
 import android.view.ContextMenu;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.widget.AlphabetIndexer;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.SectionIndexer;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
+import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 
 public class ArtistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
@@ -67,9 +54,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     private String mCurrentArtistName;
     private SimpleCursorAdapter mAdapter;
     private boolean mAdapterSent;
-    private final static int SEARCH = CHILD_MENU_BASE;
     private AsyncTask<Void, Void, Boolean> mArtistTask;
-    private AsyncTask<Integer, Void, Boolean> mTracksTask;
+    private AsyncTask<Void, Void, Boolean> mTracksTask;
     
     
     String[] mFrom = new String[] {
@@ -84,6 +70,12 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
             R.id.line2
     };
     
+    static class FROM_MAPPING {
+        static final int ID          = 0;
+        static final int NAME        = 1;
+        static final int ALBUM_COUNT = 2;
+    };
+    
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle icicle)
@@ -96,6 +88,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
+        Music.ensureSession(this);
         
         buildErrorDialog(R.string.artist_browser_error);
         buildProgressDialog(R.string.loading_artists);
@@ -224,11 +217,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     public void init(Cursor c) 
     {
         mAdapter.changeCursor(c); // also sets mArtistCursor
-
-        if (mArtistCursor == null) {
-            closeContextMenu();
-            return;
-        }
+        mArtistCursor = c;
         
         setTitle();
     }
@@ -240,14 +229,12 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     
     @Override
     public void onCreateContextMenu(ContextMenu menu, View view, ContextMenuInfo menuInfoIn) {
-        menu.add(0, QUEUE, 0, R.string.menu_queue);
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
-        menu.add(0, SEARCH, 0, R.string.search);
 
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
         mArtistCursor.moveToPosition(mi.position);
-        mCurrentArtistId = mArtistCursor.getString(Music.ARTIST_MAPPING.ID);
-        mCurrentArtistName = mArtistCursor.getString(Music.ARTIST_MAPPING.ARTIST_NAME);
+        mCurrentArtistId = mArtistCursor.getString(FROM_MAPPING.ID);
+        mCurrentArtistName = mArtistCursor.getString(FROM_MAPPING.NAME);
         menu.setHeaderTitle(mCurrentArtistName);
     }
 
@@ -256,42 +243,11 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected artist
-                mTracksTask = new FetchTracksTask().execute( Integer.valueOf( mCurrentArtistId ), PLAY_SELECTION );
-                return true;
-            }
-
-            case QUEUE: {
-                mTracksTask = new FetchTracksTask().execute( Integer.valueOf( mCurrentArtistId ), QUEUE );
-                return true;
-            }
-
-            case NEW_PLAYLIST: {
-                Intent intent = new Intent();
-                startActivityForResult(intent, NEW_PLAYLIST);
-                return true;
-            }
-
-            case PLAYLIST_SELECTED: {
-                item.getIntent().getIntExtra("playlist", 0);
+                mTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ARTIST, mCurrentArtistId, this).execute();
                 return true;
             }
         }
         return super.onContextItemSelected(item);
-    }
-
-    void doSearch() {
-        CharSequence title = null;
-        String query = null;
-        
-        Intent i = new Intent();
-        i.setAction(MediaStore.INTENT_ACTION_MEDIA_SEARCH);
-        
-        title = mCurrentArtistName;
-        i.putExtra(MediaStore.EXTRA_MEDIA_ALBUM, mCurrentArtistName);
-        i.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE);
-        i.putExtra(SearchManager.QUERY, query);
-
-        startActivity(Intent.createChooser(i, title));
     }
 
     @Override
@@ -309,7 +265,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     protected void onListItemClick(ListView l, View v, int position, long id)
     {
         Cursor c = (Cursor) getListAdapter().getItem( position );
-        String artist = c.getString(Music.ARTIST_MAPPING.ID);
+        String artist = c.getString(FROM_MAPPING.ID);
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/album");
         intent.putExtra("artist", artist);
@@ -328,6 +284,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     public boolean onPrepareOptionsMenu(Menu menu) {
         menu.findItem(R.id.menu_opt_player).setVisible( Music.isMusicPlaying() );
         menu.findItem(R.id.menu_opt_playall).setVisible( false );
+        menu.findItem(R.id.menu_opt_shuffleall).setVisible( false );
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -376,51 +333,43 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         }
     }
     
-    private class FetchTracksTask extends AsyncTask<Integer, Void, Boolean>
-    {
-        Cursor cursor;
-        int action = -1;
-        @Override
-        public void onPreExecute()
-        {
-            Music.setSpinnerState(ArtistBrowser.this, true);
-        }
-
-        @Override
-        public Boolean doInBackground( Integer... params )
-        {
-            if(params.length <= 1)
-                return false;
-            int artist_id = params[0];
-            action = params[1];
-            try {
-                    cursor = Music.getDb(getBaseContext()).getTracksForArtist( artist_id );
-            } catch ( Exception e ) {
-                System.out.println("Fetching tracks failed");
-                e.printStackTrace();
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        public void onPostExecute( Boolean result )
-        {
-            Music.setSpinnerState(ArtistBrowser.this, false);
-            if( cursor != null && result) {
-                switch ( action )
-                {
-                case PLAY_SELECTION:
-                    Music.playAll(ArtistBrowser.this, cursor, 0);
-                    break;
-                case QUEUE:
-                    int[] ids = Music.getSongListForCursor( cursor );
-                    System.out.println("queue got " +ids.length);
-                    break;
-                }
-            } else
-                System.out.println("CURSOR NULL");
-        }
-    }
+//    private class FetchTracksTask extends AsyncTask<Integer, Void, Boolean>
+//    {
+//        Cursor cursor;
+//        @Override
+//        public void onPreExecute()
+//        {
+//            Music.setSpinnerState(ArtistBrowser.this, true);
+//        }
+//
+//        @Override
+//        public Boolean doInBackground( Integer... params )
+//        {
+//            if(params.length <= 1)
+//                return false;
+//            int artist_id = params[0];
+//            try {
+//                    cursor = Music.getDb(getBaseContext()).getTracksForArtist(artist_id);
+//            } catch ( Exception e ) {
+//                System.out.println("Fetching tracks failed");
+//                e.printStackTrace();
+//                return false;
+//            }
+//            return true;
+//        }
+//
+//        @Override
+//        public void onPostExecute( Boolean result )
+//        {
+//            Music.setSpinnerState(ArtistBrowser.this, false);
+//            
+//            if (result) return;
+//            
+//            if( cursor != null) {
+//                    Music.playAll(ArtistBrowser.this, cursor, 0);
+//            } else
+//                System.out.println("CURSOR NULL");
+//        }
+//    }
 }
 

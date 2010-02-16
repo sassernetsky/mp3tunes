@@ -18,6 +18,12 @@ public class LockerContext
             return c.mSession;
     }
     
+    synchronized public boolean haveSession()
+    {
+        LockerContext c = sRetriever.get();
+        return c.mSession != null;
+    }
+    
     synchronized public String getSessionId() throws InvalidSessionException
     {
         LockerContext c = sRetriever.get();

@@ -29,8 +29,10 @@ import java.util.Formatter;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.BitmapFactory;
@@ -47,9 +49,12 @@ import android.util.Log;
 import android.view.Window;
 import android.widget.Toast;
 
+import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.service.ITunesService;
+import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 /**
  * Simple static types and enums.
@@ -212,6 +217,36 @@ public class Music
     private static CurrentPlaylist sCp = null;
     private static ArrayList<Context> sDbConnectionMap = new ArrayList<Context>();
 
+    //This function checks for a session.  If we do not have a session
+    //it will try to get one from the stored username and password
+    //if it cannot then it will take you to the login page.
+    public static void ensureSession(Activity a)
+    {
+        LockerContext context = LockerContext.instance();
+        if (context.haveSession()) return;
+        RefreshSessionTask task = new RefreshSessionTask(a);
+        if (task.doInForground()) {
+            Intent intent = new Intent(a, Login.class);
+            a.startActivity(intent);
+            a.finish();
+        }
+    }
+    
+    static public void clearData(Context context)
+    {
+        ContextWrapper cw       = new ContextWrapper(context);
+        SharedPreferences settings = cw.getSharedPreferences(Login.PREFS, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putBoolean("auto_login", false);
+        editor.commit();
+        Music.getDb(context).clearDB();
+        try {
+            Music.sService.stop();
+        } catch (RemoteException e) {
+        } catch (Exception e) {
+        }
+    }
+    
     
     public static boolean unconnectFromDb( Context context )
     {
@@ -453,14 +488,14 @@ public class Music
         try {
             int curid = getCurrentTrackId();
             int curpos = sService.getQueuePosition();
-            if (position != -1 && curpos == position && curid == list[position]) {
-                // The selected file is the file that's currently playing;
-                // figure out if we need to restart with a new playlist,
-                // or just launch the playback activity.
-                int [] playlist = sCp.getQueue();
-                if (Arrays.equals(list, playlist))
-                    return; 
-            }
+//            if (position != -1 && curpos == position && curid == list[position]) {
+//                // The selected file is the file that's currently playing;
+//                // figure out if we need to restart with a new playlist,
+//                // or just launch the playback activity.
+//                int [] playlist = sCp.getQueue();
+//                if (Arrays.equals(list, playlist))
+//                    return; 
+//            }
             if (position < 0) {
                 position = 0;
             }

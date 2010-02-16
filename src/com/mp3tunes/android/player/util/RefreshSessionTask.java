@@ -32,7 +32,7 @@ public class RefreshSessionTask extends AsyncTask<Void, Void, Boolean>
     public RefreshSessionTask(Context context)
     {
         mCw       = new ContextWrapper(context);
-        mLocker   = MP3tunesApplication.getInstance().getLocker();
+        mLocker   = new Locker();
         mSuccess  = null;
         mFail     = null;
         mReceiver = null;

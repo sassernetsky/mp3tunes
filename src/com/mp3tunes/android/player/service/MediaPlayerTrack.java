@@ -3,6 +3,7 @@ package com.mp3tunes.android.player.service;
 import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
+import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
@@ -106,7 +107,7 @@ public class MediaPlayerTrack
             mMp.stop();
             return true;
         }
-        return false;
+        return true;
     }
     
     synchronized public boolean isPlaying() 
@@ -363,6 +364,18 @@ public class MediaPlayerTrack
                     if (prepare(false)) {
                         if (play())
                             return true;
+                    }
+                }
+            } else if (extra == -1) {
+                Locker l = new Locker();
+                if (!l.testSession()) {
+                    Logger.log("Session likely invalid trying to refresh and play again");
+                    RefreshSessionTask task = new RefreshSessionTask(mContext);
+                    if (task.doInForground()) {
+                        if (prepare(false)) {
+                            if (play())
+                                return true;
+                        }
                     }
                 }
             }

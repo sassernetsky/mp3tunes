@@ -20,9 +20,6 @@
 package com.binaryelysium.mp3tunes.api;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringBufferInputStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.http.client.HttpResponseException;
@@ -50,6 +47,45 @@ public class Locker
             throws LockerException, LoginException
     {
         refreshSession(username, password);
+    }
+    
+    public boolean testSession()
+    {
+        String text;
+        try {
+            text = HttpClientCaller.getInstance().callNoFixSession(new RemoteMethod.Builder(RemoteMethod.METHODS.LAST_UPDATE)
+            .addParam("type", UpdateType.locker.toString())
+            .create());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return true;
+        } catch (InvalidSessionException e) {
+            e.printStackTrace();
+            return false;
+        } catch (LockerException e) {
+            e.printStackTrace();
+            return false;
+        } catch (LoginException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        try {
+            JSONObject json = new JSONObject(text);
+            if (json.getInt("status") == 1)
+                return true;
+            else {
+                int error = json.getInt("errorCode");
+                if (error == 401001) return false;
+                String errorStr = Integer.toString(error);
+                Log.e("Mp3Tunes", "Got error " + errorStr + " testing for valid session");
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return true;
+        }
+
+        return false;
     }
     
     public void refreshSession(String username, String password) throws LockerException, LoginException
@@ -85,7 +121,7 @@ public class Locker
     {
         String text;
         try {
-            text = HttpClientCaller.getInstance().call(new RemoteMethod.Builder(RemoteMethod.METHODS.LOGIN)
+            text = HttpClientCaller.getInstance().call(new RemoteMethod.Builder(RemoteMethod.METHODS.LAST_UPDATE)
             .addParam("type", type.toString())
             .create());
         } catch (IOException e) {

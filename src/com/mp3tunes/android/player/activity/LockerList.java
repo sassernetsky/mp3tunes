@@ -90,7 +90,8 @@ public class LockerList extends ListActivity
         super.onCreate(state);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.lockerlist);
-
+        Music.ensureSession(this);
+        
         // this prevents the background image from flickering when the
         // animations run
         getListView().setAnimationCacheEnabled( false );
@@ -265,16 +266,7 @@ public class LockerList extends ListActivity
 
     private void clearData()
     {
-        SharedPreferences settings = getSharedPreferences( Login.PREFS, 0 );
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putBoolean("auto_login", false);
-        editor.commit();
-        Music.getDb(this).clearDB();
-        try {
-            Music.sService.stop();
-        } catch (RemoteException e) {
-        } catch (Exception e) {
-        }
+        Music.clearData(this);
     }
     
     private void createAlertDialog()

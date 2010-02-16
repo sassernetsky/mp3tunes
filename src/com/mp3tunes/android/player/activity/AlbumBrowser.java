@@ -15,41 +15,27 @@
  */
 package com.mp3tunes.android.player.activity;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ListActivity;
-import android.app.SearchManager;
-import android.content.AsyncQueryHandler;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ContextMenu;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.widget.AlphabetIndexer;
-import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.SectionIndexer;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -57,26 +43,22 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import com.mp3tunes.android.player.AlbumArtImageView;
 import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
-import com.mp3tunes.android.player.RemoteImageView;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
-import com.mp3tunes.android.player.util.ImageDownloaderListener;
+import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 
 public class AlbumBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
     private String mCurrentAlbumId;
-    private String mCurrentAlbumName;
     private Cursor mAlbumCursor;
     private String mArtistId;
     private SimpleCursorAdapter mAdapter;
     private AsyncTask<Void, Integer, Boolean> mArtFetcher;
     private AsyncTask<Void, Void, Boolean>    mAlbumFetcher;
-    private AsyncTask<Integer, Void, Boolean> mTracksTask;
+    private AsyncTask<Void, Void, Boolean> mTracksTask;
     private boolean mAdapterSent;
-    private final static int SEARCH = CHILD_MENU_BASE;
     
     static final String[] mFrom = new String[] {
             LockerDb.KEY_ID,
@@ -106,10 +88,11 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         } else {
             mArtistId = getIntent().getStringExtra("artist");
         }
-        super.onCreate(icicle);
+        super.onCreate(icicle); 
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
+        Music.ensureSession(this);
 
         buildErrorDialog(R.string.ablum_browser_error);
         buildProgressDialog(R.string.loading_albums);
@@ -194,46 +177,27 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         super.onPause();
     }
 
-    public void init(Cursor c) {
-
+    public void init(Cursor c) 
+    {
         mAdapter.changeCursor(c); // also sets mAlbumCursor
-
-        if (mAlbumCursor == null) {
-            closeContextMenu();
-            return;
-        }
+        mAlbumCursor = c;
         
-        setTitle();
-    }
-
-    private void setTitle() {
-        //CharSequence fancyName = "";
-        //if (mAlbumCursor != null && mAlbumCursor.getCount() > 0) {
-        //    mAlbumCursor.moveToFirst();
-        //    fancyName = mAlbumCursor.getString(Music.ALBUM_MAPPING.ARTIST_NAME);
-        //    if (fancyName == null || fancyName.equals(LockerDb.UNKNOWN_STRING))
-        //        fancyName = getText(R.string.unknown_artist_name);
-        //}
-
-        //if (mArtistId != null && fancyName != null)
-        //    setTitle(fancyName);
-        //else
-            setTitle(R.string.title_albums);
+        setTitle(R.string.title_albums);
     }
     
     @Override
-    public void onCreateContextMenu(ContextMenu menu, View view, ContextMenuInfo menuInfoIn) {
-        menu.add(0, QUEUE, 0, R.string.menu_play_selection);
-        menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
-        
-        menu.add(0, SEARCH, 0, R.string.search);
+    public void onCreateContextMenu(ContextMenu menu, View view, ContextMenuInfo menuInfoIn) 
+    {
+        menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);   
 
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
-        mAlbumCursor.moveToPosition(mi.position);
-        mCurrentAlbumId = mAlbumCursor.getString(mAlbumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums._ID));
-        mCurrentAlbumName = mAlbumCursor.getString(mAlbumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM));
-
-        menu.setHeaderTitle(mCurrentAlbumName);
+        int pos = mi.position;
+        if (mAlbumCursor != null) {
+            mAlbumCursor.moveToPosition(pos);
+            mCurrentAlbumId = mAlbumCursor.getString(FROM_MAPPING.ID);
+            String name = mAlbumCursor.getString(FROM_MAPPING.NAME);
+            menu.setHeaderTitle(name);
+        }
     }
 
     @Override
@@ -241,48 +205,12 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected album
-                mTracksTask = new FetchTracksTask().execute( Integer.valueOf( mCurrentAlbumId ), PLAY_SELECTION );
+                mTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ALBUM, mCurrentAlbumId, this).execute();
                 return true;
             }
-
-            case QUEUE: {
-                mTracksTask = new FetchTracksTask();
-                mTracksTask.execute( Integer.valueOf( mCurrentAlbumId ), QUEUE );
-                return true;
-            }
-
-            case NEW_PLAYLIST: {
-                Intent intent = new Intent();
-                startActivityForResult(intent, NEW_PLAYLIST);
-                return true;
-            }
-
-            case PLAYLIST_SELECTED: {
-                return true;
-            }
-            case DELETE_ITEM: {
-                return true;
-            }
-            case SEARCH:
-                return true;
-
+            default:
         }
         return super.onContextItemSelected(item);
-    }
-
-    void doSearch() {
-        CharSequence title = null;
-        String query = null;
-        
-        Intent i = new Intent();
-        i.setAction(MediaStore.INTENT_ACTION_MEDIA_SEARCH);
-        
-        title = mCurrentAlbumName;
-        i.putExtra(MediaStore.EXTRA_MEDIA_ALBUM, mCurrentAlbumName);
-        i.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, MediaStore.Audio.Albums.ENTRY_CONTENT_TYPE);
-        i.putExtra(SearchManager.QUERY, query);
-
-        startActivity(Intent.createChooser(i, title));
     }
 
     @Override
@@ -293,12 +221,6 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
                     finish();
                 }
                 break;
-
-            case NEW_PLAYLIST:
-                if (resultCode == RESULT_OK) {
-                    Uri uri = intent.getData();
-                }
-                break;
         }
     }
 
@@ -306,12 +228,10 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     protected void onListItemClick(ListView l, View v, int position, long id)
     {
         Cursor c = (Cursor) getListAdapter().getItem( position );
-        String artist = c.getString(Music.ALBUM_MAPPING.ARTIST_ID);
-        String album = c.getString(Music.ARTIST_MAPPING.ID);
+        String album = c.getString(FROM_MAPPING.ID);
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
         intent.putExtra("album", album);
-        intent.putExtra("artist", artist);
         startActivity(intent);
     }
 
@@ -327,6 +247,7 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     public boolean onPrepareOptionsMenu(Menu menu) {
         menu.findItem(R.id.menu_opt_player).setVisible( Music.isMusicPlaying() );
         menu.findItem(R.id.menu_opt_playall).setVisible( false );
+        menu.findItem(R.id.menu_opt_shuffleall).setVisible( false );
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -344,9 +265,6 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
             case R.id.menu_opt_player:
                 intent = new Intent("com.mp3tunes.android.player.PLAYER");
                 startActivity(intent);
-                return true;
-
-            case SHUFFLE_ALL:
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -423,48 +341,48 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         }
     }
     
-    private class FetchTracksTask extends AsyncTask<Integer, Void, Boolean>
-    {
-        Cursor cursor;
-        int action = -1;
-        @Override
-        public void onPreExecute()
-        {
-            Music.setSpinnerState(AlbumBrowser.this, true);
-        }
-
-        @Override
-        public Boolean doInBackground( Integer... params )
-        {
-            if(params.length <= 1)
-                return false;
-            int album_id = params[0];
-            action = params[1];
-            try {
-                    cursor = Music.getDb(getBaseContext()).getTracksForAlbum(album_id);
-            } catch ( Exception e ) {
-                System.out.println("Fetching tracks failed");
-                e.printStackTrace();
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        public void onPostExecute( Boolean result )
-        {
-            Music.setSpinnerState(AlbumBrowser.this, false);
-            if( cursor != null && result) {
-                switch ( action )
-                {
-                case PLAY_SELECTION:
-                    Music.playAll(AlbumBrowser.this, cursor, 0);
-                    break;
-                case QUEUE:
-                }
-            } else
-                System.out.println("CURSOR NULL");
-        }
-    }
+//    private class FetchTracksTask extends AsyncTask<Integer, Void, Boolean>
+//    {
+//        Cursor cursor;
+//        int action = -1;
+//        @Override
+//        public void onPreExecute()
+//        {
+//            Music.setSpinnerState(AlbumBrowser.this, true);
+//        }
+//
+//        @Override
+//        public Boolean doInBackground( Integer... params )
+//        {
+//            if(params.length <= 1)
+//                return false;
+//            int album_id = params[0];
+//            action = params[1];
+//            try {
+//                    cursor = Music.getDb(getBaseContext()).getTracksForAlbum(album_id);
+//            } catch ( Exception e ) {
+//                System.out.println("Fetching tracks failed");
+//                e.printStackTrace();
+//                return false;
+//            }
+//            return true;
+//        }
+//
+//        @Override
+//        public void onPostExecute( Boolean result )
+//        {
+//            Music.setSpinnerState(AlbumBrowser.this, false);
+//            if( cursor != null && result) {
+//                switch ( action )
+//                {
+//                case PLAY_SELECTION:
+//                    Music.playAll(AlbumBrowser.this, cursor, 0);
+//                    break;
+//                default:
+//                }
+//            } else
+//                System.out.println("CURSOR NULL");
+//        }
+//    }
    
 }
