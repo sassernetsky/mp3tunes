@@ -22,6 +22,8 @@ package com.binaryelysium.mp3tunes.api;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.util.Log;
+
 public class Track
 {
     private int      mId;
@@ -245,6 +247,7 @@ public class Track
             return t;
         } catch (JSONException e) {
             e.printStackTrace();
+            Log.e("Mp3Tunes", obj.toString());
             return null;
         }
     }

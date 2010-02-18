@@ -246,8 +246,13 @@ public class PlayerHandler
 
         void tryPreCache()
         {
+            Logger.log("Trying precache");
             try {
-                if (mLastIndex == -1) return;
+                if (mLastIndex == -1) {
+                    Logger.log("Last index not set");
+                    return;
+                }
+                Logger.log("Last index set: " + Integer.toString(mLastIndex));
                 if (mList.peekAt(mLastIndex).isBuffered()) 
                     tryPreCache(mLastIndex);
             } catch (PlaybackListEmptyException e) {
@@ -262,7 +267,7 @@ public class PlayerHandler
         //playing
         void tryPreCache(int bufferingPos)
         {
-            Logger.log("Trying precache");
+            Logger.log("Trying precache at: " + Integer.toString(bufferingPos));
             int playbackPos = mList.getCurrentPosition();
             
             //if this is true then we have prefetched enough tracks
@@ -301,6 +306,7 @@ public class PlayerHandler
             
             public void run() 
             {
+                Logger.log("Trying to precache at: " + Integer.toString(mPos));
                 mCacher.tryPreCache(mPos);
             }
         }

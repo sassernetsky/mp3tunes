@@ -265,6 +265,89 @@ public class LockerDb
         }
     }
     
+    public Cursor getTrackDataByAlbumForBrowser(String[] from, String id) throws SQLiteException, IOException, LockerException
+    {
+        System.out.println("querying for tracks on album: " + id);
+        if (id == null) return null;
+        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + KEY_TRACK_COUNT
+                + " FROM album WHERE " + KEY_ID + "=" + id);
+        
+        int idNum = Integer.parseInt(id);
+        try {
+            long count = albumTrackCount.simpleQueryForLong();
+            
+            Cursor c = mDb.query(TABLE_TRACK, from, KEY_ALBUM_ID + "=" + id, 
+                                 null, null, null, "lower(" + KEY_TITLE + ")");
+            if (c.getCount() == count)
+                return c;
+            else
+                c.close();
+        } catch (SQLiteDoneException e) {}
+        refreshTracksforAlbum(idNum);
+        return mDb.query(TABLE_TRACK, from, KEY_ALBUM_ID + "=" + id, 
+                null, null, null, "lower(" + KEY_TITLE + ")");
+    }
+    
+    public Cursor getTrackDataByArtistForBrowser(String[] from, String id) throws SQLiteException, IOException, LockerException
+    {
+        System.out.println("querying for tracks on album: " + id);
+        if (id == null) return null;
+        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + KEY_TRACK_COUNT
+                + " FROM artist WHERE " + KEY_ID + "=" + id);
+        int idNum = Integer.parseInt(id);
+        try {
+            long count = albumTrackCount.simpleQueryForLong();
+            
+            Cursor c = mDb.query(TABLE_TRACK, from, KEY_ARTIST_ID + "=" + id, 
+                    null, null, null, "lower(" + KEY_TITLE + ")");
+            if (c.getCount() == count)
+                return c;
+            else
+                c.close();
+        } catch (SQLiteDoneException e) {}
+        refreshTracksforArtist(idNum);
+        return mDb.query(TABLE_TRACK, from, KEY_ARTIST_ID + "=" + id, 
+                null, null, null, "lower(" + KEY_TITLE + ")");
+    }
+    
+    public Cursor getTrackDataByPlaylistForBrowser(String[] from, String id) throws SQLiteException, IOException, LockerException
+    {
+        System.out.println("querying for tracks on album: " + id);
+        if (id == null) return null;
+        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + KEY_FILE_COUNT
+                + " FROM playlist WHERE " + KEY_ID + "=\"" + id + "\"");
+        
+        StringBuilder query = new StringBuilder("SELECT DISTINCT ")
+        .append(TABLE_TRACK).append(".").append(KEY_ID).append(" ");
+        for (String key : from) {
+            query.append(key).append(", ");
+        }
+        query.append(KEY_PLAYLIST_INDEX).append(" ").append("FROM ")
+        .append(TABLE_PLAYLIST).append(" JOIN ")
+        .append(TABLE_PLAYLIST_TRACKS).append(" ").append("ON ")
+        .append(TABLE_PLAYLIST).append(".").append(KEY_ID)
+        .append(" = ").append(TABLE_PLAYLIST_TRACKS).append(".")
+        .append(KEY_PLAYLIST_ID).append(" ").append("JOIN ")
+        .append(TABLE_TRACK).append(" ").append("ON ")
+        .append(TABLE_PLAYLIST_TRACKS).append(".").append(KEY_TRACK_ID)
+        .append(" = ").append(TABLE_TRACK).append(".").append(KEY_ID)
+        .append(" ").append("WHERE ").append(KEY_PLAYLIST_ID).append("='")
+        .append(id).append("' ").append("ORDER BY ")
+        .append(KEY_PLAYLIST_INDEX);
+
+        try {
+            long count = albumTrackCount.simpleQueryForLong();
+            
+            Cursor c = mDb.rawQuery(query.toString(), null);
+            if (c.getCount() == count)
+                return c;
+            else
+                c.close();
+        } catch (SQLiteDoneException e) {}
+        refreshTracksforPlaylist(id);
+        return mDb.rawQuery(query.toString(), null);
+    }
+    
     /**
      * 
      * @param artist_id
@@ -840,38 +923,6 @@ public class LockerDb
         System.out.println("insertion complete");
     }
     
-//    private void refreshTracksforRadio(final String radio_id)
-//    throws SQLiteException, IOException, LockerException
-//    {
-//        List<Track> tracks;
-//        try {
-//            tracks = mLocker.getTracksForPlaylistFromJson(radio_id);
-//        } catch (InvalidSessionException e) {
-//            throw new LockerException("Bad Session Data");
-//        } catch (JSONException e) {
-//            throw new LockerException("Sever Sent Corrupt Data");
-//        } catch (LoginException e) {
-//            throw new LockerException("Unable to refresh session");
-//        }
-//        
-//        System.out.println("beginning insertion of " + tracks.size()
-//                + " tracks for playlist id " + radio_id);
-//
-//        mDb.delete("radio_tracks", "radio_id='" + radio_id + "'",
-//                null);
-//        int index = 0;
-//        for (Track t : tracks) {
-//            ContentValues cv = new ContentValues(); 
-//            insertTrack(t);
-//            cv.put("radio_id", radio_id);
-//            cv.put("track_id", t.getId());
-//            cv.put("radio_index", index);
-//            mDb.insert("radio_tracks", UNKNOWN_STRING, cv);
-//            index++;
-//        }
-//        System.out.println("insertion complete");
-//    }
-
     private void refreshSearch(String query) throws SQLiteException, IOException, LockerException
     {
         SearchResult results = null;

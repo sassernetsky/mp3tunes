@@ -6,6 +6,7 @@ import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 import android.app.Service;
@@ -144,18 +145,24 @@ public class MediaPlayerTrack
     synchronized private boolean prepare(boolean async)
     {
         try {
-            RemoteMethod method;
-            try {
-                method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
-                    .addFileKey(mTrack.getFileKey())
-                    .addParam("fileformat", "mp3")
-                    .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
-                    .create();
-            } catch (InvalidSessionException e) {
-                e.printStackTrace();
-                return false;
+            String url;
+            if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
+                url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
+                mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
+            } else {
+                try {
+                    RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+                        .addFileKey(mTrack.getFileKey())
+                        .addParam("fileformat", "mp3")
+                        .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
+                        .create();
+                    url = method.getCall();
+                } catch (InvalidSessionException e) {
+                    e.printStackTrace();
+                    return false;
+                }
             }
-            
+        
             //State Idle
             mMp = new MediaPlayer();
             mMp.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -163,8 +170,8 @@ public class MediaPlayerTrack
             setListeners();
         
             //State Initialized
-            Logger.log("playing: " + method.getCall());
-            mMp.setDataSource(method.getCall());
+            Logger.log("playing: " + url);
+            mMp.setDataSource(url);
             
         
             if (async) {
@@ -253,10 +260,10 @@ public class MediaPlayerTrack
             }
         }
         
-        private void runBufferedCallback()
+        public void runBufferedCallback()
         {
+            mBuffered = true;
             if (mBufferedCallback != null) {
-                mBuffered = true;
                 mBufferedCallback.run();
             }
         }
@@ -265,6 +272,7 @@ public class MediaPlayerTrack
         {
             if (mBuffered) return;
             if (percent == 100) {
+                Logger.log("Buffering Got to 100% before buffered condition was met");
                 runBufferedCallback();
             }
             long duration = getDuration();            
@@ -276,6 +284,7 @@ public class MediaPlayerTrack
             //try to start buffering the next song once we get one minute
             //ahead of our play back position
             if ((bufferingPos - pos) > 60000) {
+                Logger.log("Buffering condition was met");
                 runBufferedCallback();
             }
         }

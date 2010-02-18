@@ -17,7 +17,7 @@
     <string name="menu_player">Player</string>
     <string name="menu_rename_playlist">Rename</string>
     <string name="menu_stop">Stop</string><string name="menu_edit_playlist">Edit</string>
-    <string name="menu_delete">Delete</string><string name="menu_about">About</string>
+    <string name="menu_add_track_locally">Add track to local storage</string><string name="menu_delete">Delete</string><string name="menu_about">About</string>
     
     
     <string name="title_nowplaying">Now Playing</string>
@@ -127,5 +127,6 @@
 <string name="playmix_browser_error">Unable to load radio playlists.  Please, check your network connection try again.</string>
 <string name="ok_text">OK</string>
 <string name="network_problem">Network Problem</string>
+
 
 </resources>

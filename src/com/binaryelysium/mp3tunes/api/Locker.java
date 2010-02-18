@@ -20,6 +20,7 @@
 package com.binaryelysium.mp3tunes.api;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.http.client.HttpResponseException;
@@ -31,6 +32,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
 
+import com.binaryelysium.mp3tunes.api.HttpClientCaller.CreateStreamCallback;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 
@@ -392,5 +394,17 @@ public class Locker
             throw new LockerException("download failed");
         }
     }
-    
+
+    public boolean getTrack(String key, CreateStreamCallback callback) throws InvalidSessionException, LockerException, LoginException
+    {
+        RemoteMethod method = 
+            new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_GET)
+                                    .addFileKey(key)
+                                    .create();
+        try {
+            return HttpClientCaller.getInstance().callStream(method, callback);
+        } catch (IOException e) {
+            throw new LockerException("download failed");
+        }
+    }
 }
