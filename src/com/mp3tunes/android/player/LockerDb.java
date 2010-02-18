@@ -336,13 +336,15 @@ public class LockerDb
         .append(KEY_PLAYLIST_INDEX);
 
         try {
-            long count = albumTrackCount.simpleQueryForLong();
+            if (!Playlist.isDynamicPlaylist(id)) {
+                long count = albumTrackCount.simpleQueryForLong();
             
-            Cursor c = mDb.rawQuery(query.toString(), null);
-            if (c.getCount() == count)
-                return c;
-            else
-                c.close();
+                Cursor c = mDb.rawQuery(query.toString(), null);
+                if (c.getCount() == count)
+                    return c;
+                else
+                    c.close();
+            }
         } catch (SQLiteDoneException e) {}
         refreshTracksforPlaylist(id);
         return mDb.rawQuery(query.toString(), null);

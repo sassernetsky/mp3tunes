@@ -12,9 +12,15 @@ import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.HttpClientCaller.CreateStreamCallback;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
+import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.activity.Player;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -33,6 +39,8 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
     String          mFilePath;
     
     MediaScannerConnection mConnection;
+    
+    private static final int NOTIFY_ID = 10911252; // mp3 + 1 in ascii
 
     public AddTrackToMediaStore(Track track, Context context)
     {
@@ -70,19 +78,38 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             mConnection.scanFile(mFilePath, null);
             while (mScanning) {}
             Log.w("Mp3Tunes", "Scanning Done");
+            sendNotification(mTrack, mResult);
             return mResult;
-        } catch (InvalidSessionException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            return false;
-        } catch (LockerException e) {
-            e.printStackTrace();
-            return false;
-        } catch (LoginException e) {
-            e.printStackTrace();
-            return false;
         }
+        sendNotification(mTrack, false);
+        return false;
     }
 
+    private void sendNotification(Track t, boolean status)
+    {
+        String ns = Context.NOTIFICATION_SERVICE;
+        NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
+        
+        int icon = R.drawable.logo_statusbar;
+        long when = System.currentTimeMillis();
+        CharSequence tickerText;
+        
+        if (status)
+            tickerText = t.getTitle() + " added to local storage";
+        else
+            tickerText = "Failed to add " + t.getTitle() + " to local storage";
+        
+        Notification notification = new Notification(icon, tickerText, when);
+        Intent        intent        = new Intent(mContext, Player.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
+        notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
+        
+        nm.notify(NOTIFY_ID, notification);
+        nm.cancel(NOTIFY_ID);
+    }
+    
     static public String getTrackUrl(Track track, Context context)
     {
         ContentResolver cr = context.getContentResolver();
@@ -113,19 +140,6 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
      
         
         Cursor cursor;
-//        = cr.query(media, null, null, null, null);
-//        if (cursor.moveToFirst()) {
-//            do {
-//                String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
-//                String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
-//                String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
-//                Log.w("Mp3Tunes", "Track Name: " + title);
-//                Log.w("Mp3Tunes", "Album Name: " + album);
-//                Log.w("Mp3Tunes", "Artist Name: " + artist);
-//            } while (cursor.moveToNext());
-//        }
-//        cursor.close();
-        
         cursor = cr.query(media, null, where, null, null);
         if (cursor.getCount() > 0) {
             cursor.close();
@@ -210,6 +224,8 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             } else if (contentType.equals("audio/ogg")) {
                 mFileName += ".ogg";
             } else if (contentType.equals("audio/vorbis")) {
+                mFileName += ".ogg";
+            } else if (contentType.equals("application/ogg")) {
                 mFileName += ".ogg";
             } else if (contentType.equals("audio/x-ms-wma")) {
                 mFileName += ".wma";
