@@ -6,6 +6,9 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.LockerDb;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.ITunesService;
+import com.mp3tunes.android.player.util.LazyTrack;
+import com.mp3tunes.android.player.util.Timer;
+
 import android.app.Service;
 import android.content.Intent;
 import android.os.Handler;
@@ -147,7 +150,12 @@ public class Mp3tunesService extends Service
 
         public void next() throws RemoteException
         {
+            Timer timings = new Timer("Mp3TunesServices.next");
+            try {
             if (!mPlayerHandler.playNext()) throw new RemoteException();
+            } finally {
+                timings.push();
+            }
         }
 
         public void pause() throws RemoteException
@@ -204,6 +212,7 @@ public class Mp3tunesService extends Service
 
         public void createPlaybackList(int[] trackIds) throws RemoteException
         {
+            
             PlaybackList list = new PlaybackList(getTracksForList(trackIds));
             mPlayerHandler.setPlaybackList(list);
         }
@@ -218,13 +227,10 @@ public class Mp3tunesService extends Service
     private Vector<MediaPlayerTrack> getTracksForList(int[] trackIds)
     {
         Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
-        LockerDb db = new LockerDb(getBaseContext());
         for (int id : trackIds) {
-            Track t = db.getTrack(id);
-            MediaPlayerTrack track = new MediaPlayerTrack(t, this, getBaseContext());
+            MediaPlayerTrack track = new MediaPlayerTrack(new LazyTrack(id, getBaseContext()), this, getBaseContext());
             tracks.add(track);
         }
-        db.close();
         return tracks;
     }
 }

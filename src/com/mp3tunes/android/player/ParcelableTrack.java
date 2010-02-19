@@ -3,9 +3,10 @@ package com.mp3tunes.android.player;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Track;
 
-public class ParcelableTrack extends Track implements Parcelable
+public class ParcelableTrack extends ConcreteTrack implements Parcelable
 {
 
     public ParcelableTrack(Track t)
@@ -66,7 +67,7 @@ public class ParcelableTrack extends Track implements Parcelable
         int    fileSize    = in.readInt();
         String albumYear   = in.readString();
         
-        return new Track(id, playUrl, downloadUrl, title, number,
+        return new ConcreteTrack(id, playUrl, downloadUrl, title, number,
                          artistId, artistName, albumId, albumTitle,
                          albumArt, duration, fileName, fileKey, fileSize,
                          albumYear);

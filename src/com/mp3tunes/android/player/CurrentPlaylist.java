@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDiskIOException;
 
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Track;
 
 public class CurrentPlaylist {
@@ -41,7 +42,7 @@ public class CurrentPlaylist {
             return null;
         }
         
-        Track t = new Track(
+        Track t = new ConcreteTrack(
                 c.getInt( Music.TRACK_MAPPING.ID ),
                 c.getString( Music.TRACK_MAPPING.PLAY_URL ),
                 c.getString( Music.TRACK_MAPPING.DOWNLOAD_URL ),

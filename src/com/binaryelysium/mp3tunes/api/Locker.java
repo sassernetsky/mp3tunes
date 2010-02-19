@@ -241,7 +241,7 @@ public class Locker
         ArrayList<Track> tracks = new ArrayList<Track>();
         for (int i = 0; i < jsonTracks.length(); i++) {
             JSONObject obj = jsonTracks.getJSONObject(i);
-            Track t = Track.trackFromJson(obj);
+            Track t = ConcreteTrack.trackFromJson(obj);
             if (t != null) 
                 tracks.add(t);
             else
@@ -369,7 +369,7 @@ public class Locker
             JSONArray jsonArray = json.getJSONArray("trackList");
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject obj = jsonArray.getJSONObject(i);
-                Track t = Track.trackFromJson(obj);
+                Track t = ConcreteTrack.trackFromJson(obj);
                 if (t != null) 
                     tracks.add(t);
                 else
