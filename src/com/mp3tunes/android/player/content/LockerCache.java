@@ -16,7 +16,9 @@
 *   Free Software Foundation, Inc.,                                       *
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.         *
 ***************************************************************************/
-package com.mp3tunes.android.player;
+package com.mp3tunes.android.player.content;
+
+import com.mp3tunes.android.player.MP3tunesApplication;
 
 import android.content.Context;
 import android.content.SharedPreferences;
