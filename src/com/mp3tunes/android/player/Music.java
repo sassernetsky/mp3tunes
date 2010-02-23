@@ -49,9 +49,14 @@ import android.util.Log;
 import android.view.Window;
 import android.widget.Toast;
 
+import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.activity.Login;
+import com.mp3tunes.android.player.content.CurrentPlaylist;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.DbTables;
+import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.service.ITunesService;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
@@ -68,62 +73,62 @@ public class Music
         TRACK, ARTIST, ALBUM, PLAYLIST, CURRENT_PLAYLIST, RADIO;
     }
     
-    public static String[] ID = {LockerDb.KEY_ID};
+    public static String[] ID = {DbKeys.ID};
     
-    public static String[] TOKEN = {LockerDb.KEY_TYPE, 
-    								LockerDb.KEY_TOKEN, 
-    								LockerDb.KEY_COUNT};
+    public static String[] TOKEN = {DbKeys.TYPE, 
+    								DbKeys.TOKEN, 
+    								DbKeys.COUNT};
     
-    public static String[] ARTIST = {LockerDb.KEY_ID, 
-    								 LockerDb.KEY_ARTIST_NAME, 
-    								 LockerDb.KEY_ALBUM_COUNT, 
-    								 LockerDb.KEY_TRACK_COUNT};
+    public static String[] ARTIST = {DbKeys.ID, 
+    								 DbKeys.ARTIST_NAME, 
+    								 DbKeys.ALBUM_COUNT, 
+    								 DbKeys.TRACK_COUNT};
     
-    public static String[] PLAYLIST = {LockerDb.KEY_ID, 
-    								   LockerDb.KEY_PLAYLIST_NAME, 
-    								   LockerDb.KEY_FILE_COUNT, 
-    								   LockerDb.KEY_FILE_NAME, 
-    								   LockerDb.KEY_PLAYLIST_ORDER};
+    public static String[] PLAYLIST = {DbKeys.ID, 
+    								   DbKeys.PLAYLIST_NAME, 
+    								   DbKeys.FILE_COUNT, 
+    								   DbKeys.FILE_NAME, 
+    								   DbKeys.PLAYLIST_ORDER};
     
-    public static String[] ALBUM  = {LockerDb.KEY_ID, 
-    								 LockerDb.KEY_ALBUM_NAME, 
-    								 LockerDb.KEY_ARTIST_ID, 
-    								 LockerDb.KEY_ARTIST_NAME, 
-    								 LockerDb.KEY_TRACK_COUNT, 
-    								 LockerDb.KEY_COVER_URL};
+    public static String[] ALBUM  = {DbKeys.ID, 
+    								 DbKeys.ALBUM_NAME, 
+    								 DbKeys.ARTIST_ID, 
+    								 DbKeys.ARTIST_NAME, 
+    								 DbKeys.TRACK_COUNT, 
+    								 DbKeys.COVER_URL};
     
-    public static String[] TRACK = {LockerDb.KEY_ID, 
-        							LockerDb.KEY_TITLE, 
-        							LockerDb.KEY_ARTIST_NAME, 
-        							LockerDb.KEY_ARTIST_ID, 
-        							LockerDb.KEY_ALBUM_NAME, 
-        							LockerDb.KEY_ALBUM_ID,
-        							LockerDb.KEY_TRACK, 
-        							LockerDb.KEY_PLAY_URL, 
-        							LockerDb.KEY_DOWNLOAD_URL, 
-        							LockerDb.KEY_TRACK_LENGTH, 
-        							LockerDb.KEY_COVER_URL};
+    public static String[] TRACK = {DbKeys.ID, 
+        							DbKeys.TITLE, 
+        							DbKeys.ARTIST_NAME, 
+        							DbKeys.ARTIST_ID, 
+        							DbKeys.ALBUM_NAME, 
+        							DbKeys.ALBUM_ID,
+        							DbKeys.TRACK, 
+        							DbKeys.PLAY_URL, 
+        							DbKeys.DOWNLOAD_URL, 
+        							DbKeys.TRACK_LENGTH, 
+        							DbKeys.COVER_URL};
     
     public static String[] TRACK_FOR_BROWSER = {
-        LockerDb.KEY_ID, 
-        LockerDb.KEY_TITLE, 
-        LockerDb.KEY_ARTIST_NAME, 
-        LockerDb.KEY_ALBUM_NAME,  
-        LockerDb.KEY_TRACK_LENGTH
+        DbKeys.ID, 
+        DbKeys.TITLE, 
+        DbKeys.ARTIST_NAME, 
+        DbKeys.ALBUM_NAME,  
+        DbKeys.TRACK_LENGTH
     };
     
 
-    public static String[] TRACKP = {LockerDb.TABLE_TRACK + "." + LockerDb.KEY_ID, 
-		 							 LockerDb.KEY_TITLE,  
-		 							 LockerDb.KEY_ARTIST_NAME, 
-		 							 LockerDb.KEY_ARTIST_ID, 
-		 							 LockerDb.KEY_ALBUM_NAME, 
-		 							 LockerDb.KEY_ALBUM_ID,
-		 							 LockerDb.KEY_TRACK, 
-		 							 LockerDb.KEY_PLAY_URL, 
-		 							 LockerDb.KEY_DOWNLOAD_URL, 
-		 							 LockerDb.KEY_TRACK_LENGTH, 
-		 							 LockerDb.KEY_COVER_URL};
+    public static String[] TRACKP = {DbTables.TRACK + "." + DbKeys.ID, 
+		 							 DbKeys.TITLE,  
+		 							 DbKeys.ARTIST_NAME, 
+		 							 DbKeys.ARTIST_ID, 
+		 							 DbKeys.ALBUM_NAME, 
+		 							 DbKeys.ALBUM_ID,
+		 							 DbKeys.TRACK, 
+		 							 DbKeys.PLAY_URL, 
+		 							 DbKeys.DOWNLOAD_URL, 
+		 							 DbKeys.TRACK_LENGTH, 
+		 							 DbKeys.COVER_URL};
 
   //This mapping corresponds to the field indexes above
     public static final class PLAYLIST_MAPPING 
@@ -214,7 +219,7 @@ public class Music
     }
     
     private static LockerDb        sDb = null;
-    private static CurrentPlaylist sCp = null;
+//    private static CurrentPlaylist sCp = null;
     private static ArrayList<Context> sDbConnectionMap = new ArrayList<Context>();
 
     //This function checks for a session.  If we do not have a session
@@ -257,10 +262,10 @@ public class Music
                 sDb.close();
                 sDb = null;
             }
-            if (sCp != null) {
-                sCp.close();
-                sCp = null;
-            }
+//            if (sCp != null) {
+//                sCp.close();
+//                sCp = null;
+//            }
         }
         return res;
     }
@@ -420,64 +425,33 @@ public class Music
         return false;
     }
     
-    public static int getCurrentAlbumId() {
-        if (sService != null) {
-            try {
-                return sService.getTrack().getAlbumId();
-            } catch (RemoteException ex) {
-            }
-        }
-        return -1;
-    }
-    public static int getCurrentArtistId() {
-        if (sService != null) {
-            try {
-                return sService.getTrack().getArtistId();
-            } catch (RemoteException ex) {
-            }
-        }
-        return -1;
-    }
-    public static int getCurrentTrackId() {
+    public static Id getCurrentTrackId() {
         if (sService != null) {
             try {
                 return sService.getTrack().getId();
             } catch (RemoteException ex) {
             }
         }
-        return -1;
+        return null;
     }
-    public static int getCurrentQueuePosition() {
-        if (sService != null) {
-            try {
-                return sService.getQueuePosition();
-            } catch (RemoteException ex) {
-            }
-        }
-        return -1;
-    }
+
+//    public static void playAll(Context context, Cursor cursor, int position) {
+//        playAll(context, cursor, position, false);
+//    }
+//    
+//    private static void playAll(Context context, Cursor cursor, int position, boolean force_shuffle) {
+//        
+//        id[] list = getSongListForCursor(cursor);
+//        System.out.println("list " + list.length);
+//        playAll(context, list, position, force_shuffle);
+//    }
     
-    public static void shuffleAll(Context context, Cursor cursor)
-    {
-        playAll(context, cursor, 0, true);
-    }
-    public static void playAll(Context context, Cursor cursor, int position) {
-        playAll(context, cursor, position, false);
-    }
-    
-    private static void playAll(Context context, Cursor cursor, int position, boolean force_shuffle) {
-        
-        int [] list = getSongListForCursor(cursor);
-        System.out.println("list " + list.length);
-        playAll(context, list, position, force_shuffle);
-    }
-    
-    public static void playAll(Context context, int [] list, int position )
+    public static void playAll(Context context, Id[] list, int position )
     {
         playAll(context, list, position, false);   
     }
     
-    private static void playAll(Context context, int [] list, int position, boolean force_shuffle) {
+    private static void playAll(Context context, Id[] list, int position, boolean force_shuffle) {
         if (list.length == 0 || sService == null || sDb == null) {
             Log.d("MusicUtils", "attempt to play empty song list");
             // Don't try to play empty playlists. Nothing good will come of it.
@@ -486,7 +460,7 @@ public class Music
             return;
         }
         try {
-            int curid = getCurrentTrackId();
+            Id curid = getCurrentTrackId();
             int curpos = sService.getQueuePosition();
 //            if (position != -1 && curpos == position && curid == list[position]) {
 //                // The selected file is the file that's currently playing;
@@ -499,7 +473,7 @@ public class Music
             if (position < 0) {
                 position = 0;
             }
-            sService.createPlaybackList(list);
+            sService.createPlaybackList(idArrayToIdParcelArray(list));
             //Music.sCp.clearQueue();
             //Music.sCp.insertQueueItems( list );
             sService.startAt(position); // +1 because the dbase queue is 1-indexed
@@ -513,19 +487,27 @@ public class Music
     
     private final static int [] sEmptyList = new int[0];
     
-    public static int [] getSongListForCursor(Cursor cursor) {
-        if (cursor == null) {
-            return sEmptyList;
+//    public static IdParcel [] getSongListForCursor(Cursor cursor) {
+//        if (cursor == null) {
+//            return sEmptyList;
+//        }
+//        int len = cursor.getCount();
+//        int [] list = new int[len];
+//        cursor.moveToFirst();
+//        int colidx = Music.TRACK_MAPPING.ID;
+//        for (int i = 0; i < len; i++) {
+//            list[i] = new IdParcel(cursor.getInt(colidx));
+//            cursor.moveToNext();
+//        }
+//        return list;
+//    }
+    private static IdParcel[] idArrayToIdParcelArray(Id[] ids)
+    {
+        IdParcel[] output = new IdParcel[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            output[i] = new IdParcel(ids[i]);
         }
-        int len = cursor.getCount();
-        int [] list = new int[len];
-        cursor.moveToFirst();
-        int colidx = Music.TRACK_MAPPING.ID;
-        for (int i = 0; i < len; i++) {
-            list[i] = cursor.getInt(colidx);
-            cursor.moveToNext();
-        }
-        return list;
+        return output;
     }
     
     private static final HashMap<Integer, Drawable> sArtCache = new HashMap<Integer, Drawable>();

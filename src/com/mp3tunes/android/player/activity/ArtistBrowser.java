@@ -40,9 +40,15 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
-import com.mp3tunes.android.player.LockerDb;
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerId;
+import com.mp3tunes.android.player.IdParcel;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
@@ -50,7 +56,7 @@ import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 public class ArtistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
-    private String mCurrentArtistId;
+    private Id mCurrentArtistId;
     private String mCurrentArtistName;
     private SimpleCursorAdapter mAdapter;
     private boolean mAdapterSent;
@@ -59,21 +65,24 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     
     
     String[] mFrom = new String[] {
-            LockerDb.KEY_ID,
-            LockerDb.KEY_ARTIST_NAME,
-            LockerDb.KEY_ALBUM_COUNT
+            DbKeys.ID,
+            DbKeys.ARTIST_NAME,
+            DbKeys.ALBUM_COUNT,
+            MediaStore.KEY_LOCAL
       };
     
     int[] mTo = new int[] {
             R.id.icon,
             R.id.line1,
-            R.id.line2
+            R.id.line2,
+            0
     };
     
     static class FROM_MAPPING {
         static final int ID          = 0;
         static final int NAME        = 1;
         static final int ALBUM_COUNT = 2;
+        static final int LOCAL       = 3;
     };
     
     /** Called when the activity is first created. */
@@ -81,7 +90,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     public void onCreate(Bundle icicle)
     {
         if (icicle != null) {
-            mCurrentArtistId = icicle.getString("selectedalbum");
+            mCurrentArtistId = IdParcel.idParcelToId(icicle.getParcelable("selectedalbum"));
             mArtistId = icicle.getString("artist");
         }
         super.onCreate(icicle);
@@ -169,7 +178,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
-        outcicle.putString("selectedalbum", mCurrentArtistId);
+        if (mCurrentArtistId != null)
+            outcicle.putParcelable("selectedalbum", new IdParcel(mCurrentArtistId));
         outcicle.putString("artist", mArtistId);
         super.onSaveInstanceState(outcicle);
     }
@@ -233,7 +243,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
 
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
         mArtistCursor.moveToPosition(mi.position);
-        mCurrentArtistId = mArtistCursor.getString(FROM_MAPPING.ID);
+        mCurrentArtistId = cursorToId(mArtistCursor);
         mCurrentArtistName = mArtistCursor.getString(FROM_MAPPING.NAME);
         menu.setHeaderTitle(mCurrentArtistName);
     }
@@ -265,10 +275,10 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     protected void onListItemClick(ListView l, View v, int position, long id)
     {
         Cursor c = (Cursor) getListAdapter().getItem( position );
-        String artist = c.getString(FROM_MAPPING.ID);
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/album");
-        intent.putExtra("artist", artist);
+        intent.putExtra("artist", new IdParcel(cursorToId(c)));
+        intent.putExtra("name", c.getString(FROM_MAPPING.NAME));
         startActivity(intent);
     }
 
@@ -324,7 +334,9 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         public Boolean doInBackground( Void... params )
         {
             try {
-                mCursor = Music.getDb(getBaseContext()).getArtistDataForBrowser(mFrom);
+                //mCursor = Music.getDb(getBaseContext()).getArtistData(mFrom);
+                MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
+                mCursor = ms.getArtistData(mFrom);
             } catch ( Exception e ) {
                 e.printStackTrace();
                 return false;

@@ -26,7 +26,7 @@ import android.util.Log;
 
 public class Track
 {
-    private int      mId;
+    private Id       mId;
     private String   mTitle;
     int              mNumber;
     protected double mDuration;
@@ -68,7 +68,7 @@ public class Track
         mAlbumYear   = t.mAlbumYear;
     }
 
-    public Track(int id, String play_url, String download_url, String title,
+    public Track(Id id, String play_url, String download_url, String title,
             int track, int artist_id, String artist_name, int album_id,
             String album_name, String cover_url)
     {
@@ -84,7 +84,7 @@ public class Track
         mAlbumArt = cover_url;
     }
     
-    public Track(int id, String playUrl, String downloadUrl, String title, int number,
+    public Track(Id id, String playUrl, String downloadUrl, String title, int number,
                  int artistId, String artistName, int albumId, String albumTitle, 
                  String albumArt, double duration, String fileName, String fileKey,
                  int fileSize, String albumYear)
@@ -117,7 +117,7 @@ public class Track
         return builder.toString();
     }
 
-    public int getId()
+    public Id getId()
     {
         return mId;
     }
@@ -229,7 +229,7 @@ public class Track
     {
         Track t = new Track();
         try {
-            t.mId          = obj.getInt("trackId");
+            t.mId          = new LockerId(obj.getInt("trackId"));
             t.mFileSize    = obj.getInt("trackFileSize");
             t.mNumber      = obj.getInt("trackNumber");
             t.mAlbumId     = obj.getInt("albumId");

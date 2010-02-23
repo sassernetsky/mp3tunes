@@ -20,7 +20,7 @@ public class ParcelableTrack extends Track implements Parcelable
 
     public void writeToParcel(Parcel out, int flags)
     {
-        out.writeInt(getId());
+        out.writeParcelable(new IdParcel(getId()), flags);
         out.writeString(getPlayUrl());
         out.writeString(getDownloadUrl());
         out.writeString(getTitle());
@@ -50,7 +50,7 @@ public class ParcelableTrack extends Track implements Parcelable
     
     private static Track parcelToTrack(Parcel in)
     {
-        int    id          = in.readInt();
+        IdParcel id        = in.readParcelable(null);
         String playUrl     = in.readString();
         String downloadUrl = in.readString();
         String title       = in.readString();
@@ -66,7 +66,7 @@ public class ParcelableTrack extends Track implements Parcelable
         int    fileSize    = in.readInt();
         String albumYear   = in.readString();
         
-        return new Track(id, playUrl, downloadUrl, title, number,
+        return new Track(id.getId(), playUrl, downloadUrl, title, number,
                          artistId, artistName, albumId, albumTitle,
                          albumArt, duration, fileName, fileKey, fileSize,
                          albumYear);

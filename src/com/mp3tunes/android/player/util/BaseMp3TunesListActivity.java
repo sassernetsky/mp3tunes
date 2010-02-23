@@ -1,8 +1,13 @@
 package com.mp3tunes.android.player.util;
 
-import com.mp3tunes.android.player.LockerDb;
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerId;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -71,6 +76,31 @@ public class BaseMp3TunesListActivity extends ListActivity
         mFetchBrowserCursorTask = task;
         mFetchBrowserCursorTask.execute();
     }  
+    
+    public Id cursorToId(Cursor c)
+    {
+        if (c.getInt(c.getColumnIndexOrThrow(MediaStore.KEY_LOCAL)) == 0) {
+            int id = c.getInt(c.getColumnIndexOrThrow(DbKeys.ID));
+            return new LockerId(id);
+        } else { 
+            int id = c.getInt(c.getColumnIndexOrThrow(DbKeys.ID));
+            return new LocalId(id);
+        }
+    }
+    
+    public Id[] cursorToIdArray(Cursor c)
+    {
+        int i = 0;
+        int len = c.getCount();
+        Id[] list = new Id[len];
+        if (c.moveToFirst()) {
+            do {
+                list[i] = cursorToId(c);
+                i++;
+            } while (c.moveToNext());
+        }
+        return list;
+    }
     
     abstract protected class FetchBrowserCursor extends AsyncTask<Void, Void, Boolean>
     { 

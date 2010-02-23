@@ -3,8 +3,10 @@ package com.mp3tunes.android.player.service;
 import java.util.Vector;
 
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.LockerDb;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.ITunesService;
 import android.app.Service;
 import android.content.Intent;
@@ -202,7 +204,7 @@ public class Mp3tunesService extends Service
             }   
         }
 
-        public void createPlaybackList(int[] trackIds) throws RemoteException
+        public void createPlaybackList(IdParcel[] trackIds) throws RemoteException
         {
             PlaybackList list = new PlaybackList(getTracksForList(trackIds));
             mPlayerHandler.setPlaybackList(list);
@@ -215,12 +217,13 @@ public class Mp3tunesService extends Service
         
     };
     
-    private Vector<MediaPlayerTrack> getTracksForList(int[] trackIds)
+    private Vector<MediaPlayerTrack> getTracksForList(IdParcel[] trackIds)
     {
         Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
         LockerDb db = new LockerDb(getBaseContext());
-        for (int id : trackIds) {
-            Track t = db.getTrack(id);
+        MediaStore store = new MediaStore(db, getContentResolver());
+        for (IdParcel id : trackIds) {
+            Track t = store.getTrack(id.getId());
             MediaPlayerTrack track = new MediaPlayerTrack(t, this, getBaseContext());
             tracks.add(track);
         }
