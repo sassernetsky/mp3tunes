@@ -58,6 +58,12 @@ public class Locker
             text = HttpClientCaller.getInstance().callNoFixSession(new RemoteMethod.Builder(RemoteMethod.METHODS.LAST_UPDATE)
             .addParam("type", UpdateType.locker.toString())
             .create());
+        } catch (HttpResponseException e) {
+            if (e.getStatusCode() == 401) {
+                return false;
+            }
+            e.printStackTrace();
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
             return true;
