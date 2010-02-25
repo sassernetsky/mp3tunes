@@ -912,16 +912,23 @@ public class LockerDb
         }
         timer.push();
         
-        Timer timer2 = new Timer("inserting tracks");
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for playlist id " + playlist_id);
 
+        Timer timer2 = new Timer("deleting playlist tracks");
         mDb.delete("playlist_tracks", "playlist_id='" + playlist_id + "'", null);
+        timer2.push();
         
+        Timer timer3 = new Timer("inserting tracks");
+        for (Track t : tracks) { 
+            insertTrack(t);
+        }
+        timer3.push();
+        
+        Timer timer4 = new Timer("inserting playlist tracks");
         int index = 0;
         for (Track t : tracks) {
             ContentValues cv = new ContentValues(); 
-            insertTrack(t);
             cv.put("playlist_id", playlist_id);
             cv.put("track_id", t.getId());
             cv.put("playlist_index", index);
@@ -929,7 +936,7 @@ public class LockerDb
             index++;
         }
         System.out.println("insertion complete");
-        timer2.push();
+        timer4.push();
     }
     
     private void refreshSearch(String query) throws SQLiteException, IOException, LockerException
