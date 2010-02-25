@@ -55,6 +55,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.LockerCache;
+import com.mp3tunes.android.player.util.Timer;
 
 /**
  * This class is essentially a wrapper for storing MP3tunes locker data in an
@@ -492,48 +493,48 @@ public class LockerDb
         return null;
     }
 
-    public void fetchArt(int album_id)
-    {
-        boolean cacheEnabled = PreferenceManager.getDefaultSharedPreferences(
-                mContext).getBoolean("cacheart", false);
-        Bitmap ret = null;
-        try {
-            String cacheDir = Environment.getExternalStorageDirectory()
-                    + "/mp3tunes/art/";
-            String ext = ".jpg";
-            if (cacheEnabled) {
-                File f = new File(cacheDir + album_id + ext);
-                if (!f.exists() && !f.canRead()) {
-                    List<Track> tracks = null;
-                    synchronized (mLocker) {
-                        tracks = mLocker.getTracksForAlbumFromJson(
-                                Integer.valueOf(album_id));
-                    }
-                    String artUrl = null;
-                    for (Track t : tracks) {
-                        artUrl = t.getAlbumArt();
-                        if (artUrl != null)
-                            break;
-                    }
-                    ret = getArtwork(artUrl);
-                    if (ret != null && cacheEnabled) {
-                        f = new File(cacheDir);
-                        f.mkdirs();
-                        f = new File(cacheDir + album_id + ext);
-                        f.createNewFile();
-
-                        if (f.canWrite()) {
-                            FileOutputStream out = new FileOutputStream(f);
-                            ret.compress(Bitmap.CompressFormat.JPEG, 70, out);
-                            out.close();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+//    public void fetchArt(int album_id)
+//    {
+//        boolean cacheEnabled = PreferenceManager.getDefaultSharedPreferences(
+//                mContext).getBoolean("cacheart", false);
+//        Bitmap ret = null;
+//        try {
+//            String cacheDir = Environment.getExternalStorageDirectory()
+//                    + "/mp3tunes/art/";
+//            String ext = ".jpg";
+//            if (cacheEnabled) {
+//                File f = new File(cacheDir + album_id + ext);
+//                if (!f.exists() && !f.canRead()) {
+//                    List<Track> tracks = null;
+//                    synchronized (mLocker) {
+//                        tracks = mLocker.getTracksForAlbumFromJson(
+//                                Integer.valueOf(album_id));
+//                    }
+//                    String artUrl = null;
+//                    for (Track t : tracks) {
+//                        artUrl = t.getAlbumArt();
+//                        if (artUrl != null)
+//                            break;
+//                    }
+//                    ret = getArtwork(artUrl);
+//                    if (ret != null && cacheEnabled) {
+//                        f = new File(cacheDir);
+//                        f.mkdirs();
+//                        f = new File(cacheDir + album_id + ext);
+//                        f.createNewFile();
+//
+//                        if (f.canWrite()) {
+//                            FileOutputStream out = new FileOutputStream(f);
+//                            ret.compress(Bitmap.CompressFormat.JPEG, 70, out);
+//                            out.close();
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     public DbSearchResult search(DbSearchQuery query)
     {
@@ -548,8 +549,8 @@ public class LockerDb
             if (query.mArtists)
                 res.mArtists = querySearch(query.mQuery, Music.Meta.ARTIST);
 
-            System.out.println("Got artists: " + res.mArtists.getCount());
-            System.out.println("Got tracks: " + res.mTracks.getCount());
+            Log.w("Mp3Tunes", "Got artists: " + res.mArtists.getCount());
+            Log.w("Mp3Tunes", "Got tracks: " + res.mTracks.getCount());
             return res;
         } catch (SQLiteException e) {
             e.printStackTrace();
@@ -580,16 +581,16 @@ public class LockerDb
         try {
             // cache some values
             int    trackId     = track.getId();
-            int    number      = track.getNumber();
+            //int    number      = track.getNumber();
             int    artistId    = track.getArtistId();
             int    albumId     = track.getAlbumId();
-            Double duration    = track.getDuration();
+            //Double duration    = track.getDuration();
             String playUrl     = track.getPlayUrl();
-            String downloadUrl = track.getDownloadUrl();
+            //String downloadUrl = track.getDownloadUrl();
             String title       = track.getTitle();
             String artistName  = track.getArtistName();
             String albumTitle  = track.getAlbumTitle();
-            String albumArt    = track.getAlbumArt();
+            //String albumArt    = track.getAlbumArt();
             // Insert artist info to the artist table
             if (artistName.length() > 0) {
                 try {
@@ -622,18 +623,18 @@ public class LockerDb
             } catch (SQLiteDoneException e) {
                 mInsertTrack.bindLong(1, trackId);
                 mInsertTrack.bindString(2, playUrl);
-                mInsertTrack.bindString(3, downloadUrl);
+                //mInsertTrack.bindString(3, downloadUrl);
                 mInsertTrack.bindString(4, title);
-                mInsertTrack.bindLong(5, number);
+                //mInsertTrack.bindLong(5, number);
                 mInsertTrack.bindString(6, artistName);
                 mInsertTrack.bindString(7, albumTitle);
                 mInsertTrack.bindLong(8, artistId);
                 mInsertTrack.bindLong(9, albumId);
-                mInsertTrack.bindDouble(10, duration);
-                if (albumArt != null)
-                    mInsertTrack.bindString(11, albumArt);
-                else
-                    mInsertTrack.bindString(11, UNKNOWN_STRING);
+                //mInsertTrack.bindDouble(10, duration);
+//                if (albumArt != null)
+//                    mInsertTrack.bindString(11, albumArt);
+//                else
+//                    mInsertTrack.bindString(11, UNKNOWN_STRING);
                 mInsertTrack.execute();
             }
 
@@ -898,6 +899,7 @@ public class LockerDb
     private void refreshTracksforPlaylist(final String playlist_id)
             throws SQLiteException, IOException, LockerException
     {
+        Timer timer = new Timer("Getting tracks");
         List<Track> tracks;
         try {
             tracks = mLocker.getTracksForPlaylistFromJson(playlist_id);
@@ -908,6 +910,9 @@ public class LockerDb
         } catch (LoginException e) {
             throw new LockerException("Unable to refresh session");
         }
+        timer.push();
+        
+        Timer timer2 = new Timer("inserting tracks");
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for playlist id " + playlist_id);
 
@@ -924,6 +929,7 @@ public class LockerDb
             index++;
         }
         System.out.println("insertion complete");
+        timer2.push();
     }
     
     private void refreshSearch(String query) throws SQLiteException, IOException, LockerException
@@ -1024,26 +1030,27 @@ public class LockerDb
         String table;
         String[] columns;
         String selection;
+        String[] selectionArgs = new String[] {"%" + query + "%"};
         switch (type) {
             case TRACK:
                 table = "track";
                 columns = Music.TRACK;
-                selection = "lower(title) LIKE lower('%" + query + "%')";
+                selection = "lower(title) LIKE lower(?)";
                 break;
             case ARTIST:
                 table = "artist";
                 columns = Music.ARTIST;
-                selection = "lower(artist_name) LIKE lower('%" + query + "%')";
+                selection = "lower(artist_name) LIKE lower(?)";
                 break;
             case ALBUM:
                 table = "album";
                 columns = Music.ALBUM;
-                selection = "lower(album_name) LIKE lower('%" + query + "%')";
+                selection = "lower(album_name) LIKE lower(?)";
                 break;
             default:
                 return null;
         }
-        return mDb.query(table, columns, selection, null, null, null, null,
+        return mDb.query(table, columns, selection, selectionArgs, null, null, null,
                 null);
     }
 

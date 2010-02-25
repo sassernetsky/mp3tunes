@@ -121,7 +121,9 @@ public class PlayerHandler
     public boolean stop()
     {
         mGuiNotifier.stop(getTrack());
-        return mTrack.stop();
+        if (mTrack != null)
+            return mTrack.stop();
+        return false;
     }
     
     public void setPlaybackList(PlaybackList list)

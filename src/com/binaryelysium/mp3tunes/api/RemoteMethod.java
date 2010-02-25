@@ -5,6 +5,8 @@ import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
+import android.util.Log;
+
 public class RemoteMethod
 {
     public static final String API_GENERAL = "http://ws.mp3tunes.com/api/v1/";

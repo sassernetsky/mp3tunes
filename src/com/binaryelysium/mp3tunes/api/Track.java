@@ -9,17 +9,17 @@ public interface Track
 
     public abstract String getTitle();
 
-    public abstract int getNumber();
+    //public abstract int getNumber();
 
-    public abstract Double getDuration();
+    //public abstract Double getDuration();
 
-    public abstract String getFileName();
+    //public abstract String getFileName();
 
     public abstract String getFileKey();
 
-    public abstract int getFileSize();
+    //public abstract int getFileSize();
 
-    public abstract String getDownloadUrl();
+    //public abstract String getDownloadUrl();
 
     public abstract String getPlayUrl();
 
@@ -27,14 +27,14 @@ public interface Track
 
     public abstract String getAlbumTitle();
 
-    public abstract String getAlbumYear();
+    //public abstract String getAlbumYear();
 
     public abstract int getArtistId();
 
     public abstract String getArtistName();
 
-    public abstract String getAlbumArt();
+    //public abstract String getAlbumArt();
 
-    public abstract boolean sameRemoteFile(Track t);
+    //public abstract boolean sameRemoteFile(Track t);
 
 }

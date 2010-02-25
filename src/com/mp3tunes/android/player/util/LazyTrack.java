@@ -18,12 +18,12 @@ public class LazyTrack implements Track
         mContext = context;
     }
     
-    public String getAlbumArt()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getAlbumArt();
-    }
+//    public String getAlbumArt()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getAlbumArt();
+//    }
 
     public int getAlbumId()
     {
@@ -39,12 +39,12 @@ public class LazyTrack implements Track
         return mTrack.getAlbumTitle();
     }
 
-    public String getAlbumYear()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getAlbumYear();
-    }
+//    public String getAlbumYear()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getAlbumYear();
+//    }
 
     public int getArtistId()
     {
@@ -60,19 +60,19 @@ public class LazyTrack implements Track
         return mTrack.getArtistName();
     }
 
-    public String getDownloadUrl()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getDownloadUrl();
-    }
+//    public String getDownloadUrl()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getDownloadUrl();
+//    }
 
-    public Double getDuration()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getDuration();
-    }
+//    public Double getDuration()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getDuration();
+//    }
 
     public String getFileKey()
     {
@@ -81,31 +81,31 @@ public class LazyTrack implements Track
         return mTrack.getFileKey();
     }
 
-    public String getFileName()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getFileName();
-    }
+//    public String getFileName()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getFileName();
+//    }
 
-    public int getFileSize()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getFileSize();
-    }
+//    public int getFileSize()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getFileSize();
+//    }
 
     public int getId()
     {   
         return mTrackId;
     }
 
-    public int getNumber()
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.getNumber();
-    }
+//    public int getNumber()
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.getNumber();
+//    }
 
     public String getPlayUrl()
     {
@@ -121,12 +121,12 @@ public class LazyTrack implements Track
         return mTrack.getTitle();
     }
 
-    public boolean sameRemoteFile(Track t)
-    {
-        if (mTrack == null)  createTrack();
-        
-        return mTrack.sameRemoteFile(t);
-    }
+//    public boolean sameRemoteFile(Track t)
+//    {
+//        if (mTrack == null)  createTrack();
+//        
+//        return mTrack.sameRemoteFile(t);
+//    }
     
     private void createTrack()
     {

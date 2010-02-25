@@ -81,6 +81,7 @@ public class NotificationHandler
         
         mNm.cancel(NOTIFY_ID);
         mNm.notify(NOTIFY_ID, notification);
+        mNm.cancel(NOTIFY_ID);
     }
 
 }

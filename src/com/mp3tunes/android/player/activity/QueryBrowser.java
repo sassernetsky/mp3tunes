@@ -177,9 +177,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
    
     private boolean gotNoResults(SearchCursor c)
     {
-        if (c.getCount() > -1)
-            return false;
-        return true;
+        return c.getCount() < 1;
     }
     
     public void init(SearchCursor c) {
@@ -187,14 +185,12 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         mAdapter.changeCursor(c);
         
         if (mQueryCursor == null) {
-//            Music.displayDatabaseError(this);
             setListAdapter(null);
             return;
         }
         if (gotNoResults(c)) {
             this.showDialog(NO_RESULTS);
         }
-//        Music.hideDatabaseError(this);
     }
     
     @Override
@@ -280,7 +276,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         @Override
         public int getCount()
         {
-            int count = -1;
+            int count = 0;
             if( mArtists != null)
                 count += mArtists.getCount();
             if( mTracks != null )
@@ -489,9 +485,16 @@ public class QueryBrowser extends ListActivity implements Music.Defs
         public void onPostExecute( Boolean result )
         {
             dismissDialog( PROGRESS );
-            if(res == null)
-            {
-                System.out.println("No results");
+            if (!result) {
+                Log.w("Mp3Tunes", "Search Failed");
+                return;
+            }
+            if((res == null)) {
+                Log.w("Mp3Tunes", "No results");
+                return;
+            }
+            if (res.mArtists == null && res.mTracks == null) {
+                Log.w("Mp3Tunes", "No results");
                 return;
             }
 
