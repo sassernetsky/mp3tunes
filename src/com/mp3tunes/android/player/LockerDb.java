@@ -41,6 +41,7 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteStatement;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Debug;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -80,6 +81,7 @@ public class LockerDb
     private SQLiteStatement    mInsertArtist;
     private SQLiteStatement    mInsertAlbum;
     private SQLiteStatement    mInsertPlaylist;
+    private SQLiteStatement    mInsertPlaylistTrack;
 
     private SQLiteStatement    mUpdateArtist;
     private SQLiteStatement    mUpdateAlbum;
@@ -146,6 +148,8 @@ public class LockerDb
                 .compileStatement("INSERT INTO artist   (_id, artist_name, album_count, track_count) VALUES (?, ?, ?, ?)");
         mInsertPlaylist = mDb
                 .compileStatement("INSERT INTO playlist (_id, playlist_name, file_count, file_name, playlist_order) VALUES (?, ?, ?, ?, ?)");
+        mInsertPlaylistTrack = mDb
+                .compileStatement("INSERT INTO playlist_tracks (playlist_id, track_id, playlist_index) VALUES (?, ?, ?)");
         
         mUpdateArtist = mDb
                 .compileStatement("UPDATE artist   SET artist_name=?, album_count=?, track_count=? WHERE _id=?");
@@ -578,7 +582,7 @@ public class LockerDb
         }
         mDb.execSQL("BEGIN TRANSACTION");
 
-        try {
+       try {
             // cache some values
             int    trackId     = track.getId();
             //int    number      = track.getNumber();
@@ -918,21 +922,76 @@ public class LockerDb
         Timer timer2 = new Timer("deleting playlist tracks");
         mDb.delete("playlist_tracks", "playlist_id='" + playlist_id + "'", null);
         timer2.push();
+       
+        
+        int    trackId;
+        int    artistId;
+        int    albumId;
+        String playUrl;
+        String title;
+        String artistName;
+        String albumTitle;
         
         Timer timer3 = new Timer("inserting tracks");
         for (Track t : tracks) { 
-            insertTrack(t);
+                // cache some values
+                trackId     = t.getId();
+                artistId    = t.getArtistId();
+                albumId     = t.getAlbumId();
+                playUrl     = t.getPlayUrl();
+                title       = t.getTitle();
+                artistName  = t.getArtistName();
+                albumTitle  = t.getAlbumTitle();
+
+                // Insert artist info to the artist table
+                if (artistName.length() > 0) {
+                    try {
+                        mArtistExists.bindLong(1, artistId);
+                        mArtistExists.simpleQueryForLong();
+                    } catch (SQLiteDoneException e) {
+                        mInsertArtistFromTrack.bindLong(1, artistId);
+                        mInsertArtistFromTrack.bindString(2, artistName);
+                        mInsertArtistFromTrack.execute();
+                    }
+                }
+
+                // Insert album info to the album table
+                if (albumTitle.length() > 0) {
+                    try {
+                        mAlbumExists.bindLong(1, albumId);
+                        mAlbumExists.simpleQueryForLong();
+                    } catch (SQLiteDoneException e) {
+                        mInsertAlbumFromTrack.bindLong(1, albumId);
+                        mInsertAlbumFromTrack.bindString(2, albumTitle);
+                        mInsertAlbumFromTrack.bindLong(3, artistId);
+                        mInsertAlbumFromTrack.execute();
+                    }
+                }
+
+                // Insert track info
+                try {
+                    mTrackExists.bindLong(1, trackId);
+                    mTrackExists.simpleQueryForLong();
+                } catch (SQLiteDoneException e) {
+                    mInsertTrack.bindLong(1, trackId);
+                    mInsertTrack.bindString(2, playUrl);
+                    mInsertTrack.bindString(4, title);
+                    mInsertTrack.bindString(6, artistName);
+                    mInsertTrack.bindString(7, albumTitle);
+                    mInsertTrack.bindLong(8, artistId);
+                    mInsertTrack.bindLong(9, albumId);
+                    mInsertTrack.execute();
+                }
         }
         timer3.push();
         
         Timer timer4 = new Timer("inserting playlist tracks");
         int index = 0;
         for (Track t : tracks) {
-            ContentValues cv = new ContentValues(); 
-            cv.put("playlist_id", playlist_id);
-            cv.put("track_id", t.getId());
-            cv.put("playlist_index", index);
-            mDb.insert("playlist_tracks", UNKNOWN_STRING, cv);
+            mInsertPlaylistTrack.bindString(1, playlist_id);
+            mInsertPlaylistTrack.bindLong(2, t.getId());
+            mInsertPlaylistTrack.bindLong(3, index);
+            mInsertPlaylistTrack.execute();
             index++;
         }
         System.out.println("insertion complete");
