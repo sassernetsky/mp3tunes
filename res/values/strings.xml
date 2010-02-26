@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">MP3tunes Mobile Locker</string>
+   	<string name="main_cancel">Cancel</string>
+	<string name="main_login">Log in</string>
+	<string name="main_setup">Setup</string>
+	<string name="main_signup">Sign up</string>
+	<string name="main_newaccount">Haven't got an account yet?</string>
+    
+    <string name="menu_logout">Logout</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_play_selection">Play all</string>
+    <string name="menu_add_to_playlist">Add to playlist</string>
+    <string name="menu_queue">Queue all</string>
+    <string name="menu_home">Locker Main</string>
+    <string name="menu_shuffle_all">Shuffle all</string>
+    <string name="menu_player">Player</string>
+    <string name="menu_rename_playlist">Rename</string>
+    <string name="menu_stop">Stop</string><string name="menu_edit_playlist">Edit</string>
+    <string name="menu_add_track_locally">Download</string><string name="menu_delete">Delete</string><string name="menu_about">About</string>
+    
+    
+    <string name="title_nowplaying">Now Playing</string>
+    <string name="title_working_songs">Songs…</string>
+    <string name="title_tracks">Songs</string>
+    <string name="title_working_albums">Albums…</string>
+    <string name="title_albums">Albums</string>
+    <string name="title_artists">Artists</string>
+    <string name="title_working_artists">Artists…</string><string name="title_radio">Radio</string>
+    <string name="title_playlists">Playlists</string>
+    <string name="title_working_radio">Radio...</string><string name="title_working_playlists">Playlists…</string>
+    <string name="title_search">Search</string>
+    
+	
+	<string name="artists">Artists</string>
+	<string name="albums">Albums</string>
+	<string name="tracks">Tracks</string>
+	<string name="playlists">Playlists</string>
+	<string name="radio">Radio</string><string name="search">Search</string>
+	
+	<string name="shuffle_tracks">Shuffle Tracks</string>
+	<string name="shuffle_artists">Shuffle Artists</string>
+	<string name="shuffle_albums">Shuffle Albums</string>
+	<string name="shuffle_none">Normal</string>
+	
+	<string name="empty_artist">No Artists in your Locker</string>
+	<string name="empty_album">No Albums in your Locker</string>
+	<string name="empty_track">No Tracks in your Locker</string>
+	
+	<string name="loading_artists">Loading Artists...</string>
+    <string name="loading_albums">Loading Albums...</string>
+    <string name="loading_tracks">Loading Tracks...</string>
+    <string name="loading_playlists">Loading Playlists...</string><string name="loading_playmix">Loading Radio...</string>
+    <string name="loading_search">Searching...</string>
+    <string name="loading_authentication">Authenticating...</string>
+    
+    <string name="search_hint">Type an Artist or Track Name</string>
+    
+    <string name="emptyplaylist">Selected playlist is empty.</string>
+    
+    <string name="unknown_artist_name">Unknown artist</string>
+    <string name="unknown_album_name">Unknown album</string>
+    <string name="unknown_playlist_name">Unknown playlist</string>
+	
+<!--    <string name="alphabet">\u0020\u0028\u0029\u002D\u0022\u00270123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>-->
+    <string name="alphabet">\u0020ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>
+    
+    <!--
+    This string is used as the format string in a String.format call,
+    and 5 additional arguments are available for printing:
+    1 - hours
+    2 - minutes
+    3 - minutes%60
+    4 - seconds
+    5 - second%60
+    -->
+    <skip/>
+    <!-- Do not translate. Duration format. -->
+    <string name="durationformat"><xliff:g id="format">%2$d:%5$02d</xliff:g></string>
+    
+    <string name="albumsongseparator">\n</string>
+    
+    <string name="onesong">1 song</string>
+    <plurals name="Nsongs">
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> songs</item>
+    </plurals>
+    
+    <!-- Used in artists list view, indicates how many albums exist for a given artist. -->
+    <plurals name="Nalbums">
+        <!-- number of albums is one -->
+        <item quantity="one">1 album</item>
+        <!-- number of albums is not equal to one -->
+        <item quantity="other"><xliff:g id="count">%d</xliff:g> albums</item>
+    </plurals>
+	
+	<string name="ERROR_AUTH_TITLE">Incorrect Login</string>
+	<string name="ERROR_AUTH">Unable to login to MP3tunes.  Please check your email and password and try again.</string>
+	<string name="ERROR_MISSINGINFO">You must have a valid MP3tunes email and password.  If you don't have an account, visit www.mp3tunes.com to get your free Music Locker.</string>
+	<string name="ERROR_MISSINGINFO_TITLE">Missing Information</string>
+	<string name="ERROR_SERVER_UNAVAILABLE">There was a problem communicating with the Mp3tunes servers.  Please try again shortly.</string>
+	<string name="ERROR_SERVER_UNAVAILABLE_TITLE">Communication Error</string>
+	<string name="ERROR_GENERIC">A problem was encountered and the application must restart.</string>
+	<string name="ERROR_GENERIC_TITLE">Error Encountered</string>
+	<string name="ERROR_PLAYBACK_FAILED_TITLE"></string>
+	<string name="ERROR_PLAYBACK_FAILED"></string>
+    
+    <string name="update_ticker">MP3tunes Update</string>
+    <string name="update_title">MP3tunes Update Available</string>
+    <string name="update_message">Download update</string>
+    <string name="update_confirm_title">Confirm MP3tunes Update</string>
+    <string name="update_confirm_text">Would you like to update this application to the newest version?</string>
+    <string name="update_confirm_stop">Don\'t notify me of this update again</string>
+    
+
+
+
+
+
+<string name="about_text">Version: %1$s</string>
+<string name="about_code_link">Code:  http://code.google.com/p/mp3tunes/</string>
+<string name="about_bugs_link">Bugs: http://androidmp3.uservoice.com</string>
+<string name="about_player_name">MP3tunes Mobile Locker\n© 2010 MP3tunes, Inc.</string>
+<string name="artist_browser_error">Unable to load the artist list.  Please, check your network connection and try again.</string>
+<string name="ablum_browser_error">Unable to load the album list.  Please, check your network connection and try again.</string>
+<string name="track_browser_error">Unable to load the track list.  Please, check your network connection and try again.</string>
+<string name="playlist_browser_error">Unable to load playlists.  Please, check your network connection and try again.</string>
+<string name="playmix_browser_error">Unable to load radio playlists.  Please, check your network connection try again.</string>
+<string name="ok_text">OK</string>
+<string name="network_problem">Network Problem</string>
+
+
+</resources>
