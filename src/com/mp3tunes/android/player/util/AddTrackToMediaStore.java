@@ -178,7 +178,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         File storageDir = Environment.getExternalStorageDirectory();
         Log.w("Mp3Tunes", "External Storage dir: " + storageDir.getAbsolutePath());
         if (storageDir.isDirectory()) {
-            File mp3tunesDir = new File(storageDir, "mp3tunes_dir");
+            File mp3tunesDir = new File(storageDir, "mp3tunes/music");
             Log.w("Mp3Tunes", "mp3tunes dir: " + mp3tunesDir.getAbsolutePath());
             if (mp3tunesDir.isDirectory()) {
                 Log.w("Mp3Tunes", "mp3tunes dir exists");

@@ -32,6 +32,7 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteImageHandler;
 import com.mp3tunes.android.player.RemoteImageView;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.Worker;
 
 
@@ -60,6 +61,8 @@ public class Player extends Activity
     private RemoteImageHandler mAlbumArtHandler;
     private IntentFilter mIntentFilter;
     private AsyncTask<Void, Void, Boolean> mArtTask;
+    
+    private TrackAdder mTrackAdder;
     
     @Override
     public void onCreate( Bundle icicle )
@@ -186,7 +189,22 @@ public class Player extends Activity
                     return false;
                 }
                 return true;
+            case R.id.menu_opt_load_track: {
+                // add track to local storage
+                Track t = Music.sService.getTrack();
+                if (AddTrackToMediaStore.isInStore(t, this)) {
+                    Log.w("Mp3Tunes", "Track already in store");
+                    return true;
+                }
+                    
+                mTrackAdder = new TrackAdder(t);
+                mTrackAdder.execute();
+                return true;
+            }
+                
         }
+        } catch (RemoteException e) {
+            e.printStackTrace();
         } finally {
         }
         return super.onOptionsItemSelected(item);
@@ -471,5 +489,22 @@ public class Player extends Activity
         }
         
     };
+    
+    private class TrackAdder extends AddTrackToMediaStore
+    {
+
+        public TrackAdder(Track track)
+        {
+            super(track, getBaseContext());
+        }
+        
+        @Override
+        protected void onPostExecute(Boolean result)
+        {
+            if (!result) {
+                Log.w("Mp3Tunes", "Failed to add track");
+            }
+        }
+    }
     
 }
