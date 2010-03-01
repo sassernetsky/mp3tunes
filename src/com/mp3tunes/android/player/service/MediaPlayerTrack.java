@@ -501,5 +501,12 @@ public class MediaPlayerTrack
     {
         return mErrorCode;
     }
+
+    public void seekTo(int i)
+    {
+        if (mIsInitialized)
+            mMp.seekTo(i);
+        
+    }
     
 }
