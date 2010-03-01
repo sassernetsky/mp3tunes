@@ -195,6 +195,7 @@ public class PlayerHandler
                 Logger.log("Error: Finished a song successfully while on a call");
                 mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
             }
+            track.seekTo(1);
             if (!playNext()) mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
         }
         
@@ -206,6 +207,8 @@ public class PlayerHandler
             mTrack.setPlayNow(false);
             if (mTrack.isPlaying()) 
                 mTrack.stop();
+            //mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
+            //mTrack.requestPreload();
         }
     }
 
@@ -286,6 +289,8 @@ public class PlayerHandler
             Timer timings = new Timer("tryPrecache pos");
             Logger.log("Trying precache at: " + Integer.toString(bufferingPos));
             int playbackPos = mList.getCurrentPosition();
+            
+            if (bufferingPos < playbackPos) return;
             
             //if this is true then we have prefetched enough tracks
             if ((playbackPos + mPreCache - bufferingPos) < 1) return;
