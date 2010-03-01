@@ -8,6 +8,7 @@
 <!--        android:id="@+id/menu_opt_newplaylist"-->
 <!--        android:icon="@drawable/ic_menu_playback"-->
 <!--        android:title="@string/menu_player"/>-->
-<item android:id="@+id/menu_opt_stop" android:title="@string/menu_stop" android:icon="@drawable/ic_menu_playback">
+<item android:id="@+id/menu_opt_stop" android:title="@string/menu_stop" android:icon="@drawable/stop">
 </item>
+<item android:id="@+id/menu_opt_load_track" android:title="@string/menu_add_track_locally" android:icon="@drawable/download1"></item>
 </menu>
