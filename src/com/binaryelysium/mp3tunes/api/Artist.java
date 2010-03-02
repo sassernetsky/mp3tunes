@@ -22,14 +22,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Artist {
-	int mId;
-	String mName;
-	int mTrackCount;
-	int mAlbumCount;
-	int mSize;
+	Id      mId;
+	String  mName;
+	int     mTrackCount;
+	int     mAlbumCount;
+	int     mSize;
 	Album[] mAlbums;
 
-	public int getId() {
+	public Id getId() {
 		return mId;
 	}
 
@@ -49,14 +49,19 @@ public class Artist {
 		return mSize;
 	}
 
-	private Artist() {
+	public Artist(Id id, String name) 
+	{
+	    mId   = id;
+	    mName = name;
 	}
+	
+	private Artist(){}
 	
     public static Artist artistFromJson(JSONObject obj)
     {
         Artist a = new Artist();
         try {
-            a.mId         = obj.getInt("artistId");
+            a.mId         = new LockerId(obj.getInt("artistId"));
             a.mSize       = obj.getInt("artistSize");
             a.mName       = obj.getString("artistName");
             a.mAlbumCount = obj.getInt("albumCount");

@@ -1,6 +1,7 @@
 package com.mp3tunes.android.player.service;
 
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.IdParcel;
 
 import android.app.Service;
 import android.content.Context;
@@ -95,8 +96,7 @@ public class GuiNotifier
             i.putExtra("artist", track.getArtistName());
             i.putExtra("album", track.getAlbumTitle());
             i.putExtra("track", track.getTitle());
-            //i.putExtra("duration", track.getDuration());
-            i.putExtra("id", track.getId());
+            i.putExtra("id", new IdParcel(track.getId()));
         }
         mService.sendBroadcast(i);
     }

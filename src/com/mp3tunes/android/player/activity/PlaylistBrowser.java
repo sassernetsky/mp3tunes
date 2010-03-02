@@ -42,9 +42,11 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
-import com.mp3tunes.android.player.LockerDb;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
@@ -52,7 +54,7 @@ import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 public class PlaylistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
-    private String              mCurrentPlaylistId;
+    private LockerId            mCurrentPlaylistId;
     private String              mCurrentPlaylistName;
     private SimpleCursorAdapter mAdapter;
     private boolean             mAdapterSent;
@@ -66,10 +68,10 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     private boolean     mIsRadio;
     
     String[] mFrom = new String[] {
-            LockerDb.KEY_ID,
-            LockerDb.KEY_PLAYLIST_NAME,
-            LockerDb.KEY_FILE_COUNT,
-            LockerDb.KEY_PLAYLIST_ORDER
+            DbKeys.ID,
+            DbKeys.PLAYLIST_NAME,
+            DbKeys.FILE_COUNT,
+            DbKeys.PLAYLIST_ORDER
       };
     
     int[] mTo = new int[] {
@@ -165,7 +167,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
-        outcicle.putString("selectedalbum", mCurrentPlaylistId);
+        outcicle.putString("selectedalbum", mCurrentPlaylistId.asString());
         outcicle.putString("artist", mArtistId);
         super.onSaveInstanceState(outcicle);
     }
@@ -229,7 +231,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
 
         mPlaylistCursor.moveToPosition(mi.position);
         mCurrentPlaylistName = mPlaylistCursor.getString(FROM_MAPPING.NAME);
-        mCurrentPlaylistId = mPlaylistCursor.getString(FROM_MAPPING.ID);
+        mCurrentPlaylistId = new LockerId(mPlaylistCursor.getString(FROM_MAPPING.ID));
         
         if (mIsRadio) {
             mCurrentPlaylistName = mCurrentPlaylistName
@@ -369,9 +371,9 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         {
             try {
                 if (PlaylistBrowser.this.mIsRadio)
-                    mCursor = Music.getDb(getBaseContext()).getRadioDataForBrowser(mFrom);
+                    mCursor = Music.getDb(getBaseContext()).getRadioData(mFrom);
                 else 
-                    mCursor = Music.getDb(getBaseContext()).getPlaylistDataForBrowser(mFrom);
+                    mCursor = Music.getDb(getBaseContext()).getPlaylistData(mFrom);
             } catch ( Exception e ) {
                 e.printStackTrace();
                 return false;
