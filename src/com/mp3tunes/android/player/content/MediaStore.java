@@ -1,20 +1,25 @@
 package com.mp3tunes.android.player.content;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.database.CursorJoiner;
 import android.database.MatrixCursor;
+import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import android.util.Log;
 
+import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.LocalId;
+import com.mp3tunes.android.player.content.LockerDb.GetAlbumsByArtist;
+import com.mp3tunes.android.player.util.Timer;
 
 public class MediaStore
 {
@@ -27,70 +32,104 @@ public class MediaStore
         mCr       = cr;
     }
     
-    private static final Uri sArtistsUri = android.provider.MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI;
-    private static final Uri sAlbumsUri  = android.provider.MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI;
-
+    public static final Uri sArtistsUri = android.provider.MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI;
+    public static final Uri sAlbumsUri  = android.provider.MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI;
+    public static final Uri sTracksUri   = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+    
     public static final String KEY_LOCAL = "local";
     
     public Cursor getArtistData(String[] columns)throws IOException, LockerException
     {
-        String[] cols = rmLocalCol(columns);
-        Cursor locker = mLockerDb.getArtistData(cols);
-        
-        String[] projection = lockerDbToMediaStoreColumns(cols);
-        Cursor store = mCr.query(sArtistsUri, projection, null, null, 
-                                 "lower(" + lockerDbToMediaStoreKey(DbKeys.ARTIST_NAME) + ")");
-        
-        return merge(locker, store, columns, new String[] {DbKeys.ARTIST_NAME});
+        String[] joinBy =  new String[] {DbKeys.ARTIST_NAME};
+        return getData(columns, joinBy, sArtistsUri, DbKeys.ARTIST_NAME, mLockerDb.new GetArtists());
     }
     
-    public Cursor getAlbumData(String[] columns, Id id)throws IOException, LockerException
+    public Cursor getAlbumData(String[] columns)throws IOException, LockerException
     {
+        Timer timer = new Timer("Get Album Data");
+        try {
+        String[] joinBy = new String[] {DbKeys.ALBUM_NAME};
+        return getData(columns, joinBy, sAlbumsUri, DbKeys.ALBUM_NAME, mLockerDb.new GetAlbums());
+        } finally {
+            timer.push();
+        }
+    }
+    
+    public Cursor getAlbumDataByArtist(String[] columns, Id id) throws IOException, LockerException
+    {
+        String[] joinBy = new String[] {DbKeys.ALBUM_NAME};
+        return getDataById(columns, joinBy, sAlbumsUri, DbKeys.ALBUM_NAME, id, 
+                           android.provider.MediaStore.Audio.Media.ARTIST, new ArtistGetter(mLockerDb, mCr),
+                           mLockerDb.new GetAlbumsByArtist());
+    }
+
+    public Cursor getTrackDataByAlbum(String[] columns, Id id) throws SQLiteException, IOException, LockerException
+    {
+        String[] joinBy = new String[] {DbKeys.TITLE};
+        return getDataById(columns, joinBy, sTracksUri, DbKeys.TITLE, id, 
+                           android.provider.MediaStore.Audio.Media.ALBUM, new AlbumGetter(mLockerDb, mCr),
+                           mLockerDb.new GetTracksByAlbum());
+    }
+
+    public Cursor getTrackDataByArtist(String[] columns, Id id) throws IOException, LockerException
+    {
+        String[] joinBy = new String[] {DbKeys.TITLE};
+        return getDataById(columns, joinBy, sTracksUri, DbKeys.TITLE, id, 
+                android.provider.MediaStore.Audio.Media.ARTIST, new ArtistGetter(mLockerDb, mCr),
+                mLockerDb.new GetTracksByArtist());
+    }
+    
+    public Cursor getTrackDataByPlaylist(String[] columns, LockerId lockerId) throws SQLiteException, IOException, LockerException
+    {
+        String[] joinBy = new String[] {DbKeys.TITLE};
         String[] cols = rmLocalCol(columns);
         String[] projection = lockerDbToMediaStoreColumns(cols);
-        String[] joinBy = new String[] {DbKeys.ALBUM_NAME};
         
-        Cursor locker = null;
-        Cursor store  = null;
-        if (id == null) {
-            locker = mLockerDb.getAlbumData(cols, null);
-            store = mCr.query(sAlbumsUri, projection, null, null, 
-                              "lower(" + lockerDbToMediaStoreKey(DbKeys.ALBUM_NAME) + ")");
-        } else {
-            Log.w("Mp3Tunes", "geting album data for artist id: " + id.asString());
-            if (LockerId.class.isInstance(id)) {
-                Log.w("Mp3Tunes", "Id is from Locker");
-                locker = mLockerDb.getAlbumData(cols, id.asString());
-                Artist artist = mLockerDb.getArtistById(id);
-                Log.w("Mp3Tunes", "Artist name: " + artist.getName());
-                store = mCr.query(sAlbumsUri, projection,
-                        android.provider.MediaStore.Audio.Media.ARTIST + "=\"" + artist.getName() + "\"", null, 
-                        "lower(" + lockerDbToMediaStoreKey(DbKeys.ALBUM_NAME) + ")");
-            } else {
-                Log.w("Mp3Tunes", "Id is from Store");
-                Artist localArtist = getArtistFromLocal(id);
-                if (localArtist == null) return null;
+        //no matter what columns the caller requests we need the Artist, Album, and Title to be returned
+        //so we make sure they are in the projection here
+        cols = ensureColInColumns(cols, DbKeys.TITLE);
+        cols = ensureColInColumns(cols, DbKeys.ALBUM_NAME); 
+        cols = ensureColInColumns(cols, DbKeys.ARTIST_NAME);
+        
+        Cursor locker = mLockerDb.getTrackDataByPlaylist(cols, lockerId);
+        
+        int titleIndex  = locker.getColumnIndexOrThrow(DbKeys.TITLE);
+        int artistIndex = locker.getColumnIndexOrThrow(DbKeys.ARTIST_NAME);
+        int albumIndex  = locker.getColumnIndexOrThrow(DbKeys.ALBUM_NAME);
+        
+        String   where = android.provider.MediaStore.Audio.Media.ARTIST + "=? AND " +
+                         android.provider.MediaStore.Audio.Media.ALBUM  + "=? AND " +
+                         android.provider.MediaStore.Audio.Media.TITLE  + "=?";
+        String[] whereArgs = new String[3];
+        
+        MatrixCursor output = new MatrixCursor(columns);
+        int len = columns.length - 1;
+        if (locker.moveToFirst()) {
+            do {
+                MatrixCursor.RowBuilder builder = output.newRow();
                 
-                Log.w("Mp3Tunes", "Artist name: " + localArtist.getName());
-                Artist remoteArtist = mLockerDb.getArtistByName(localArtist.getName());
-                if (remoteArtist != null) {
-                    Log.w("Mp3Tunes", "Artist is local and remote");
-                    locker = mLockerDb.getAlbumData(cols, id.asString());
+                whereArgs[0] = locker.getString(artistIndex);
+                whereArgs[1] = locker.getString(albumIndex);
+                whereArgs[2] = locker.getString(titleIndex);
+                Cursor cursor = mCr.query(sTracksUri, projection, where, whereArgs, null);
+                if (cursor.moveToFirst()) {
+                    buildRow(builder, cursor, len, 1);
+                } else {
+                    buildRow(builder, locker, len, 0);
                 }
-                store = mCr.query(sAlbumsUri, projection,
-                        android.provider.MediaStore.Audio.Media.ARTIST + "=\"" + localArtist.getName() + "\"", null, 
-                        "lower(" + lockerDbToMediaStoreKey(DbKeys.ALBUM_NAME) + ")");
-            }
+            } while (locker.moveToNext());
         }
-        return merge(locker, store, columns, joinBy);
+        return output;
     }
     
     public Track getTrack(Id id)
     {
-        if (LockerId.class.isInstance(id)) {
-            return mLockerDb.getTrack((LockerId)id);
-        } else if (LocalId.class.isInstance(id)) {
-            throw new RuntimeException();
+        try {
+            return (Track)(new TrackGetter(mLockerDb, mCr).get(id));
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (LockerException e) {
+            e.printStackTrace();
         }
         return null;
     }
@@ -119,6 +158,8 @@ public class MediaStore
     
     private Cursor merge(Cursor locker, Cursor store, String[] columns, String[] joinOn)
     {
+        Timer timer = new Timer("Merge took");
+        try { 
         MatrixCursor output;
         if (locker == null) {
             output = addColumnToCursor(store, columns, 1);
@@ -136,13 +177,20 @@ public class MediaStore
                         buildRow(builder, locker, len, 0);
                         break;
                     case RIGHT:
-                    case BOTH:  
+                        buildRow(builder, store, len, 1);
+                        break;
+                    case BOTH: 
                         buildRow(builder, store, len, 1);
                         break;
                 }
             }
+            locker.close();
+            store.close();
         }
         return output;
+        } finally {
+            timer.push();
+        }
     }
     
     private String[] rmLocalCol(String[] array)
@@ -155,18 +203,18 @@ public class MediaStore
         return array;
     }
     
-    private Artist getArtistFromLocal(Id id)
+    private String[] ensureColInColumns(String[] array, String key) 
     {
-        String[] projection = new String[] {
-            android.provider.BaseColumns._ID,
-            android.provider.MediaStore.Audio.Media.ARTIST
-        };
-        Cursor c = mCr.query(sArtistsUri, projection, android.provider.BaseColumns._ID + "=" + id.asInt(), null, null);
-        if (c.moveToFirst()) {
-            Artist a = new Artist(id, c.getString(1));
-            return a;
+        String[] sorted = new String[array.length];
+        System.arraycopy(array, 0, sorted, 0, array.length);
+        Arrays.sort(sorted);
+        if (Arrays.binarySearch(sorted, key) < 0) {
+            String[] old = array;
+            array = new String[old.length + 1];
+            System.arraycopy(old, 0, array, 0, old.length);
+            array[array.length - 1] = key;
         }
-        return null;
+        return array;
     }
     
     private MatrixCursor addColumnToCursor(Cursor c, String[] columns, int local)
@@ -180,6 +228,7 @@ public class MediaStore
                 buildRow(builder, c, len, local);
             } while (c.moveToNext());
         }
+        c.close();
         return output;
     }
     
@@ -190,4 +239,41 @@ public class MediaStore
         }
         builder.add(local);
     }
+
+    private Cursor getData(String[] columns, String[] joinBy, Uri storeUri, String order, LockerDb.LockerDataCall call) throws SQLiteException, IOException, LockerException
+    {
+        String[] cols = rmLocalCol(columns);
+        String[] projection = lockerDbToMediaStoreColumns(cols);
+
+        Cursor locker = call.get(cols);
+        Cursor store = mCr.query(storeUri, projection, null, null, 
+                              "lower(" + lockerDbToMediaStoreKey(order) + ")");
+        return merge(locker, store, columns, joinBy);
+    }
+    
+    private Cursor getDataById(String[] columns, String[] joinBy, Uri storeUri, String order, Id id, String nameKey, MergeHelper helper, LockerDb.LockerDataByCall call) throws IOException, LockerException
+    {
+        String[] cols = rmLocalCol(columns);
+        String[] projection = lockerDbToMediaStoreColumns(cols);
+        
+        LocalId  localId  = helper.getLocalId(id);
+        LockerId lockerId = helper.getLockerId(id);
+        String   name     = helper.getName(id);
+        
+        
+        Log.w("Mp3Tunes", "Name: " + name);
+        Cursor locker = null;
+        Cursor store  = null;
+        if (localId != null) {
+            Log.w("Mp3Tunes", "Have Local data");
+            store = mCr.query(storeUri, projection, nameKey + "=\"" + name + "\"", null, 
+                              "lower(" + lockerDbToMediaStoreKey(order) + ")");
+        }
+        if (lockerId != null) {
+            Log.w("Mp3Tunes", "Have Remote data");
+            locker = call.get(cols, lockerId);
+        }
+        return merge(locker, store, columns, joinBy);
+    }
+
 }

@@ -21,7 +21,8 @@ package com.binaryelysium.mp3tunes.api;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class Album {
+public class Album implements LockerData 
+{
 	Id mId;
 	String mName;
 	String mYear;
@@ -35,6 +36,12 @@ public class Album {
 	Track[] mTracks;
 
 	private Album() {
+	}
+	
+	public Album(Id id, String name)
+	{
+	    mId   = id;
+	    mName = name;
 	}
 	
 	public Album(Id id, String name, String year, int trackCount, int size, String releaseDate,
