@@ -166,6 +166,7 @@ public class MediaPlayerTrack
         try {
             String url;
             if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
+                Logger.log("playing local track");
                 url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
                 mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
             } else {

@@ -146,6 +146,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             return true;
         }
         cursor.close();
+        
         return false;
     }
     
@@ -185,7 +186,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
                 return mp3tunesDir;
             } else {
                 Log.w("Mp3Tunes", "making mp3tunes dir");
-                if (mp3tunesDir.mkdir()) {
+                if (mp3tunesDir.mkdirs()) {
                     return mp3tunesDir;
                 }
             }
