@@ -46,6 +46,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
@@ -127,31 +128,32 @@ public class LockerDb
                 null, DbKeys.PLAYLIST_ORDER);
     }
     
-    public Cursor getArtistData(String[] from)throws IOException, LockerException
+    public Cursor getArtistData(String[] from, String where)throws IOException, LockerException
     {
         if (!mCache.isCacheValid(LockerCache.ARTIST)) {
             System.out.println("artist cache not valid refreshing");
             refreshArtists();
         }
         
-        return mDb.query(DbTables.ARTIST, from, null, null, null, null,
+        return mDb.query(DbTables.ARTIST, from, where, null, null, null,
                 "lower(" + DbKeys.ARTIST_NAME + ")");
     }
     
-    public Cursor getAlbumData(String[] from, String artistId) throws SQLiteException, IOException, LockerException
+    public Cursor getAlbumData(String[] from, String where) throws SQLiteException, IOException, LockerException
     {
-        if (artistId != null) {
-            refreshAlbumsForArtist(Integer.parseInt(artistId));
-            return mDb.query(DbTables.ALBUM, from, DbKeys.ARTIST_ID + "=" + artistId, null, null, null,
-                    "lower(" + DbKeys.ALBUM_NAME + ")");
-        } else {
             if (!mCache.isCacheValid(LockerCache.ALBUM)) {
                 System.out.println("artist cache not valid refreshing");
                 refreshAlbums();
             }
-            return mDb.query(DbTables.ALBUM, from, null, null, null, null,
+            return mDb.query(DbTables.ALBUM, from, where, null, null, null,
                     "lower(" + DbKeys.ALBUM_NAME + ")");
-        }
+    }
+    
+    public Cursor getAlbumDataByArtist(String[] from, LockerId id) throws SQLiteException, IOException, LockerException
+    {
+            refreshAlbumsForArtist(id.asInt());
+            return mDb.query(DbTables.ALBUM, from, DbKeys.ARTIST_ID + "=" + id.asString(), null, null, null,
+                    "lower(" + DbKeys.ALBUM_NAME + ")");
     }
     
     public Cursor getTrackDataByAlbum(String[] from, LockerId id) throws SQLiteException, IOException, LockerException
@@ -240,6 +242,31 @@ public class LockerDb
     }
     
     
+    public Track getTrack(String name)
+    {
+        
+        Cursor c = mDb.query(DbTables.TRACK, Music.TRACK, DbKeys.TITLE + "=\"" + name + "\"", null, null, null, null);
+        if (c.moveToFirst()) {
+            int id              = c.getInt(Music.TRACK_MAPPING.ID);
+            int track           = c.getInt(Music.TRACK_MAPPING.TRACKNUM);
+            int artist_id       = c.getInt(Music.TRACK_MAPPING.ARTIST_ID);
+            int album_id        = c.getInt(Music.TRACK_MAPPING.ALBUM_ID);
+            String play_url     = c.getString(Music.TRACK_MAPPING.PLAY_URL);
+            String download_url = c.getString(Music.TRACK_MAPPING.DOWNLOAD_URL);
+            String title        = c.getString(Music.TRACK_MAPPING.TITLE);
+            String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
+            String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
+            String cover_url    = c.getString(Music.TRACK_MAPPING.COVER_URL);
+            Track t = new ConcreteTrack(new LockerId(id), play_url, download_url, title, track, 
+                                artist_id, artist_name, album_id, album_name, 
+                                cover_url);
+            c.close();
+            return t;
+        }
+        c.close();
+        return null;
+    }
+    
     public Track getTrack(LockerId id)
     {
         
@@ -254,7 +281,7 @@ public class LockerDb
             String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
             String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
             String cover_url    = c.getString(Music.TRACK_MAPPING.COVER_URL);
-            Track t = new Track(id, play_url, download_url, title, track, 
+            Track t = new ConcreteTrack(id, play_url, download_url, title, track, 
                                 artist_id, artist_name, album_id, album_name, 
                                 cover_url);
             c.close();
@@ -294,6 +321,31 @@ public class LockerDb
         return null;
     }
 
+    
+    private Album buildAlbum(Cursor c)
+    {
+        if (c.getCount() > 1)
+            Log.e("Mp3Tunes", "Got more than one album");
+        if (c.moveToFirst()) {
+            Album a = new Album(new LockerId(c.getInt(Music.ALBUM_MAPPING.ID)), c.getString(Music.ALBUM_MAPPING.ALBUM_NAME));
+            c.close();
+            return a;
+        }
+        c.close();
+        return null;
+    }
+    
+    public Album getAlbum(LockerId id)
+    {
+        Cursor c = mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ID + "=" + id.asInt(), null, null, null, null);
+        return buildAlbum(c);
+    };
+    
+    public Album getAlbum(String name)
+    {
+        Cursor c = mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ALBUM_NAME + "=\"" + name + "\"", null, null, null, null);
+        return buildAlbum(c);
+    }
 
     public DbSearchResult search(DbSearchQuery query)
     {
@@ -406,7 +458,7 @@ public class LockerDb
         }
         try {
             if (playlist.getName().length() > 0) {
-                if (mQueries.playlistExists(playlist.getId())) {
+                if (mQueries.playlistExists(playlist.getId().asString())) {
                     mQueries.updatePlaylist(playlist, index);
                 } else {
                     mQueries.insertPlaylist(playlist, index);
@@ -662,10 +714,58 @@ public class LockerDb
         public boolean mAlbums;
         public boolean mTracks;
     }
+    
+    abstract public class LockerDataCall {
+        public abstract Cursor get(String[] columns) throws SQLiteException, IOException, LockerException;
+    };
+    
+    public class GetAlbums extends LockerDataCall
+    {
+        public Cursor get(String[] columns) throws SQLiteException, IOException, LockerException
+        {
+            return getAlbumData(columns, null);
+        }
+    };
+    
+    public class GetArtists extends LockerDataCall
+    {
+        public Cursor get(String[] columns) throws IOException, LockerException
+        {
+            return getArtistData(columns, null);
+        }
+    };
+    
+    abstract public class LockerDataByCall {
+        public abstract Cursor get(String[] columns, LockerId id) throws SQLiteException, IOException, LockerException;
+    };
+    
+    public class GetAlbumsByArtist extends LockerDataByCall
+    {
+        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException
+        {
+            return getAlbumDataByArtist(columns, id);
+        }
+    };
+    
+    public class GetTracksByAlbum extends LockerDataByCall
+    {
+        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException
+        {
+            return getTrackDataByAlbum(columns, id);
+        }
+    };
+    
+    public class GetTracksByArtist extends LockerDataByCall
+    {
+        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException
+        {
+            return getTrackDataByArtist(columns, id);
+        }
+    };
 
     static public class IdPolicyException extends RuntimeException
     {
         private static final long serialVersionUID = -5529281068172111226L;
 
-    };
+    }
 }

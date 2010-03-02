@@ -21,7 +21,8 @@ package com.binaryelysium.mp3tunes.api;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class Artist {
+public class Artist  implements LockerData
+{
 	Id      mId;
 	String  mName;
 	int     mTrackCount;

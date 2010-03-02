@@ -127,25 +127,24 @@
             android:orientation="horizontal"
             android:layout_gravity="bottom"
             android:layout_height="wrap_content"
-            android:layout_width="fill_parent"
+            
             android:paddingTop="5dip"
             android:paddingBottom="5dip"
             android:gravity="center"
             android:layout_alignParentBottom="true"
             
-            android:layout_below="@id/track_metadata">
+            android:layout_below="@id/track_metadata" android:layout_width="fill_parent">
 <!--            android:background="@drawable/tab_bar_rest"-->
-
+<!--android:layout_width="fill_parent"-->
             <ImageButton
                 android:id="@+id/rew"
                 style="@+style/TunesButton.Rew" />
             <ImageButton
-                android:id="@+id/play"
-                style="@+style/TunesButton.PlayPause" />
-            <!--
-                <ImageButton android:id="@+id/stop"
+                android:id="@+id/stop"
                 style="@+style/TunesButton.Stop" />
-            -->
+            <ImageButton
+                android:id="@+id/play"
+                style="@+style/TunesButton.PlayPause"/>
             <ImageButton
                 android:id="@+id/fwd"
                 style="@+style/TunesButton.Fwd" />

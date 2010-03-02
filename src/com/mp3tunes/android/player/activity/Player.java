@@ -43,6 +43,7 @@ public class Player extends Activity
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
     private ImageButton mNextButton;
+    private ImageButton mStopButton;
     private RemoteImageView mAlbum;
     private TextView mCurrentTime;
     private TextView mTotalTime;
@@ -63,7 +64,6 @@ public class Player extends Activity
     @Override
     public void onCreate( Bundle icicle )
     {
-        Timer timings = new Timer("onCreate");
         super.onCreate(icicle);
         
         requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -83,10 +83,12 @@ public class Player extends Activity
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
         mNextButton = ( ImageButton ) findViewById( R.id.fwd );
+        mStopButton = ( ImageButton ) findViewById( R.id.stop );
         
         mPrevButton.setOnClickListener(mPrevListener);
         mPlayButton.setOnClickListener(mPlayListener);
         mNextButton.setOnClickListener(mNextListener);
+        mStopButton.setOnClickListener(mStopListener);
         
         mPlayButton.requestFocus();
         
@@ -101,89 +103,71 @@ public class Player extends Activity
         mIntentFilter.addAction(GuiNotifier.DATABASE_ERROR);
         
         Music.bindToService(this);
-        timings.push();
     }
     
     @Override
     public void onStart() {
-        Timer timings = new Timer("onStart");
         super.onStart();
         paused = false;
         long next = refreshNow();
         queueNextRefresh(next);
-        timings.push();
     }
     
     @Override
     public void onStop() {
-        Timer timings = new Timer("onStop");
         paused = true;
         mHandler.removeMessages(REFRESH);
 
         super.onStop();
-        timings.push();
     }
     
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        Timer timings = new Timer("onSaveInstanceState");
         outState.putBoolean("configchange", getChangingConfigurations() != 0);
         super.onSaveInstanceState(outState);
-        timings.push();
     }
 
     @Override
     protected void onPause() {
-        Timer timings = new Timer("onPause");
         unregisterReceiver(mStatusListener);
         super.onPause();
-        timings.push();
     }
     
     @Override
     public void onResume() {
-        Timer timings = new Timer("onResume");
         registerReceiver(mStatusListener, mIntentFilter);
         updateTrackInfo();
         setPauseButtonImage();
 
         super.onResume();
-        timings.push();
     }
 
     @Override
     public void onDestroy() {
-        Timer timings = new Timer("onDestroy");
         Music.unbindFromService( this );
         mAlbumArtWorker.quit();
         super.onDestroy();
-        timings.push();
     }
     
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Timer timings = new Timer("onCreateOptionsMenu");
         super.onCreateOptionsMenu(menu);
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.player, menu);
-        timings.push();
         return true;
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        Timer timings = new Timer("onPrepareOptionsMenu");
         mShowingOptions = true;
         try {
             dismissDialog(BUFFERING_DIALOG);
         } catch (IllegalArgumentException e) {}
-        timings.push();
         return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Timer timings = new Timer("onOptionsItemSelected");
         try {
         Intent intent;
         switch (item.getItemId()) {
@@ -204,7 +188,6 @@ public class Player extends Activity
                 return true;
         }
         } finally {
-            timings.push();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -212,42 +195,35 @@ public class Player extends Activity
     @Override
     public void onOptionsMenuClosed(Menu menu)
     {
-        Timer timings = new Timer("onOptionsMenuClosed");
         mShowingOptions = false;
-        timings.push();
     }
     
     private View.OnClickListener mPrevListener = new View.OnClickListener() {
         public void onClick(View v) 
         {
-            Timer timings = new Timer("mPrevListener");
             if (Music.sService == null) return;
             try {
                 Music.sService.prev();
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            timings.push();
         }
     };
     
     private View.OnClickListener mPlayListener = new View.OnClickListener() {
         public void onClick(View v) 
         {
-            Timer timings = new Timer("mPlayListener");
             if (Music.sService== null) return;
             try {
                 Music.sService.togglePlayback();
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            timings.push();
         }
     };
     
     private void setPauseButtonImage()
     {
-        Timer timings = new Timer("setPauseButtonImage");
          try {
             if (Music.sService != null && Music.sService.isPaused()) {
                 mPlayButton.setImageResource( R.drawable.play_button );
@@ -255,12 +231,10 @@ public class Player extends Activity
                 mPlayButton.setImageResource( R.drawable.pause_button );
             }
         } catch ( RemoteException ex ) {}
-        timings.push();
     }
     
     private View.OnClickListener mNextListener = new View.OnClickListener() {
         public void onClick(View v) {
-            Timer timings = new Timer("mNextListener");
             if (Music.sService== null)
                 return;
             try {
@@ -268,15 +242,25 @@ public class Player extends Activity
             } catch ( RemoteException e ) {
                 e.printStackTrace();
             }
-            timings.push();
         }
     };
     
+    private View.OnClickListener mStopListener = new View.OnClickListener() {
+        public void onClick(View v) {
+            if (Music.sService== null)
+                return;
+            try {
+                Music.sService.stop();
+            } catch ( RemoteException e ) {
+                e.printStackTrace();
+            }
+        }
+    };
+
     private BroadcastReceiver mStatusListener = new BroadcastReceiver() {
 
         public void onReceive(Context context, Intent intent) 
         {
-            Timer timings = new Timer("mStatusListener");
             try {
                 String action = intent.getAction();
                 if (action.equals(GuiNotifier.META_CHANGED)) {
@@ -293,13 +277,11 @@ public class Player extends Activity
             } catch (IllegalArgumentException e) {
                 Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }
-            timings.push();
         }
     };
     
     private void updateTrackInfo() 
     {
-        Timer timings = new Timer("updateTrackInfo");
         try {
             if (Music.sService== null)
                 return;
@@ -323,45 +305,37 @@ public class Player extends Activity
         } catch (RemoteException e) {
             e.printStackTrace();
         } finally  {
-            timings.push();
         }
     }
     
     private void queueNextRefresh(long delay) {
-        //Timer timings = new Timer("queueNextRefresh");
         if (!paused) {
             Message msg = mHandler.obtainMessage(REFRESH);
             mHandler.removeMessages(REFRESH);
             mHandler.sendMessageDelayed(msg, delay);
         }
-        //timings.push();
     }
     
     @Override
     protected Dialog onCreateDialog(int id) {
-        Timer timings = new Timer("onCreateDialog");
         Dialog d = null;
         if(id == BUFFERING_DIALOG){
             createBufferingDialog();
             d = mBufferingDialog;
         }
-        timings.push();
         return d;
     }
     
     private void createBufferingDialog()
     {
-        Timer timings = new Timer("createBufferingDialog");
         mBufferingDialog = new ProgressDialog(this);
         mBufferingDialog.setTitle("");
         mBufferingDialog.setMessage("Buffering");
         mBufferingDialog.setIndeterminate(true);
         mBufferingDialog.setCancelable(true);
-        timings.push();
     }
 
     private long refreshNow() {
-        Timer timings = new Timer("refreshNow");
         if (Music.sService != null) {
             try {
                 mDuration = Music.sService.getDuration();
@@ -394,19 +368,17 @@ public class Player extends Activity
                 // the counter can be updated at just the right time
                 return remaining;
             } catch (IllegalArgumentException e) {
-                Log.e("Mp3Tunes", Log.getStackTraceString(e));
+                //Log.e("Mp3Tunes", Log.getStackTraceString(e));
             } catch (RemoteException e) {
                 Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }
         }
-        timings.push();
         return 500;
     }
 
     private final Handler mHandler = new Handler() {
 
         public void handleMessage(Message msg) {
-            Timer timings = new Timer("mHandler");
             switch (msg.what) 
             {
                 case REFRESH:
@@ -416,7 +388,6 @@ public class Player extends Activity
                 case RemoteImageHandler.REMOTE_IMAGE_DECODED:
                     mAlbum.setArtwork((Bitmap) msg.obj);
                     mAlbum.invalidate();
-                    timings.push();
                     break;
     
                 default:
@@ -430,13 +401,11 @@ public class Player extends Activity
         String artUrl;
 
         private void setArtUrl(Track t) throws InvalidSessionException {
-            Timer timings = new Timer("setArtUrl");
             RemoteMethod method 
             = new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
                     .addFileKey(t.getFileKey())
                     .create();
             artUrl = method.getCall();
-            timings.push();
         }
         
         @Override
@@ -462,7 +431,6 @@ public class Player extends Activity
 
         @Override
         public void onPostExecute(Boolean result) {
-            Timer timings = new Timer("onPostExecute");
             if (result) {
                 System.out.println("Art url: " + artUrl);
                 if (artUrl != GuiNotifier.UNKNOWN) {
@@ -472,7 +440,6 @@ public class Player extends Activity
             } else {
                 System.out.println("Art url: unknown"); 
             }
-            timings.push();
         }
     }
 
@@ -505,28 +472,4 @@ public class Player extends Activity
         
     };
     
-    class Timer
-    {
-        long   mT1;
-        long   mT2;
-        String mText;
-        
-        Timer(String text)
-        {
-            mText = text;
-            mT1 = System.currentTimeMillis();
-        }
-        
-        void start(String text)
-        {
-            mText = text;
-            mT1 = System.currentTimeMillis();
-        }
-        
-        void push() 
-        {
-            mT2 = System.currentTimeMillis();
-            Log.w("Mp3Tunes", mText + " done: " + Long.toString(mT2 - mT1) + " elapsed");
-        }
-    }
 }

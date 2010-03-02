@@ -142,8 +142,10 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
-        outcicle.putParcelable("selectedalbum", new IdParcel(mCurrentAlbumId));
-        outcicle.putParcelable("artist", new IdParcel(mArtistId));
+        if (mCurrentAlbumId != null)
+            outcicle.putParcelable("selectedalbum", new IdParcel(mCurrentAlbumId));
+        if (mArtistId != null)
+            outcicle.putParcelable("artist", new IdParcel(mArtistId));
         super.onSaveInstanceState(outcicle);
     }
 
@@ -235,10 +237,10 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     protected void onListItemClick(ListView l, View v, int position, long id)
     {
         Cursor c = (Cursor) getListAdapter().getItem( position );
-        String album = c.getString(FROM_MAPPING.ID);
+        //String album = c.getInt(FROM_MAPPING.ID);
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
-        intent.putExtra("album", album);
+        intent.putExtra("album", new IdParcel(cursorToId(c)));
         startActivity(intent);
     }
 
@@ -340,7 +342,10 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         {
             try {
                 MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
-                mCursor = ms.getAlbumData(mFrom, mArtistId);
+                if(mArtistId == null)
+                    mCursor = ms.getAlbumData(mFrom);
+                else 
+                    mCursor = ms.getAlbumDataByArtist(mFrom, mArtistId);
             } catch (Exception e) {
             	Log.w("Mp3Tunes", Log.getStackTraceString(e));
                 return false;

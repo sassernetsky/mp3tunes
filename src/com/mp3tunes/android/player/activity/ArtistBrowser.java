@@ -345,43 +345,5 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         }
     }
     
-//    private class FetchTracksTask extends AsyncTask<Integer, Void, Boolean>
-//    {
-//        Cursor cursor;
-//        @Override
-//        public void onPreExecute()
-//        {
-//            Music.setSpinnerState(ArtistBrowser.this, true);
-//        }
-//
-//        @Override
-//        public Boolean doInBackground( Integer... params )
-//        {
-//            if(params.length <= 1)
-//                return false;
-//            int artist_id = params[0];
-//            try {
-//                    cursor = Music.getDb(getBaseContext()).getTracksForArtist(artist_id);
-//            } catch ( Exception e ) {
-//                System.out.println("Fetching tracks failed");
-//                e.printStackTrace();
-//                return false;
-//            }
-//            return true;
-//        }
-//
-//        @Override
-//        public void onPostExecute( Boolean result )
-//        {
-//            Music.setSpinnerState(ArtistBrowser.this, false);
-//            
-//            if (result) return;
-//            
-//            if( cursor != null) {
-//                    Music.playAll(ArtistBrowser.this, cursor, 0);
-//            } else
-//                System.out.println("CURSOR NULL");
-//        }
-//    }
 }
 
