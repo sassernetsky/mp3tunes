@@ -96,7 +96,6 @@ public class GuiNotifier
             i.putExtra("artist", track.getArtistName());
             i.putExtra("album", track.getAlbumTitle());
             i.putExtra("track", track.getTitle());
-            i.putExtra("duration", track.getDuration());
             i.putExtra("id", new IdParcel(track.getId()));
         }
         mService.sendBroadcast(i);

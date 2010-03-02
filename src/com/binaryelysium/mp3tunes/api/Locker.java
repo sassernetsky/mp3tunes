@@ -58,6 +58,12 @@ public class Locker
             text = HttpClientCaller.getInstance().callNoFixSession(new RemoteMethod.Builder(RemoteMethod.METHODS.LAST_UPDATE)
             .addParam("type", UpdateType.locker.toString())
             .create());
+        } catch (HttpResponseException e) {
+            if (e.getStatusCode() == 401) {
+                return false;
+            }
+            e.printStackTrace();
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
             return true;
@@ -250,7 +256,7 @@ public class Locker
         JSONArray jsonTracks = json.getJSONArray("trackList");
         for (int i = 0; i < jsonTracks.length(); i++) {
             JSONObject obj = jsonTracks.getJSONObject(i);
-            Track t = Track.trackFromJson(obj);
+            Track t = ConcreteTrack.trackFromJson(obj);
             if (t != null) 
                 tracks.add(t);
             else
@@ -383,7 +389,7 @@ public class Locker
             JSONArray jsonArray = json.getJSONArray("trackList");
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject obj = jsonArray.getJSONObject(i);
-                Track t = Track.trackFromJson(obj);
+                Track t = ConcreteTrack.trackFromJson(obj);
                 if (t != null) 
                     tracks.add(t);
                 else

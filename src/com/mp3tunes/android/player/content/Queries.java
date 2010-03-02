@@ -144,18 +144,11 @@ public class Queries
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
         mInsertTrack.bindString(2,  t.getPlayUrl());
-        mInsertTrack.bindString(3,  t.getDownloadUrl());
         mInsertTrack.bindString(4,  t.getTitle());
-        mInsertTrack.bindLong(  5,  t.getNumber());
         mInsertTrack.bindString(6,  t.getArtistName());
         mInsertTrack.bindString(7,  t.getAlbumTitle());
         mInsertTrack.bindLong(  8,  t.getArtistId());
         mInsertTrack.bindLong(  9,  t.getAlbumId());
-        mInsertTrack.bindDouble(10, t.getDuration());
-        if (t.getAlbumArt() != null)
-            mInsertTrack.bindString(11, t.getAlbumArt());
-        else
-            mInsertTrack.bindString(11, DbKeys.UNKNOWN_STRING);
         mInsertTrack.execute();
         return false;
     }

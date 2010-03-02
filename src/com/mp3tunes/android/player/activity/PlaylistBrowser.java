@@ -332,7 +332,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                 view.setText(val);
             } else if (columnIndex == 2) {
                 String text = "";
-                if(!mIsRadio) {
+                if(!mIsRadio && !cursor.getString(1).equals("Inbox")) {
                     int numsongs  = cursor.getInt(columnIndex);
                     text = Music.makeAlbumsLabel(getBaseContext(), numsongs, numsongs, true);
                 }
@@ -350,10 +350,15 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     
     private void killTasks()
     {
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+        Log.w("Mp3Tunes", "Trying to kill tasks");
+        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING) {
+            Log.w("Mp3Tunes", "Killing tracks task");
             mTracksTask.cancel( true );
-        if( mPlaylistTask != null && mPlaylistTask.getStatus() == AsyncTask.Status.RUNNING)
+        }
+        if( mPlaylistTask != null && mPlaylistTask.getStatus() == AsyncTask.Status.RUNNING) {
+            Log.w("Mp3Tunes", "Killing playlist task");
             mPlaylistTask.cancel( true );
+        }
     }
     
     private Cursor mPlaylistCursor;

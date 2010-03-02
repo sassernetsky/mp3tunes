@@ -49,9 +49,11 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
         } else {
             //Check to see if the current track is already paused
             //if it is do nothing
-            if (mFadingOut || mPlayerHandler.getMediaPlayerTrack().isPaused()) {
-                return;
-            }
+            if (mPlayerHandler == null) return;
+            MediaPlayerTrack t = mPlayerHandler.getMediaPlayerTrack();
+            if (t == null)    return;
+            if (t.isPaused()) return;
+            if (mFadingOut)   return;
             mFadingOut = true;
 
             // fade out faster if making a call, this feels more natural

@@ -85,6 +85,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private boolean mPlayNow;
     private long mSelectedId;
     private String mTrackName;
+    private FetchTracksTask mTrackTask;
     private Id    mTrackId;
     
     private TrackAdder mTrackAdder;
@@ -211,9 +212,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     @Override
     public void onDestroy()
     {
-        //if (mTrackTask != null
-        //        && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
-        //    mTrackTask.cancel(true);
+        if (mTrackTask != null
+                && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
+            mTrackTask.cancel(true);
         Music.unbindFromService(this);
         try {
             if ("nowplaying".equals(mPlaylist)) {
@@ -426,7 +427,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private Cursor getTrackCursor(String filter)
     {
         Cursor ret = null;
-        fetch(new FetchTracksTask());
+        mTrackTask = new FetchTracksTask();
+        fetch(mTrackTask);
         return ret;
     }
 

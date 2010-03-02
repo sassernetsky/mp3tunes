@@ -46,6 +46,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
@@ -254,9 +255,7 @@ public class LockerDb
             String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
             String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
             String cover_url    = c.getString(Music.TRACK_MAPPING.COVER_URL);
-            Track t = new Track(id, play_url, download_url, title, track, 
-                                artist_id, artist_name, album_id, album_name, 
-                                cover_url);
+            Track t = new ConcreteTrack(id, play_url, title, artist_id, artist_name, album_id, album_name);
             c.close();
             return t;
         }

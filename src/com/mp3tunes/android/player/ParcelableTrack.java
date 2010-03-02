@@ -3,9 +3,10 @@ package com.mp3tunes.android.player;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Track;
 
-public class ParcelableTrack extends Track implements Parcelable
+public class ParcelableTrack extends ConcreteTrack implements Parcelable
 {
 
     public ParcelableTrack(Track t)
@@ -22,19 +23,12 @@ public class ParcelableTrack extends Track implements Parcelable
     {
         out.writeParcelable(new IdParcel(getId()), flags);
         out.writeString(getPlayUrl());
-        out.writeString(getDownloadUrl());
         out.writeString(getTitle());
-        out.writeInt(getNumber());
         out.writeInt(getArtistId());
         out.writeString(getArtistName());
         out.writeInt(getAlbumId());
         out.writeString(getAlbumTitle());
-        out.writeString(getAlbumArt());
-        out.writeDouble(getDuration());
-        out.writeString(getFileName());
         out.writeString(getFileKey());
-        out.writeInt(getFileSize());
-        out.writeString(getAlbumYear());
     }
 
     public static final Parcelable.Creator<ParcelableTrack> CREATOR
@@ -52,24 +46,15 @@ public class ParcelableTrack extends Track implements Parcelable
     {
         IdParcel id        = in.readParcelable(null);
         String playUrl     = in.readString();
-        String downloadUrl = in.readString();
         String title       = in.readString();
-        int    number      = in.readInt();
         int    artistId    = in.readInt();
         String artistName  = in.readString();
         int    albumId     = in.readInt();
         String albumTitle  = in.readString();
-        String albumArt    = in.readString();
-        double duration    = in.readDouble();
-        String fileName    = in.readString();
         String fileKey     = in.readString();
-        int    fileSize    = in.readInt();
-        String albumYear   = in.readString();
         
-        return new Track(id.getId(), playUrl, downloadUrl, title, number,
-                         artistId, artistName, albumId, albumTitle,
-                         albumArt, duration, fileName, fileKey, fileSize,
-                         albumYear);
+        
+        return new ConcreteTrack(id.getId(), playUrl, title, artistId, artistName, albumId, albumTitle);
     }
     
     private ParcelableTrack(Parcel in) 

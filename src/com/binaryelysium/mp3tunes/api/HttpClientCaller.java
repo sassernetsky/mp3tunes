@@ -70,9 +70,6 @@ public class HttpClientCaller
         } catch (SocketException e) {
             Log.e("Mp3Tunes", "SocketException: what do we do?");
             throw e;
-        } catch (IOException e) {
-            Log.e("Mp3Tunes", Log.getStackTraceString(e));
-            throw e;
         }
     }
 

@@ -8,6 +8,9 @@ import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.ITunesService;
+import com.mp3tunes.android.player.util.LazyTrack;
+import com.mp3tunes.android.player.util.Timer;
+
 import android.app.Service;
 import android.content.Intent;
 import android.os.Handler;
@@ -149,7 +152,12 @@ public class Mp3tunesService extends Service
 
         public void next() throws RemoteException
         {
+            Timer timings = new Timer("Mp3TunesServices.next");
+            try {
             if (!mPlayerHandler.playNext()) throw new RemoteException();
+            } finally {
+                timings.push();
+            }
         }
 
         public void pause() throws RemoteException
@@ -206,6 +214,7 @@ public class Mp3tunesService extends Service
 
         public void createPlaybackList(IdParcel[] trackIds) throws RemoteException
         {
+            
             PlaybackList list = new PlaybackList(getTracksForList(trackIds));
             mPlayerHandler.setPlaybackList(list);
         }
@@ -224,10 +233,9 @@ public class Mp3tunesService extends Service
         MediaStore store = new MediaStore(db, getContentResolver());
         for (IdParcel id : trackIds) {
             Track t = store.getTrack(id.getId());
-            MediaPlayerTrack track = new MediaPlayerTrack(t, this, getBaseContext());
+            MediaPlayerTrack track = new MediaPlayerTrack(new LazyTrack(id.getId(), getBaseContext()), this, getBaseContext());
             tracks.add(track);
         }
-        db.close();
         return tracks;
     }
 }

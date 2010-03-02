@@ -11,6 +11,7 @@ import com.mp3tunes.android.player.service.MediaPlayerTrack.TrackFinishedHandler
 import com.mp3tunes.android.player.service.PlaybackList.PlaybackListEmptyException;
 import com.mp3tunes.android.player.service.PlaybackList.PlaybackListFinishedException;
 import com.mp3tunes.android.player.service.PlaybackList.PlaybackListOutOfBounds;
+import com.mp3tunes.android.player.util.Timer;
 
 public class PlayerHandler
 {
@@ -37,19 +38,25 @@ public class PlayerHandler
 
     public boolean playNext() 
     {
+        Timer timings = new Timer("PlayerHandler.playNext");
         try {
+            Timer timings2 = new Timer("PlayerHandler.playNext first half");
             stopIfPlaying();
             mTrack = mPlaybackList.getNext();
+            mTrack.setPlayNow(true);
             mCacher.cleanPostCache();
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
             mGuiNotifier.nextTrack(getTrack());
             mCacher.tryPreCache();
+            timings2.push();
             return mTrack.play();
         } catch (PlaybackListEmptyException e) {
             mGuiNotifier.sendPlaybackError(null, "Tried to play an empty playlist");
         } catch (PlaybackListFinishedException e) {
             mGuiNotifier.stop(null);
+        } finally {
+            timings.push();
         }
         return false;
     }
@@ -60,6 +67,7 @@ public class PlayerHandler
             stopIfPlaying();
             mCacher.cleanPreCache();
             mTrack = mPlaybackList.getPrevious();
+            mTrack.setPlayNow(true);
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
             mGuiNotifier.prevTrack(getTrack());
@@ -85,6 +93,7 @@ public class PlayerHandler
             }
             
             mTrack = mPlaybackList.getAt(position);
+            mTrack.setPlayNow(true);
             mTrack.setTrackFinishedHandler(mCompleteHandler);
             mTrack.setBufferedCallback(mCacher.getPrecacherCallback(position));
             mGuiNotifier.play(getTrack());
@@ -112,7 +121,9 @@ public class PlayerHandler
     public boolean stop()
     {
         mGuiNotifier.stop(getTrack());
-        return mTrack.stop();
+        if (mTrack != null)
+            return mTrack.stop();
+        return false;
     }
     
     public void setPlaybackList(PlaybackList list)
@@ -184,6 +195,7 @@ public class PlayerHandler
                 Logger.log("Error: Finished a song successfully while on a call");
                 mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
             }
+            track.seekTo(1);
             if (!playNext()) mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
         }
         
@@ -191,9 +203,13 @@ public class PlayerHandler
     
     private void stopIfPlaying() 
     {
-        if (mTrack != null)
+        if (mTrack != null) {
+            mTrack.setPlayNow(false);
             if (mTrack.isPlaying()) 
                 mTrack.stop();
+            //mTrack.setBufferedCallback(mCacher.getPrecacherCallback(mPlaybackList.getCurrentPosition()));
+            //mTrack.requestPreload();
+        }
     }
 
     public void tooglePlayback()
@@ -246,6 +262,7 @@ public class PlayerHandler
 
         void tryPreCache()
         {
+            Timer timings = new Timer("tryPrecache");
             Logger.log("Trying precache");
             try {
                 if (mLastIndex == -1) {
@@ -259,6 +276,8 @@ public class PlayerHandler
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
                 e.printStackTrace();
+            } finally {
+                timings.push();
             }
         }
         
@@ -267,8 +286,11 @@ public class PlayerHandler
         //playing
         void tryPreCache(int bufferingPos)
         {
+            Timer timings = new Timer("tryPrecache pos");
             Logger.log("Trying precache at: " + Integer.toString(bufferingPos));
             int playbackPos = mList.getCurrentPosition();
+            
+            if (bufferingPos < playbackPos) return;
             
             //if this is true then we have prefetched enough tracks
             if ((playbackPos + mPreCache - bufferingPos) < 1) return;
@@ -280,12 +302,16 @@ public class PlayerHandler
                 MediaPlayerTrack t = mList.peekAt(nextTrackPos);
                 Logger.logTrack(nextTrackPos, t.getTrack());
                 t.setBufferedCallback(new PrecacherCallback(this, nextTrackPos));
+                
+                Timer timings2 = new Timer("request preload");
                 t.requestPreload();
+                timings2.push();
             } catch (PlaybackListEmptyException e) {
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
                 e.printStackTrace();
             }
+            timings.push();
         }
         
         void setPlaybackList(PlaybackList list)
