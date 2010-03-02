@@ -25,8 +25,9 @@ import java.util.List;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class Playlist {
-    String mId;
+public class Playlist implements LockerData
+{
+    Id     mId;
 	String mName;
 	String mFileName;
 	int mCount;
@@ -46,7 +47,7 @@ public class Playlist {
 
 	private Playlist() {}
 	
-	public Playlist( String id, String name, String fileName, int count, String dateModified, int size )
+	public Playlist(Id id, String name, String fileName, int count, String dateModified, int size )
     {
         mId = id;
         mName = name;
@@ -72,7 +73,7 @@ public class Playlist {
 		return new Playlist();
 	}
 	
-	public String getId() {
+	public Id getId() {
 		return mId;
 	}
 
@@ -104,7 +105,7 @@ public class Playlist {
     {
         Playlist p = new Playlist();
         try {
-            p.mId       = obj.getString("playlistId");
+            p.mId       = new LockerId(obj.getString("playlistId"));
             p.mName     = obj.getString("playlistTitle");
             p.mFileName = obj.getString("fileName");
             p.mCount    = obj.getInt("fileCount");

@@ -273,9 +273,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
+        if (mArtistId != null)
+            outcicle.putParcelable("artist", new IdParcel(mArtistId));
+        if (mAlbumId != null)
+            outcicle.putParcelable("album", new IdParcel(mAlbumId));
+            
+        
         outcicle.putLong("selectedtrack", mSelectedId);
-        outcicle.putParcelable("artist", new IdParcel(mArtistId));
-        outcicle.putParcelable("album", new IdParcel(mAlbumId));
         outcicle.putString("playlist", mPlaylist);
         outcicle.putString("playlist_name", mPlaylistName);
         outcicle.putString("genre", mGenre);
@@ -472,10 +476,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         {
             try {
                 LockerDb db = Music.getDb(getBaseContext());
+                MediaStore store = new MediaStore(db, getContentResolver());
                 if (mAlbumId != null)
-                    mCursor = db.getTrackDataByAlbum(mFrom, (LockerId)mAlbumId);
+                    mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
                 else if (mPlaylist != null)
-                    mCursor = db.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
+                    mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
+                else if (mArtistId != null)
+                    mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
             } catch (Exception e) {
                 Log.w("Mp3Tunes", Log.getStackTraceString(e));
                 return false;
