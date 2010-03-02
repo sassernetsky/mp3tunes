@@ -229,10 +229,8 @@ public class Mp3tunesService extends Service
     private Vector<MediaPlayerTrack> getTracksForList(IdParcel[] trackIds)
     {
         Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
-        LockerDb db = new LockerDb(getBaseContext());
-        MediaStore store = new MediaStore(db, getContentResolver());
+
         for (IdParcel id : trackIds) {
-            Track t = store.getTrack(id.getId());
             MediaPlayerTrack track = new MediaPlayerTrack(new LazyTrack(id.getId(), getBaseContext()), this, getBaseContext());
             tracks.add(track);
         }

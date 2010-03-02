@@ -28,22 +28,13 @@ public class ConcreteTrack implements Track
 {
     private Id       mId;
     private String   mTitle;
-    //int              mNumber;
-    //protected double mDuration;
-    //protected String mFileName;
     protected String mFileKey;
-    //protected int    mFileSize;
-    //String           mDownloadUrl;
     String           mPlayUrl;
-
     int mAlbumId;
     String mAlbumTitle;
-    //protected String mAlbumYear; // stored as a string cause we hardly use it as an int
 
     int mArtistId;
     String mArtistName;
-
-    //String mAlbumArt;
 
     private ConcreteTrack()
     {
@@ -52,15 +43,22 @@ public class ConcreteTrack implements Track
     public ConcreteTrack(Track t)
     {
         mId          = t.getId();
-        mPlayUrl     = t.getPlayUrl();
+        mPlayUrl     = t.getPlayUrl(0);
         mTitle       = t.getTitle();
         mArtistId    = t.getArtistId();
         mArtistName  = t.getArtistName();
         mAlbumId     = t.getAlbumId();
         mAlbumTitle  = t.getAlbumTitle();
-        mFileKey     = t.getFileKey();
     }
 
+    public ConcreteTrack(Id id, String title, String url)
+    {
+        mId      = id;
+        mTitle   = title;
+        mPlayUrl = url;
+                
+    }
+    
     public ConcreteTrack(Id id, String play_url, String title, int artist_id, String artist_name, int album_id, String album_name)
     {
         mId = id;
@@ -92,6 +90,11 @@ public class ConcreteTrack implements Track
     {
         return mTitle;
     }
+    
+    public String getName()
+    {
+        return mTitle;
+    }
 
     public String getFileKey()
     {
@@ -103,9 +106,25 @@ public class ConcreteTrack implements Track
         return mFileKey;
     }
 
-    public String getPlayUrl()
+    public String getPlayUrl(int requestedBitrate)
     {
-        return mPlayUrl;
+        if (LockerId.class.isInstance(mId)) {
+        if (mFileKey == null) getFileKey();
+        RemoteMethod method;
+        try {
+            method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+                .addFileKey(mFileKey)
+                .addParam("fileformat", "mp3")
+                .addParam("bitrate", Integer.toString(requestedBitrate))
+                .create();
+        } catch (InvalidSessionException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return method.getCall();
+        } else {
+            return mPlayUrl;
+        }
     }
 
     public int getAlbumId()

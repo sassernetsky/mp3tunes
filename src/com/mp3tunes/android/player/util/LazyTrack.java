@@ -19,6 +19,14 @@ public class LazyTrack implements Track
         mTrackId = id;
         mContext = context;
     }
+    
+    public String getName()
+    {
+        if (mTrack == null)  createTrack();
+        
+        return mTrack.getName();
+    }
+    
 
     public int getAlbumId()
     {
@@ -60,11 +68,11 @@ public class LazyTrack implements Track
         return mTrackId;
     }
 
-    public String getPlayUrl()
+    public String getPlayUrl(int requestedBitrate)
     {
         if (mTrack == null)  createTrack();
         
-        return mTrack.getPlayUrl();
+        return mTrack.getPlayUrl(requestedBitrate);
     }
 
     public String getTitle()

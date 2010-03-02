@@ -106,7 +106,7 @@ public class Queries
         mUpdatePlaylist.bindLong(  2, p.getCount());
         mUpdatePlaylist.bindString(3, p.getFileName());
         mUpdatePlaylist.bindLong(  4, index);
-        mUpdatePlaylist.bindString(5, p.getId());
+        mUpdatePlaylist.bindString(5, p.getId().asString());
         mUpdatePlaylist.execute();
         return false;
     }
@@ -143,7 +143,7 @@ public class Queries
         assertLockerId(t.getId());
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
-        mInsertTrack.bindString(2,  t.getPlayUrl());
+        mInsertTrack.bindString(2,  t.getPlayUrl(0));
         mInsertTrack.bindString(4,  t.getTitle());
         mInsertTrack.bindString(6,  t.getArtistName());
         mInsertTrack.bindString(7,  t.getAlbumTitle());
@@ -196,7 +196,7 @@ public class Queries
         if (mInsertPlaylist == null)
             mInsertPlaylist = makeInsertPlaylistStatement(mDb.mDb);
         
-        mInsertPlaylist.bindString(1, p.getId());
+        mInsertPlaylist.bindString(1, p.getId().asString());
         mInsertPlaylist.bindString(2, p.getName());
         mInsertPlaylist.bindLong(  3, p.getCount());
         mInsertPlaylist.bindString(4, p.getFileName());
