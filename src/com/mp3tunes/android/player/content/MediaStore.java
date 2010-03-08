@@ -105,6 +105,7 @@ public class MediaStore
         MatrixCursor output = new MatrixCursor(columns);
         int len = columns.length - 1;
         if (locker.moveToFirst()) {
+            Timer timer = new Timer("checking for playlist tracks");
             do {
                 MatrixCursor.RowBuilder builder = output.newRow();
                 
@@ -117,8 +118,11 @@ public class MediaStore
                 } else {
                     buildRow(builder, locker, len, 0);
                 }
+                cursor.close();
             } while (locker.moveToNext());
+            timer.push();
         }
+        locker.close();
         return output;
     }
     

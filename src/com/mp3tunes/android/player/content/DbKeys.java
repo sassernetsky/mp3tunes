@@ -29,4 +29,9 @@ public class DbKeys
     public static final String TYPE               = "type";
     public static final String TOKEN              = "token";
     public static final String COUNT              = "count";
+    
+    public static final String LAST_UPDATE        = "last_update";
+    public static final String SET                = "set_number";
+    public static final String STATE              = "state";
+
 }

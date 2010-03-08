@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.MP3tunesApplication;
+import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 
 import android.app.Activity;
@@ -35,6 +36,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -207,8 +209,10 @@ public class Login extends Activity
                 Log.w("mp3tunes", Log.getStackTraceString(e));
                 return e.getMessage();
             } catch (LoginException e) {
+                Log.w("mp3tunes", Log.getStackTraceString(e));
                 return "auth failure";
             } catch (Exception e) {
+                Log.w("mp3tunes", Log.getStackTraceString(e));
                 return "Logic Error";
             }
         }
@@ -233,6 +237,7 @@ public class Login extends Activity
                 editor.putString( "mp3tunes_pass", pass );
                 editor.putBoolean("auto_login", true);
                 editor.commit();
+                
                 Intent intent = new Intent( Login.this, LockerList.class );
                 startActivity( intent );
                 finish();

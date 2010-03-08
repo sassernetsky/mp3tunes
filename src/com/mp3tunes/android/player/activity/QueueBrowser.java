@@ -67,6 +67,7 @@ import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
+import com.mp3tunes.android.player.util.Timer;
 
 public class QueueBrowser extends BaseMp3TunesListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
@@ -476,6 +477,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Boolean doInBackground(Void... params)
         {
+            Timer timer = new Timer("FetchTracksTask");
             try {
                 LockerDb db = Music.getDb(getBaseContext());
                 MediaStore store = new MediaStore(db, getContentResolver());
@@ -488,6 +490,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             } catch (Exception e) {
                 Log.w("Mp3Tunes", Log.getStackTraceString(e));
                 return false;
+            } finally {
+                timer.push();
             }
             return true;
         }

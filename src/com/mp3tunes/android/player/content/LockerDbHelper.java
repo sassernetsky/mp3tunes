@@ -11,7 +11,7 @@ class LockerDbHelper extends SQLiteOpenHelper
 {
 
     private static final String DB_NAME = "locker.dat";
-    private static final int DB_VERSION = 7;
+    private static final int DB_VERSION = 8;
     
     private static final String CREATE_TRACK = "CREATE TABLE " + DbTables.TRACK + "(" +
                                                     DbKeys.ID           + " INTEGER PRIMARY KEY," +
@@ -59,10 +59,18 @@ class LockerDbHelper extends SQLiteOpenHelper
                                                     DbKeys.TOKEN + " VARCHAR," + 
                                                     DbKeys.COUNT + " INTEGER" + 
                                                ")";
-    private static final String CREATE_CURRENT_PLAYLIST = "CREATE TABLE " + DbTables.CURRENT_PLAYLIST + "(" + 
-                                                               DbKeys.POS      + " INTEGER PRIMARY KEY," +
-                                                               DbKeys.TRACK_ID + " INTEGER" + 
-                                                           ")";
+//    private static final String CREATE_CURRENT_PLAYLIST = "CREATE TABLE " + DbTables.CURRENT_PLAYLIST + "(" + 
+//                                                               DbKeys.POS      + " INTEGER PRIMARY KEY," +
+//                                                               DbKeys.TRACK_ID + " INTEGER" + 
+//                                                           ")";
+//     
+    private static final String CREATE_CACHE = "CREATE TABLE " + DbTables.CACHE + "(" +
+                                                    DbKeys.ID          + " INTEGER PRIMARY KEY," + 
+                                                    DbKeys.LAST_UPDATE + " INTEGER,"             +
+                                                    DbKeys.SET         + " INTEGER,"             +
+                                                    DbKeys.COUNT       + " INTEGER,"             +
+                                                    DbKeys.STATE       + " INTEGER"              +
+                                               ")";
     
     private static final String DELETE = "DROP TABLE IF EXISTS ";
     
@@ -80,20 +88,22 @@ class LockerDbHelper extends SQLiteOpenHelper
         db.execSQL(CREATE_PLAYLIST);
         db.execSQL(CREATE_PLAYLIST_TRACKS);
         db.execSQL(CREATE_TOKEN);
-        db.execSQL(CREATE_CURRENT_PLAYLIST);
+        db.execSQL(CREATE_CACHE);
+        //db.execSQL(CREATE_CURRENT_PLAYLIST);
 
     }
 
     @Override
     public void onUpgrade( SQLiteDatabase db, int oldV, int newV )
     {
-        db.execSQL(DELETE + DbTables.CURRENT_PLAYLIST);
+        //db.execSQL(DELETE + DbTables.CURRENT_PLAYLIST);
         db.execSQL(DELETE + DbTables.ALBUM);
         db.execSQL(DELETE + DbTables.ARTIST);
         db.execSQL(DELETE + DbTables.TRACK);
         db.execSQL(DELETE + DbTables.PLAYLIST);
         db.execSQL(DELETE + DbTables.PLAYLIST_TRACKS);
         db.execSQL(DELETE + DbTables.TOKEN);
+        db.execSQL(DELETE + DbTables.CACHE);
         onCreate( db );
     }
 

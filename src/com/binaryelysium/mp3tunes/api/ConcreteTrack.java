@@ -100,7 +100,7 @@ public class ConcreteTrack implements Track
     {
         if (mFileKey == null) {
             if (mPlayUrl != null) {
-                mFileKey = mPlayUrl.replaceFirst("^.*lockerplay/", "").replaceFirst("\\?.*", "");
+                mFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
             }
         }
         return mFileKey;
@@ -109,19 +109,19 @@ public class ConcreteTrack implements Track
     public String getPlayUrl(int requestedBitrate)
     {
         if (LockerId.class.isInstance(mId)) {
-        if (mFileKey == null) getFileKey();
-        RemoteMethod method;
-        try {
-            method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
-                .addFileKey(mFileKey)
-                .addParam("fileformat", "mp3")
-                .addParam("bitrate", Integer.toString(requestedBitrate))
-                .create();
-        } catch (InvalidSessionException e) {
-            e.printStackTrace();
-            return null;
-        }
-        return method.getCall();
+            if (mFileKey == null) getFileKey();
+            RemoteMethod method;
+            try {
+                method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+                    .addFileKey(mFileKey)
+                    .addParam("fileformat", "mp3")
+                    .addParam("bitrate", Integer.toString(requestedBitrate))
+                    .create();
+            } catch (InvalidSessionException e) {
+                e.printStackTrace();
+                return null;
+            }
+            return method.getCall();
         } else {
             return mPlayUrl;
         }
