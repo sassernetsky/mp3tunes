@@ -3,8 +3,10 @@ package com.mp3tunes.android.player.service;
 import java.util.Vector;
 
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.LockerDb;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.ITunesService;
 import com.mp3tunes.android.player.util.LazyTrack;
 import com.mp3tunes.android.player.util.Timer;
@@ -210,7 +212,7 @@ public class Mp3tunesService extends Service
             }   
         }
 
-        public void createPlaybackList(int[] trackIds) throws RemoteException
+        public void createPlaybackList(IdParcel[] trackIds) throws RemoteException
         {
             
             PlaybackList list = new PlaybackList(getTracksForList(trackIds));
@@ -224,11 +226,12 @@ public class Mp3tunesService extends Service
         
     };
     
-    private Vector<MediaPlayerTrack> getTracksForList(int[] trackIds)
+    private Vector<MediaPlayerTrack> getTracksForList(IdParcel[] trackIds)
     {
         Vector<MediaPlayerTrack> tracks = new Vector<MediaPlayerTrack>();
-        for (int id : trackIds) {
-            MediaPlayerTrack track = new MediaPlayerTrack(new LazyTrack(id, getBaseContext()), this, getBaseContext());
+
+        for (IdParcel id : trackIds) {
+            MediaPlayerTrack track = new MediaPlayerTrack(new LazyTrack(id.getId(), getBaseContext()), this, getBaseContext());
             tracks.add(track);
         }
         return tracks;

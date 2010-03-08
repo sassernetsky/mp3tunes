@@ -25,6 +25,8 @@ import com.mp3tunes.android.player.ListAdapter;
 import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.LockerDb.PreCacheTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -36,8 +38,10 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -83,6 +87,8 @@ public class LockerList extends ListActivity
 
     private IntentFilter mIntentFilter;
     private Dialog  mAboutDialog;
+    
+    private PreCacheTask mPreCacher;
 
     @Override
     public void onCreate(Bundle state)
@@ -91,6 +97,9 @@ public class LockerList extends ListActivity
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.lockerlist);
         Music.ensureSession(this);
+        mPreCacher = new PreCacheTask(Music.getDb(getBaseContext()));
+        mPreCacher.execute((Void[])null);
+        
         
         // this prevents the background image from flickering when the
         // animations run
@@ -107,6 +116,7 @@ public class LockerList extends ListActivity
     @Override
     protected void onDestroy()
     {
+        //Music.unbindFromCacheService(this);
         super.onDestroy();    
     }
     
@@ -297,5 +307,6 @@ public class LockerList extends ListActivity
         mAboutDialog.setCancelable(true);
         mAboutDialog.setCanceledOnTouchOutside(true);
     }
+
 }
 

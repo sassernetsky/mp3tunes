@@ -1,7 +1,10 @@
 package com.mp3tunes.android.player.util;
 
-import com.mp3tunes.android.player.LockerDb;
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.Music;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
 
 import android.database.Cursor;
 import android.os.AsyncTask;
@@ -11,7 +14,7 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
 {
     private Cursor mCursor;
     private int    mIdType;
-    private String mId;
+    private Id     mId;
     
     
     private BaseMp3TunesListActivity mActivity;
@@ -23,7 +26,7 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
         
     }
     
-    public FetchAndPlayTracks(int type, String id, BaseMp3TunesListActivity activity)
+    public FetchAndPlayTracks(int type, Id id, BaseMp3TunesListActivity activity)
     {
         mIdType   = type;
         mId       = id;
@@ -41,15 +44,16 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
     {
         try {
             LockerDb db = Music.getDb(mActivity);
+            String[] data = new String[] {DbKeys.ID};
             switch (mIdType) {
                 case FOR.ARTIST:
-                    mCursor = db.getTracksForArtist(Integer.parseInt(mId));
+                    mCursor = db.getTrackDataByArtist(data, (LockerId)mId);
                     break;
                 case FOR.ALBUM:
-                    mCursor = db.getTracksForAlbum(Integer.parseInt(mId));
+                    mCursor = db.getTrackDataByAlbum(data, (LockerId)mId); 
                     break;
                 case FOR.PLAYLIST:
-                    mCursor = db.getTracksForPlaylist(mId);
+                    mCursor = db.getTrackDataByPlaylist(data, (LockerId)mId);
                     break;
             };
         } catch ( Exception e ) {
@@ -73,7 +77,7 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
         
         if( mCursor != null) {
             Log.w("Mp3Tunes", "Playing tracks from cursor");
-            Music.playAll(mActivity, mCursor, 0);
+            Music.playAll(mActivity, mActivity.cursorToIdArray(mCursor), 0);
         } else {
             System.out.println("Got no tracks to play");
         }

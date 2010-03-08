@@ -26,24 +26,15 @@ import android.util.Log;
 
 public class ConcreteTrack implements Track
 {
-    private int      mId;
+    private Id       mId;
     private String   mTitle;
-    //int              mNumber;
-    //protected double mDuration;
-    //protected String mFileName;
     protected String mFileKey;
-    //protected int    mFileSize;
-    //String           mDownloadUrl;
     String           mPlayUrl;
-
     int mAlbumId;
     String mAlbumTitle;
-    //protected String mAlbumYear; // stored as a string cause we hardly use it as an int
 
     int mArtistId;
     String mArtistName;
-
-    //String mAlbumArt;
 
     private ConcreteTrack()
     {
@@ -52,63 +43,33 @@ public class ConcreteTrack implements Track
     public ConcreteTrack(Track t)
     {
         mId          = t.getId();
-        //mPlayUrl     = t.getPlayUrl();
-        //mDownloadUrl = t.getDownloadUrl();
+        mPlayUrl     = t.getPlayUrl(0);
         mTitle       = t.getTitle();
-        //mNumber      = t.getNumber();
         mArtistId    = t.getArtistId();
         mArtistName  = t.getArtistName();
         mAlbumId     = t.getAlbumId();
         mAlbumTitle  = t.getAlbumTitle();
-        //mAlbumArt    = t.getAlbumArt();
-        //mDuration    = t.getDuration();
-        //mFileName    = t.getFileName();
-        mFileKey     = t.getFileKey();
-        //mFileSize    = t.getFileSize();
-        //mAlbumYear   = t.getAlbumYear();
     }
 
-    public ConcreteTrack(int id, String play_url, String download_url, String title,
-            int track, int artist_id, String artist_name, int album_id,
-            String album_name, String cover_url)
+    public ConcreteTrack(Id id, String title, String url)
+    {
+        mId      = id;
+        mTitle   = title;
+        mPlayUrl = url;
+                
+    }
+    
+    public ConcreteTrack(Id id, String play_url, String title, int artist_id, String artist_name, int album_id, String album_name)
     {
         mId = id;
         mPlayUrl = play_url;
-        //mDownloadUrl = download_url;
         mTitle = title;
-        //mNumber = track;
         mArtistId = artist_id;
         mArtistName = artist_name;
         mAlbumId = album_id;
         mAlbumTitle = album_name;
-        //mAlbumArt = cover_url;
     }
     
-    public ConcreteTrack(int id, String playUrl, String downloadUrl, String title, int number,
-                 int artistId, String artistName, int albumId, String albumTitle, 
-                 String albumArt, double duration, String fileName, String fileKey,
-                 int fileSize, String albumYear)
-    {
-        mId          = id;
-        mPlayUrl     = playUrl;
-        //mDownloadUrl = downloadUrl;
-        mTitle       = title;
-        //mNumber      = number;
-        mArtistId    = artistId;
-        mArtistName  = artistName;
-        mAlbumId     = albumId;
-        mAlbumTitle  = albumTitle;
-        //mAlbumArt    = albumArt;
-        //mDuration    = duration;
-        //mFileName    = fileName;
-        mFileKey     = fileKey;
-        //mFileSize    = fileSize;
-        //mAlbumYear   = albumYear;
-    }
-    
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#toString()
-     */
     @Override
     public String toString()
     {
@@ -120,170 +81,77 @@ public class ConcreteTrack implements Track
         return builder.toString();
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getId()
-     */
-    public int getId()
+    public Id getId()
     {
         return mId;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getTitle()
-     */
     public String getTitle()
     {
         return mTitle;
     }
+    
+    public String getName()
+    {
+        return mTitle;
+    }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getNumber()
-     */
-//    public int getNumber()
-//    {
-//        return mNumber;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getDuration()
-     */
-//    public Double getDuration()
-//    {
-//        return mDuration;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getFileName()
-     */
-//    public String getFileName()
-//    {
-//        return mFileName;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getFileKey()
-     */
     public String getFileKey()
     {
         if (mFileKey == null) {
             if (mPlayUrl != null) {
-                mFileKey = mPlayUrl.replaceFirst("^.*lockerplay/", "").replaceFirst("\\?.*", "");
+                mFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
             }
-//            } else if (mDownloadUrl != null) {
-//                mFileKey = mDownloadUrl.replaceFirst("^.*lockerget/", "").replaceFirst("\\?.*", "");
-//            }
         }
         return mFileKey;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getFileSize()
-     */
-//    public int getFileSize()
-//    {
-//        return mFileSize;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getDownloadUrl()
-     */
-//    public String getDownloadUrl()
-//    {
-//        return mDownloadUrl;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getPlayUrl()
-     */
-    public String getPlayUrl()
+    public String getPlayUrl(int requestedBitrate)
     {
-        return mPlayUrl;
+        if (LockerId.class.isInstance(mId)) {
+            if (mFileKey == null) getFileKey();
+            RemoteMethod method;
+            try {
+                method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+                    .addFileKey(mFileKey)
+                    .addParam("fileformat", "mp3")
+                    .addParam("bitrate", Integer.toString(requestedBitrate))
+                    .create();
+            } catch (InvalidSessionException e) {
+                e.printStackTrace();
+                return null;
+            }
+            return method.getCall();
+        } else {
+            return mPlayUrl;
+        }
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getAlbumId()
-     */
     public int getAlbumId()
     {
         return mAlbumId;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getAlbumTitle()
-     */
     public String getAlbumTitle()
     {
         return mAlbumTitle;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getAlbumYear()
-     */
-//    public String getAlbumYear()
-//    {
-//        return mAlbumYear;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getArtistId()
-     */
     public int getArtistId()
     {
         return mArtistId;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getArtistName()
-     */
     public String getArtistName()
     {
         return mArtistName;
     }
 
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#getAlbumArt()
-     */
-//    public String getAlbumArt()
-//    {
-//        return mAlbumArt;
-//    }
-
-    /* (non-Javadoc)
-     * @see com.binaryelysium.mp3tunes.api.TrackInterface#sameRemoteFile(com.binaryelysium.mp3tunes.api.Track)
-     */
-//    public boolean sameRemoteFile(Track t)
-//    {
-//        String myFileKey = null, otherFileKey = null;
-//        
-//        if (mFileKey == null || mFileKey.equals("")) {
-//            if (mPlayUrl == null || mPlayUrl.equals("")) {
-//                return false;
-//            }
-//            myFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
-//        } else {
-//            myFileKey = mFileKey;
-//        }
-//        
-//        if (t.getFileKey() == null || t.getFileKey().equals("")) {
-//            if (t.getPlayUrl() == null || t.getPlayUrl().equals("")) {
-//                return false;
-//            }
-//            otherFileKey = mPlayUrl.replaceFirst("^.*lockerPlay/", "").replaceFirst("\\?.*", "");
-//            
-//        } else {
-//            otherFileKey = mFileKey;
-//        }
-//        
-//        return myFileKey.equals(otherFileKey);
-//    }
-
     public static Track trackFromJson(JSONObject obj)
     {
         ConcreteTrack t = new ConcreteTrack();
         try {
-            t.mId          = obj.getInt("trackId");
-            //t.mFileSize    = obj.getInt("trackFileSize");
-            //t.mNumber      = obj.getInt("trackNumber");
+            t.mId          = new LockerId(obj.getInt("trackId"));
             try {
                 t.mAlbumId     = obj.getInt("albumId");
             } catch (JSONException e) {}
@@ -291,14 +159,10 @@ public class ConcreteTrack implements Track
                 t.mArtistId    = obj.getInt("artistId");
             } catch (JSONException e) {}
             t.mTitle       = obj.getString("trackTitle");
-            //t.mFileName    = obj.getString("trackFileName");
             t.mFileKey     = obj.getString("trackFileKey");
             t.mAlbumTitle  = obj.getString("albumTitle");
-            //t.mAlbumYear   = obj.getString("albumYear");
             t.mArtistName  = obj.getString("artistName");
-            //t.mDownloadUrl = obj.getString("downloadURL");
             t.mPlayUrl     = obj.getString("playURL");
-            //t.mDuration    = obj.getDouble("trackLength");
 
             return t;
         } catch (JSONException e) {
