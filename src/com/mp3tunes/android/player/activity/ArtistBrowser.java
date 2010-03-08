@@ -68,9 +68,10 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     private String mCurrentArtistName;
     private SimpleCursorAdapter mAdapter;
     private boolean mAdapterSent;
-    private AsyncTask<Void, Void, Boolean> mTracksTask;
     
     private boolean mShowingDialog;
+    
+    private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
     
     private static final int REFRESH = 0;
     
@@ -206,6 +207,13 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     }
 
     @Override
+    public void onStop()
+    {
+        killTasks();
+        super.onStop();
+    }
+    
+    @Override
     public void onDestroy() 
     {
         killTasks();
@@ -276,7 +284,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected artist
-                mTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ARTIST, mCurrentArtistId, this).execute();
+                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ARTIST, mCurrentArtistId, this).execute();
                 return true;
             }
         }
@@ -347,7 +355,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
             mLoadingCursor = false;
         }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel( true );
+            mTracksTask.cancel(true);
     }
     
     private String mArtistId;
@@ -365,10 +373,11 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         {
             mLoadingCursor = false;
             if (!result) {
-                Log.w("Mp3Tunes", "Got Error Fetching Artists");
+                    Log.w("Mp3Tunes", "Got Error Fetching Artists");
+            } else {
+                mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
             }
-            mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
-            mTracksTask.execute((Void[])null);
         }
     };
     

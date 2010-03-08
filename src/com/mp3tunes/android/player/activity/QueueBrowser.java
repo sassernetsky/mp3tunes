@@ -211,6 +211,15 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     }
 
     @Override
+    public void onStop()
+    {
+        if (mTrackTask != null
+                && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
+            mTrackTask.cancel(true);
+        super.onStop();
+    }
+    
+    @Override
     public void onDestroy()
     {
         if (mTrackTask != null

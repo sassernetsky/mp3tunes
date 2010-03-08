@@ -115,56 +115,28 @@ public class LockerDb
         mDb.delete(DbTables.PLAYLIST_TRACKS, null, null);
         mDb.delete(DbTables.TOKEN, null, null);
         mDb.delete(DbTables.CACHE, null, null);
-        //mDb.delete(DbTables.CURRENT_PLAYLIST, null, null);
     }
     
     public Cursor getRadioData(String[] from)throws IOException, LockerException
     {
-//       if (mCache.getPlaylistCacheState() == LockerCache.CacheState.UNCACHED)
-        //refreshPlaylists();
-        
         return mDb.query(DbTables.PLAYLIST, from, DbKeys.ID + " like 'PLAYMIX_GENRE_D%'", null, null,
                 null, DbKeys.PLAYLIST_ORDER);
     }
     
     public Cursor getPlaylistData(String[] from)throws IOException, LockerException
     {
-        //if (mCache.getPlaylistCacheState() == LockerCache.CacheState.UNCACHED)
-           // refreshPlaylists();
-        
         return mDb.query(DbTables.PLAYLIST, from, DbKeys.ID + " not like 'PLAYMIX_GENRE_D%'", null, null,
                 null, DbKeys.PLAYLIST_ORDER);
     }
     
     public Cursor getArtistData(String[] from, String where)throws IOException, LockerException
     {
-        //if (mCache.getArtistCacheState() == LockerCache.CacheState.UNCACHED) {
-//            System.out.println("artist cache not valid refreshing");
-//            refreshArtists();
-//        }
-//        
-//        try {
-//            Music.getCacheService(mContext).refreshArtists();
-//        } catch (RemoteException e) {
-//            e.printStackTrace();
-//        }
         return mDb.query(DbTables.ARTIST, from, where, null, null, null,
                          "lower(" + DbKeys.ARTIST_NAME + ")");
     }
     
     public Cursor getAlbumData(String[] from, String where) throws SQLiteException, IOException, LockerException
     {
-//            if (mCache.getAlbumCacheState() == LockerCache.CacheState.UNCACHED) {
-//                System.out.println("artist cache not valid refreshing");
-//                refreshAlbums();
-//            }
-//        try {
-//            Music.getCacheService(mContext).refreshAlbums();
-//        } catch (RemoteException e) {
-//            e.printStackTrace();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
         return mDb.query(DbTables.ALBUM, from, where, null, null, null,
                          "lower(" + DbKeys.ALBUM_NAME + ")");
     }
@@ -399,7 +371,6 @@ public class LockerDb
             System.out.println("OMG TRACK NULL");
             return;
         }
-        mDb.execSQL("BEGIN TRANSACTION");
 
         try {
             // Insert artist info to the artist table
@@ -420,10 +391,7 @@ public class LockerDb
             if (!mQueries.trackExists(track.getId().asInt())) {
                 mQueries.insertTrack(track);
             }
-
-            mDb.execSQL("COMMIT TRANSACTION");
         } catch (SQLiteException e) {
-            mDb.execSQL("ROLLBACK");
             throw e;
         }
     }
@@ -488,7 +456,7 @@ public class LockerDb
         }
     }
 
-    private boolean refreshArtists(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    private List<Artist> getArtists(LockerCache.Progress progress) throws LockerException
     {
         List<Artist> artists;
         try {
@@ -500,14 +468,29 @@ public class LockerDb
         } catch (LoginException e) {
             throw new LockerException("Unable to refresh session");
         }
-        
-        for (Artist a : artists) {
-            insertArtist(a);
+        return artists;
+    }
+    
+    private boolean insertArtists(List<Artist> artists) throws SQLiteException, IOException
+    {
+        mDb.beginTransaction();
+        try {
+            for (Artist a : artists) {
+                insertArtist(a);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
         }
         return artists.size() > 0;
     }
+    
+    private boolean refreshArtists(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    {
+        return insertArtists(getArtists(progress));
+    }
 
-    private boolean refreshAlbums(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    private List<Album> getAlbums(LockerCache.Progress progress) throws LockerException
     {
         List<Album> albums;
         try {
@@ -519,14 +502,29 @@ public class LockerDb
         } catch (LoginException e) {
             throw new LockerException("Unable to refresh session");
         }
-        
-        for (Album a : albums) {
-            insertAlbum(a);
+        return albums;
+    }
+    
+    private boolean insertAlbums(List<Album> albums) throws SQLiteException, IOException
+    {
+        mDb.beginTransaction();
+        try {
+            for (Album a : albums) {
+                insertAlbum(a);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
         }
         return albums.size() > 0;
     }
     
-    private boolean refreshPlaylists(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    private boolean refreshAlbums(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    {
+        return insertAlbums(getAlbums(progress));
+    }
+    
+    private List<Playlist> getPlaylists(LockerCache.Progress progress) throws LockerException
     {
         List<Playlist> playlists;
         try {
@@ -538,15 +536,31 @@ public class LockerDb
         } catch (LoginException e) {
             throw new LockerException("Unable to refresh session");
         }
-        
+        return playlists;
+    }
+    
+    private boolean insertPlaylists(List<Playlist> playlists, LockerCache.Progress progress) throws SQLiteException, IOException
+    {
         System.out.println("beginning insertion of " +playlists.size()
                 + " playlists");
         int i = progress.mCurrentSet * progress.mCount;
-        for (Playlist p : playlists) {
-            insertPlaylist(p, i);
-            i++;
+        mDb.beginTransaction();
+        try {
+            for (Playlist p : playlists) {
+                insertPlaylist(p, i);
+                i++;
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
         }
         return playlists.size() > 0;
+    }
+    
+    
+    private boolean refreshPlaylists(LockerCache.Progress progress) throws SQLiteException, IOException, LockerException
+    {
+        return insertPlaylists(getPlaylists(progress), progress);
     }
 
     private void refreshAlbumsForArtist(final int artist_id) throws SQLiteException,
@@ -565,14 +579,19 @@ public class LockerDb
 
         System.out.println("beginning insertion of " + albums.size()
                 + " albums for artist id " + artist_id);
-        for (Album a : albums) {
-            insertAlbum(a);
-        }
+        mDb.beginTransaction();
+        try {
+            for (Album a : albums) {
+                insertAlbum(a);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }  
         System.out.println("insertion complete");
     }
     
-    private boolean refreshTracks(LockerCache.Progress progress) throws SQLiteException,
-    IOException, LockerException
+    private List<Track> getTracks(LockerCache.Progress progress) throws LockerException
     {
         List<Track> tracks;
         try {
@@ -584,11 +603,27 @@ public class LockerDb
         } catch (LoginException e) {
             throw new LockerException("Unable to refresh session");
         }
-
-        for (Track t : tracks) {
-            insertTrack(t);
-        }
+        return tracks;
+    }
+    
+    private boolean insertTracks(List<Track> tracks) throws SQLiteException, IOException
+    {
+        mDb.beginTransaction();
+        try {
+            for (Track t : tracks) {
+                insertTrack(t);
+            }
+        mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }  
         return tracks.size() > 0;
+    }
+    
+    private boolean refreshTracks(LockerCache.Progress progress) throws SQLiteException,
+    IOException, LockerException
+    {
+        return insertTracks(getTracks(progress));
     }
 
     private void refreshTracksforAlbum(final int album_id) throws SQLiteException,
@@ -607,8 +642,14 @@ public class LockerDb
 
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for album id " + album_id);
-        for (Track t : tracks) {
-            insertTrack(t);
+        mDb.beginTransaction();
+        try {
+            for (Track t : tracks) {
+                insertTrack(t);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
         }
         System.out.println("insertion complete");
     }
@@ -629,9 +670,15 @@ public class LockerDb
 
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for artist id " + artist_id);
-        for (Track t : tracks) {
-            insertTrack(t);
-        }
+        mDb.beginTransaction();
+        try {
+            for (Track t : tracks) {
+                insertTrack(t);
+            }
+            mDb.setTransactionSuccessful();
+        } finally {
+            mDb.endTransaction();
+        }  
         System.out.println("insertion complete");
     }
 
@@ -809,15 +856,13 @@ public class LockerDb
         }
     }
     
-    static public class PreCacheTask extends AsyncTask <Void, Void, Boolean>
+    static public class PreCacheTask extends RefreshTask
     {
-        LockerDb mDb;
-        
         public PreCacheTask(LockerDb db)
         {
-            mDb = db;
+            super(db);
         }
-        
+
         @Override
         protected Boolean doInBackground(Void... params)
         {
@@ -859,22 +904,30 @@ public class LockerDb
         }
     }
     
-    private boolean refreshDispatcher(int cacheId, LockerCache.Progress p) throws SQLiteException, IOException, LockerException
+    private boolean refreshDispatcher(int cacheId, LockerCache.Progress p, RefreshTask task) throws SQLiteException, IOException, LockerException
     {
         switch (cacheId) {
             case LockerCache.CACHES.ARTIST:
-                return refreshArtists(p);
+                List<Artist> artists = getArtists(p);
+                if (task.isCancelled()) return false;
+                return insertArtists(artists);
             case LockerCache.CACHES.ALBUM:
-                return refreshAlbums(p);
+                List<Album> albums = getAlbums(p);
+                if (task.isCancelled()) return false;
+                return insertAlbums(albums);
             case LockerCache.CACHES.TRACK:
-                return refreshTracks(p);
+                List<Track> tracks = getTracks(p);
+                if (task.isCancelled()) return false;
+                return insertTracks(tracks);
             case LockerCache.CACHES.PLAYLIST:
-                return refreshPlaylists(p);
+                List<Playlist> playlists = getPlaylists(p);
+                if (task.isCancelled()) return false;
+                return insertPlaylists(playlists, p);
         }
         return false;
     }
     
-    private boolean refreshTask(int cacheId)
+    private boolean refreshTask(int cacheId, RefreshTask task)
     {
         Log.w("Mp3Tunes", "Starting Refresh");
         try {
@@ -884,7 +937,7 @@ public class LockerDb
                 if (state == LockerCache.CacheState.UNCACHED)
                     mCache.beginCaching(cacheId, System.currentTimeMillis());
                 LockerCache.Progress p = mCache.getProgress(cacheId);
-                while (refreshDispatcher(cacheId, p)) {
+                while (refreshDispatcher(cacheId, p, task)) {
                     p.mCurrentSet++;
                 }
                 mCache.finishCaching(cacheId);
@@ -903,71 +956,82 @@ public class LockerDb
         return false;
     }
     
-    static public class RefreshArtistsTask extends AsyncTask <Void, Void, Boolean>
+    abstract static public class RefreshTask extends AsyncTask <Void, Void, Boolean>
     {
-        LockerDb mDb;
-        
-        public RefreshArtistsTask(LockerDb db)
+        protected LockerDb mDb;
+
+        public RefreshTask(LockerDb db)
         {
             mDb = db;
+        }
+        @Override
+        protected void onCancelled()
+        {
+            Log.w("Mp3tunes", "onCancelled called");
+            if (mDb.mDb.inTransaction()) {
+                Log.w("Mp3tunes", "ending transaction");
+                mDb.mDb.endTransaction();
+            }
+        }
+    }
+    
+    static public class RefreshArtistsTask extends RefreshTask
+    {
+        public RefreshArtistsTask(LockerDb db)
+        {
+            super(db);
         }
         
         @Override
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshArtists");
-            return mDb.refreshTask(LockerCache.CACHES.ARTIST);
+            return mDb.refreshTask(LockerCache.CACHES.ARTIST, this);
         }
     }
 
-    static public class RefreshAlbumsTask extends AsyncTask <Void, Void, Boolean>
+    static public class RefreshAlbumsTask extends RefreshTask
     {
-        LockerDb mDb;
-        
         public RefreshAlbumsTask(LockerDb db)
         {
-            mDb = db;
+            super(db);
         }
         
         @Override
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshAlbums");
-            return mDb.refreshTask(LockerCache.CACHES.ALBUM);
+            return mDb.refreshTask(LockerCache.CACHES.ALBUM, this);
         }
     }
     
-    static public class RefreshPlaylistsTask extends AsyncTask <Void, Void, Boolean>
+    static public class RefreshPlaylistsTask extends RefreshTask
     {
-        LockerDb mDb;
-        
         public RefreshPlaylistsTask(LockerDb db)
         {
-            mDb = db;
+            super(db);
         }
         
         @Override
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshAlbums");
-            return mDb.refreshTask(LockerCache.CACHES.PLAYLIST);
+            return mDb.refreshTask(LockerCache.CACHES.PLAYLIST, this);
         }
     }
     
-    static public class RefreshTracksTask extends AsyncTask <Void, Void, Boolean>
+    static public class RefreshTracksTask extends RefreshTask
     {
-        LockerDb mDb;
-        
         public RefreshTracksTask(LockerDb db)
         {
-            mDb = db;
+            super(db);
         }
         
         @Override
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshTracks");
-            return mDb.refreshTask(LockerCache.CACHES.TRACK);
+            return mDb.refreshTask(LockerCache.CACHES.TRACK, this);
         }
     }
     

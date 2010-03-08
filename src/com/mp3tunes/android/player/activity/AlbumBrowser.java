@@ -57,12 +57,10 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
     private Id mCurrentAlbumId;
-    //private Cursor mAlbumCursor;
     private Id mArtistId;
     private SimpleCursorAdapter mAdapter;
     private AsyncTask<Void, Integer, Boolean> mArtFetcher;
-    //private AsyncTask<Void, Void, Boolean>    mAlbumFetcher;
-    private AsyncTask<Void, Void, Boolean> mTracksTask;
+    private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
     private boolean mAdapterSent;
     
     private boolean mShowingDialog;
@@ -163,6 +161,13 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     }
 
     @Override
+    public void onStop()
+    {
+        killTasks(null);
+        super.onStop();
+    }
+    
+    @Override
     public void onDestroy() {
         killTasks(null);
         Music.unbindFromService(this);
@@ -230,7 +235,7 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected album
-                mTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ALBUM, mCurrentAlbumId, this).execute();
+                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ALBUM, mCurrentAlbumId, this).execute();
                 return true;
             }
             default:
@@ -344,7 +349,7 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
             mLoadingCursor = false;
         }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel( true );
+            mTracksTask.cancel(true);
         if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING) {
             mArtFetcher.cancel(true);
             if (state != null)
@@ -366,10 +371,11 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         {
             mLoadingCursor = false;
             if (!result) {
-                Log.w("Mp3Tunes", "Got Error Fetching Albums");
+                    Log.w("Mp3Tunes", "Got Error Fetching Albums");
+            } else {
+                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
             }
-            mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
-            mTracksTask.execute((Void[])null);
         }
     };
 

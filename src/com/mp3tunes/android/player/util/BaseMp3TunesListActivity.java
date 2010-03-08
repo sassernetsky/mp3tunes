@@ -41,7 +41,8 @@ public class BaseMp3TunesListActivity extends ListActivity
     private ReturnToLockerListAction mReturner = new ReturnToLockerListAction(this);
     
     protected FetchBrowserCursor mFetchBrowserCursorTask; 
-    protected AsyncTask<Void, Void, Boolean> mCursorTask;
+    protected LockerDb.RefreshTask mCursorTask;
+    protected LockerDb.RefreshTask mTracksTask;
     protected Cursor mCursor;
     protected boolean mLoadingCursor;
     
