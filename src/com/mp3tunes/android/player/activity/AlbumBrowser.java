@@ -166,7 +166,6 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     public void onDestroy() {
         killTasks(null);
         Music.unbindFromService(this);
-        Music.unbindFromCacheService(this);
         Music.unconnectFromDb( this );
         if (!mAdapterSent) {
             Cursor c = mAdapter.getCursor();

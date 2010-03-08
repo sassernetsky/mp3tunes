@@ -62,7 +62,6 @@ import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
-import com.mp3tunes.android.player.LockerCacheServiceBinder;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.Music.Meta;
 import com.mp3tunes.android.player.Music.TRACK_MAPPING;

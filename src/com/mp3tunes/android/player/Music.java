@@ -56,7 +56,6 @@ import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.content.CurrentPlaylist;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.DbTables;
-import com.mp3tunes.android.player.content.LoadLockerCache;
 import com.mp3tunes.android.player.content.LoadLockerCacheService;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.service.Mp3tunesService;
@@ -340,68 +339,6 @@ public class Music
             sService = null;
         }
     }
-    
-    public static LoadLockerCacheService sCacheService = null;
-    private static HashMap<Context, LockerCacheServiceBinder> sCacheConnectionMap = new HashMap<Context, LockerCacheServiceBinder>();
-    
-    public static boolean bindToCacheService(Context context) {
-        return bindToCacheService(context, null);
-    }
-
-    public static boolean bindToCacheService(Context context, ServiceConnection callback) {
-        context.startService(new Intent(context, LoadLockerCache.class));
-        LockerCacheServiceBinder sb = new LockerCacheServiceBinder(callback);
-        sCacheConnectionMap.put(context, sb);
-        return context.bindService((new Intent()).setClass(context,
-                LoadLockerCache.class), sb, 0);
-    }
-    
-    public static void unbindFromCacheService(Context context) {
-        if (sConnectionMap.isEmpty()) {
-            // presumably there is nobody interested in the service at this point,
-            // so don't hang on to the ServiceConnection
-            sService = null;
-            return;
-        }
-        LockerCacheServiceBinder sb = (LockerCacheServiceBinder) sCacheConnectionMap.remove(context);
-        if (sb == null) {
-            Log.e("MusicUtils", "Trying to unbind for unknown Context");
-            return;
-        }
-        context.unbindService(sb);
-        if (sConnectionMap.isEmpty()) {
-            // presumably there is nobody interested in the service at this point,
-            // so don't hang on to the ServiceConnection
-            sService = null;
-        }
-    }
-
-    private static class LockerCacheServiceBinder implements ServiceConnection {
-        ServiceConnection mCallback;
-        LockerCacheServiceBinder(ServiceConnection callback) {
-            mCallback = callback;
-        }
-        
-        public void onServiceConnected(ComponentName className, android.os.IBinder service) {
-            sCacheService = LoadLockerCacheService.Stub.asInterface(service);
-//            initAlbumArtCache();
-            if (mCallback != null) {
-                mCallback.onServiceConnected(className, service);
-            }
-        }
-        
-        public void onServiceDisconnected(ComponentName className) {
-            if (mCallback != null) {
-                mCallback.onServiceDisconnected(className);
-            }
-            sService = null;
-        }
-    }
-    
-    
-    
-    
-    
     
     
     /*  Try to use String.format() as little as possible, because it creates a
