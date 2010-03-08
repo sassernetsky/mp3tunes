@@ -477,7 +477,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Boolean doInBackground(Void... params)
         {
-            Timer timer = new Timer("FetchTracksTask");
+            Timer timer = new Timer("Fetching tracks");
             try {
                 LockerDb db = Music.getDb(getBaseContext());
                 MediaStore store = new MediaStore(db, getContentResolver());

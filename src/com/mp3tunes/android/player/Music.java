@@ -56,7 +56,6 @@ import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.content.CurrentPlaylist;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.DbTables;
-import com.mp3tunes.android.player.content.LoadLockerCacheService;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.service.ITunesService;
@@ -219,26 +218,8 @@ public class Music
         }
     }
     
-//    private static LockerCacheServiceBinder mCacheBinder;
-//    public static LoadLockerCacheService getCacheService(Context context)
-//    {
-//        if (mCacheBinder == null) {
-//            Log.w("Mp3Tunes", "Trying to bind to LockerCaching service");
-//            mCacheBinder = LockerCacheServiceBinder.getBinder(context);
-//            if (!mCacheBinder.bindToService())
-//                Log.e("Mp3Tunes", "Failed to bind to LockerCaching service");
-//        }
-//        
-//        return mCacheBinder.getService();
-//    }
-//    
-//    public static void unbindCacheService(Context context)
-//    {
-//        if (mCacheBinder != null) mCacheBinder.unbindFromService();
-//    }
     
     private static LockerDb        sDb = null;
-//    private static CurrentPlaylist sCp = null;
     private static ArrayList<Context> sDbConnectionMap = new ArrayList<Context>();
 
     //This function checks for a session.  If we do not have a session
@@ -281,10 +262,6 @@ public class Music
                 sDb.close();
                 sDb = null;
             }
-//            if (sCp != null) {
-//                sCp.close();
-//                sCp = null;
-//            }
         }
         return res;
     }
@@ -476,10 +453,10 @@ public class Music
             Toast.makeText(context, "Music service died", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (sDb == null) {
-            Toast.makeText(context, "Database connection died", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        //if (sDb == null) {
+        //    Toast.makeText(context, "Database connection died", Toast.LENGTH_SHORT).show();
+        //    return;
+        //}
         if (list.length == 0) {
             Log.d("MusicUtils", "attempt to play empty song list");
             // Don't try to play empty playlists. Nothing good will come of it.

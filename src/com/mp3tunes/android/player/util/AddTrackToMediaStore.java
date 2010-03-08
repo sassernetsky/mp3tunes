@@ -114,13 +114,14 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
     {
         ContentResolver cr = context.getContentResolver();
         Uri media  = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        String where = MediaStore.Audio.Media.ARTIST + "=\"" + track.getArtistName() + "\" AND " +
-                       MediaStore.Audio.Media.ALBUM  + "=\"" + track.getAlbumTitle()  + "\" AND " +
-                       MediaStore.Audio.Media.TITLE  + "=\"" + track.getTitle()  + "\"";
+        String where = MediaStore.Audio.Media.ARTIST + "=? AND " +
+                       MediaStore.Audio.Media.ALBUM  + "=? AND " +
+                       MediaStore.Audio.Media.TITLE  + "=?";
            
+        String[] whereArgs  = new String[] {track.getArtistName(), track.getAlbumTitle(), track.getTitle()};
         String[] projection = new String[] {MediaStore.Audio.Media.DATA};
             
-        Cursor cursor = cr.query(media, projection, where, null, null);
+        Cursor cursor = cr.query(media, projection, where, whereArgs, null);
         if (cursor.moveToFirst()) {
             String url = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
             cursor.close();
@@ -134,18 +135,19 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
     {
         ContentResolver cr = context.getContentResolver();
         Uri media  = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        String where = MediaStore.Audio.Media.ARTIST + "=\"" + track.getArtistName() + "\" AND " +
-                       MediaStore.Audio.Media.ALBUM  + "=\"" + track.getAlbumTitle()  + "\" AND " +
-                       MediaStore.Audio.Media.TITLE  + "=\"" + track.getTitle()  + "\"";
+        String where = MediaStore.Audio.Media.ARTIST + "=? AND " +
+                       MediaStore.Audio.Media.ALBUM  + "=? AND " +
+                       MediaStore.Audio.Media.TITLE  + "=?";
      
-        
+        String[] whereArgs  = new String[] {track.getArtistName(), track.getAlbumTitle(), track.getTitle()};
         Cursor cursor;
-        cursor = cr.query(media, null, where, null, null);
+        cursor = cr.query(media, null, where, whereArgs, null);
         if (cursor.getCount() > 0) {
             cursor.close();
             return true;
         }
         cursor.close();
+        
         return false;
     }
     
@@ -185,7 +187,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
                 return mp3tunesDir;
             } else {
                 Log.w("Mp3Tunes", "making mp3tunes dir");
-                if (mp3tunesDir.mkdir()) {
+                if (mp3tunesDir.mkdirs()) {
                     return mp3tunesDir;
                 }
             }
