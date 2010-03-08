@@ -211,6 +211,15 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     }
 
     @Override
+    public void onStop()
+    {
+        if (mTrackTask != null
+                && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
+            mTrackTask.cancel(true);
+        super.onStop();
+    }
+    
+    @Override
     public void onDestroy()
     {
         if (mTrackTask != null
@@ -477,7 +486,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Boolean doInBackground(Void... params)
         {
-            Timer timer = new Timer("FetchTracksTask");
+            Timer timer = new Timer("Fetching tracks");
             try {
                 LockerDb db = Music.getDb(getBaseContext());
                 MediaStore store = new MediaStore(db, getContentResolver());
