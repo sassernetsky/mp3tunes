@@ -98,6 +98,5 @@
             />
         </activity>
 		<service android:name=".service.Mp3tunesService"  />
-    <service android:name=".content.LoadLockerCache"></service>
 </application>
 </manifest> 

@@ -211,7 +211,6 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         killTasks();
 
         Music.unbindFromService(this);
-        Music.unbindFromCacheService(this);
         Music.unconnectFromDb( this );
         if (!mAdapterSent) {
             Cursor c = mAdapter.getCursor();
