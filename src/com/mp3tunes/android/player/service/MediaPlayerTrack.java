@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
@@ -164,23 +165,29 @@ public class MediaPlayerTrack
     {
         Logger.log("preparing track: " + mTrack.getTitle());
         try {
-            String url;
-            if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
-                url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
+            String url = mTrack.getPlayUrl(Bitrate.getBitrate(mService, mContext));
+            if (!LockerId.class.isInstance(mTrack.getId())) {
                 mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
-            } else {
-                try {
-                    RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
-                        .addFileKey(mTrack.getFileKey())
-                        .addParam("fileformat", "mp3")
-                        .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
-                        .create();
-                    url = method.getCall();
-                } catch (InvalidSessionException e) {
-                    e.printStackTrace();
-                    return false;
+                if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
+                    url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
                 }
             }
+//            if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
+//                url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
+//                mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
+//            } else {
+//                try {
+//                    RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
+//                        .addFileKey(mTrack.getFileKey())
+//                        .addParam("fileformat", "mp3")
+//                        .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
+//                        .create();
+//                    url = method.getCall();
+//                } catch (InvalidSessionException e) {
+//                    e.printStackTrace();
+//                    return false;
+//                }
+//            }
         
             //State Idle
             mMp = new MediaPlayer();

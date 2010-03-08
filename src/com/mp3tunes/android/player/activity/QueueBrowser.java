@@ -54,14 +54,20 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.LockerDb;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
+import com.mp3tunes.android.player.util.Timer;
 
 public class QueueBrowser extends BaseMp3TunesListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
@@ -72,37 +78,40 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private Cursor mTrackCursor;
     //private TrackListAdapter mAdapter;
     private SimpleCursorAdapter mAdapter;
-    private String mAlbumId;
-    private String mArtistId;
+    private Id mAlbumId;
+    private Id mArtistId;
     private String mPlaylist;
     private String mPlaylistName;
     private String mGenre;
     private boolean mPlayNow;
     private long mSelectedId;
     private String mTrackName;
-    private int    mTrackId;
     private FetchTracksTask mTrackTask;
+    private Id    mTrackId;
     
     private TrackAdder mTrackAdder;
     
     private static final int GET_TRACK = 0;
 
     String[] mFrom = new String[] {
-            LockerDb.KEY_ID,
-            LockerDb.KEY_TITLE,
-            LockerDb.KEY_ARTIST_NAME,
+            DbKeys.ID,
+            DbKeys.TITLE,
+            DbKeys.ARTIST_NAME,
+            MediaStore.KEY_LOCAL
       };
     
     int[] mTo = new int[] {
             R.id.icon,
             R.id.line1,
-            R.id.line2
+            R.id.line2,
+            0
     };
     
     static class FROM_MAPPING {
         static final int ID          = 0;
         static final int NAME        = 1;
         static final int ARTIST_NAME = 2;
+        static final int LOCAL       = 3;
     };
     
     public QueueBrowser()
@@ -119,18 +128,18 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         Music.ensureSession(this);
         if (icicle != null) {
             mSelectedId = icicle.getLong("selectedtrack");
-            mAlbumId = icicle.getString("album");
-            mArtistId = icicle.getString("artist");
+            mAlbumId = IdParcel.idParcelToId(icicle.getParcelable("album"));
+            mArtistId = IdParcel.idParcelToId(icicle.getParcelable("artist"));
             mPlaylist = icicle.getString("playlist");
             mPlaylistName = icicle.getString("playlist_name");
             mGenre = icicle.getString("genre");
             mEditMode = icicle.getBoolean("editmode", false);
         } else {
-            mAlbumId = getIntent().getStringExtra("album");
+            mAlbumId = IdParcel.idParcelToId(getIntent().getParcelableExtra(("album")));
             // If we have an album, show everything on the album, not just stuff
             // by a particular artist.
             Intent intent = getIntent();
-            mArtistId     = intent.getStringExtra("artist");
+            mArtistId     = IdParcel.idParcelToId(intent.getParcelableExtra("artist"));
             mPlaylist     = intent.getStringExtra("playlist");
             mPlaylistName = intent.getStringExtra("playlist_name");
             mGenre        = intent.getStringExtra("genre");
@@ -266,9 +275,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
+        if (mArtistId != null)
+            outcicle.putParcelable("artist", new IdParcel(mArtistId));
+        if (mAlbumId != null)
+            outcicle.putParcelable("album", new IdParcel(mAlbumId));
+            
+        
         outcicle.putLong("selectedtrack", mSelectedId);
-        outcicle.putString("artist", mArtistId);
-        outcicle.putString("album", mAlbumId);
         outcicle.putString("playlist", mPlaylist);
         outcicle.putString("playlist_name", mPlaylistName);
         outcicle.putString("genre", mGenre);
@@ -342,7 +355,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
 
         mTrackCursor.moveToPosition(mi.position);
         mTrackName = mTrackCursor.getString(FROM_MAPPING.NAME);
-        mTrackId   = mTrackCursor.getInt(FROM_MAPPING.ID);
+        mTrackId   = cursorToId(mTrackCursor);
         
         menu.setHeaderTitle(mTrackName);
     }
@@ -353,14 +366,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         switch (item.getItemId()) {
             case GET_TRACK: {
                 // add track to local storage
-                Track t = Music.getDb(getBaseContext()).getTrack(mTrackId);
-                if (AddTrackToMediaStore.isInStore(t, this)) {
+                if (LockerId.class.isInstance(mTrackId)) {
+                    Track t = Music.getDb(getBaseContext()).getTrack((LockerId)mTrackId);
+                    mTrackAdder = new TrackAdder(t);
+                    mTrackAdder.execute();
+                } else {
                     Log.w("Mp3Tunes", "Track already in store");
-                    return true;
                 }
-                    
-                mTrackAdder = new TrackAdder(t);
-                mTrackAdder.execute();
                 return true;
             }
         }
@@ -373,7 +385,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         if (mTrackCursor.getCount() == 0)
             return;
 
-        Music.playAll(this, mTrackCursor, position);
+        Music.playAll(this, cursorToIdArray(mTrackCursor), position);
     }
 
     @Override
@@ -411,7 +423,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             case R.id.menu_opt_playall:
                 if (mTrackCursor.getCount() == 0)
                     break;
-                Music.playAll(this, mTrackCursor, 0);
+                Music.playAll(this, cursorToIdArray(mTrackCursor), 0);
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -465,15 +477,21 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Boolean doInBackground(Void... params)
         {
+            Timer timer = new Timer("FetchTracksTask");
             try {
                 LockerDb db = Music.getDb(getBaseContext());
+                MediaStore store = new MediaStore(db, getContentResolver());
                 if (mAlbumId != null)
-                    mCursor = db.getTrackDataByAlbumForBrowser(mFrom, mAlbumId);
+                    mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
                 else if (mPlaylist != null)
-                    mCursor = db.getTrackDataByPlaylistForBrowser(mFrom, mPlaylist);
+                    mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
+                else if (mArtistId != null)
+                    mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
             } catch (Exception e) {
                 Log.w("Mp3Tunes", Log.getStackTraceString(e));
                 return false;
+            } finally {
+                timer.push();
             }
             return true;
         }

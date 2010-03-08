@@ -40,9 +40,12 @@ import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
-import com.mp3tunes.android.player.LockerDb;
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
 
 public class QueryBrowser extends ListActivity implements Music.Defs
 {
@@ -218,7 +221,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
             startActivity(intent);
         } else if (position >= 0 && id >= 0){
             int track = mQueryCursor.getInt(Music.TRACK_MAPPING.ID);
-            int [] list = new int[] { track };
+            Id [] list = new Id[] { new LockerId(track) };
             Music.playAll(this, list, 0);
         } else {
             Log.e("QueryBrowser", "invalid position/id: " + position + "/" + id);
@@ -416,7 +419,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
                 String name = c.getString(Music.ARTIST_MAPPING.ARTIST_NAME);
                 String displayname = name;
                 boolean isunknown = false;
-                if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
+                if (name == null || name.equals(DbKeys.UNKNOWN_STRING)) {
                     displayname = context.getString(R.string.unknown_artist_name);
                     isunknown = true;
                 }
@@ -438,11 +441,11 @@ public class QueryBrowser extends ListActivity implements Music.Defs
                 tv1.setText(name);
                 
                 String displayname = cursor.getString( Music.TRACK_MAPPING.ARTIST_NAME );
-                if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
+                if (name == null || name.equals(DbKeys.UNKNOWN_STRING)) {
                     displayname = context.getString(R.string.unknown_artist_name);
                 }
                 name = cursor.getString( Music.TRACK_MAPPING.ALBUM_NAME );
-                if (name == null || name.equals(LockerDb.UNKNOWN_STRING)) {
+                if (name == null || name.equals(DbKeys.UNKNOWN_STRING)) {
                     name = context.getString(R.string.unknown_album_name);
                 }
                 tv2.setText(displayname + " - " + name);

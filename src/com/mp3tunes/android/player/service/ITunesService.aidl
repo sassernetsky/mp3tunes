@@ -1,6 +1,7 @@
 package com.mp3tunes.android.player.service;
 
 import com.mp3tunes.android.player.ParcelableTrack;
+import com.mp3tunes.android.player.IdParcel;
 
 interface ITunesService {  
 
@@ -21,7 +22,6 @@ interface ITunesService {
 
 	/* Play the track at a particular position in the playlist */
 	void startAt(int pos);
-	
 	
 	/* SHUFFLE or NORMAL */
 	/*void setShuffleMode(int mode);*/
@@ -81,6 +81,6 @@ interface ITunesService {
 	int removeQueueItem(int first, int last);
 	*/
 	
-	void createPlaybackList(in int[] track_ids);
+	void createPlaybackList(in IdParcel[] track_ids);
 	void togglePlayback();
 } 
