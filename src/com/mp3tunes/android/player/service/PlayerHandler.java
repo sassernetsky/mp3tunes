@@ -121,6 +121,7 @@ public class PlayerHandler
     public boolean stop()
     {
         mGuiNotifier.stop(getTrack());
+        mPlaybackList.clear();
         if (mTrack != null)
             return mTrack.stop();
         return false;
@@ -229,9 +230,9 @@ public class PlayerHandler
         
         void cleanPostCache()
         {
-            int pos = mList.getCurrentPosition() - mPostCache -1;
-            if (pos < 0) return;
             try {
+                int pos = mList.getCurrentPosition() - mPostCache -1;
+                if (pos < 0) return;
                 MediaPlayerTrack t = mList.peekAt(pos);
                 Logger.logTrack(pos, mTrack.getTrack());
                 t.clean();
@@ -239,15 +240,15 @@ public class PlayerHandler
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
                 e.printStackTrace();
-            }
+            } catch (NullPointerException e) {}
 
         }
         
         void cleanPreCache()
         {
-            int pos = mList.getCurrentPosition();
-            if (pos < 0) return;
             try {
+                int pos = mList.getCurrentPosition();
+                if (pos < 0) return;
                 boolean ret = true;
                 while (ret) {
                     MediaPlayerTrack t = mList.peekAt(pos);
@@ -257,7 +258,7 @@ public class PlayerHandler
             } catch (PlaybackListEmptyException e) {
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
-            }
+            } catch (NullPointerException e) {}
         }
 
         void tryPreCache()
@@ -276,6 +277,7 @@ public class PlayerHandler
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
                 e.printStackTrace();
+            } catch (NullPointerException e) {
             } finally {
                 timings.push();
             }
@@ -287,15 +289,15 @@ public class PlayerHandler
         void tryPreCache(int bufferingPos)
         {
             Timer timings = new Timer("tryPrecache pos");
-            Logger.log("Trying precache at: " + Integer.toString(bufferingPos));
-            int playbackPos = mList.getCurrentPosition();
-            
-            if (bufferingPos < playbackPos) return;
-            
-            //if this is true then we have prefetched enough tracks
-            if ((playbackPos + mPreCache - bufferingPos) < 1) return;
-            
             try {
+                Logger.log("Trying precache at: " + Integer.toString(bufferingPos));
+                int playbackPos = mList.getCurrentPosition();
+            
+                if (bufferingPos < playbackPos) return;
+            
+                //if this is true then we have prefetched enough tracks
+                if ((playbackPos + mPreCache - bufferingPos) < 1) return;
+            
                 //get the next track to buffer
                 int nextTrackPos = bufferingPos + 1;
                 mLastIndex       = nextTrackPos;
@@ -310,7 +312,7 @@ public class PlayerHandler
                 e.printStackTrace();
             } catch (PlaybackListOutOfBounds e) {
                 e.printStackTrace();
-            }
+            } catch (NullPointerException e) {}
             timings.push();
         }
         

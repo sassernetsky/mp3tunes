@@ -478,6 +478,14 @@ public class Music
     }
     
     private static void playAll(Context context, int [] list, int position, boolean force_shuffle) {
+        if (sService == null) {
+            Toast.makeText(context, "Android music service died", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (sDb == null) {
+            Toast.makeText(context, "Database connection closed", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (list.length == 0 || sService == null || sDb == null) {
             Log.d("MusicUtils", "attempt to play empty song list");
             // Don't try to play empty playlists. Nothing good will come of it.

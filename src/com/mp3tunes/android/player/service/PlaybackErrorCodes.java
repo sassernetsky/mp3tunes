@@ -5,6 +5,7 @@ import java.util.HashMap;
 public class PlaybackErrorCodes
 {
     private static PacketVideoErrorCodes sErrors = new PacketVideoErrorCodes();
+    private static PacketVideoInfoCodes  sInfo   = new PacketVideoInfoCodes();
     
     public static String getError(int code)
     {
@@ -116,5 +117,64 @@ public class PlaybackErrorCodes
                         return false;
             }
         }
+    }
+
+    
+    private static class PacketVideoInfoCodes {
+        private HashMap<Integer, String> mInfo = new HashMap<Integer, String>();
+        public PacketVideoInfoCodes()
+        {
+            mInfo.put(10, "Notification that a port was created");
+            mInfo.put(11, "Notification that a port was deleted");
+            mInfo.put(12, "Notification that a port was connected");
+            mInfo.put(13, "Notification that a port was disconnected");
+            mInfo.put(14, "Notification that an overflow occurred (not fatal error)");
+            mInfo.put(15, "Notification that an underflow occurred (not fatal error)");
+            mInfo.put(16, "Notification that a processing failure occurred (not fatal error)");
+            mInfo.put(17, "Notification that end of data stream has been reached");
+            mInfo.put(18, "Notification that a data buffer has been created");
+            mInfo.put(19, "Notification that buffering of data has started");
+            mInfo.put(20, "Notification for data buffering level status");
+            mInfo.put(21, "Notification that data buffering has completed");
+            mInfo.put(22, "Notification that data is ready for use");
+            mInfo.put(23, "Notification for position status");
+            mInfo.put(24, "Notification for node state change");
+            mInfo.put(25, "Notification that data was discarded during synchronization.");
+            mInfo.put(26, "Notification that error handling has started");
+            mInfo.put(27, "Notification that error handling has completed");
+            mInfo.put(28, "Notification from a remote source");
+            mInfo.put(29, "Notification that license acquisition has started.");
+            mInfo.put(30, "Notification that download content length is available");
+            mInfo.put(31, "Notification that downloaded content reaches the maximum request size, and will be truncated, especially for the case of unavailable content length");
+            mInfo.put(32, "Notification that source format is not supported, typically sent during protocol rollover");
+            mInfo.put(33, "Notification that a clip transition has occurred while playing a playlist");
+            mInfo.put(34, "Notification that content type for download or HTTP streaming is available");
+            mInfo.put(35, "Notification that paticular track is disable. This one is on a per track basis.");
+            mInfo.put(36, "Notification that unexpected data has been obtained, especially for download, when client receives from server more data than requested in content-length header");
+            mInfo.put(37, "Notification that server discnnect happens after download is complete");
+            mInfo.put(38, "Notification that new media stream has been started");
+            mInfo.put(39, "Notification that node has processed a command with ReportObserver marker info");
+            mInfo.put(40, "Notification that meta data is available with source node");
+            mInfo.put(41, "Notification that duration is available with source node");
+            mInfo.put(42, "Notification that Change Position request not supported");
+            mInfo.put(43, "Notification that the content is poorly inter-leaved");
+            mInfo.put(44, "Notification that the video track is falling behind");
+            mInfo.put(100,"Placeholder for end of range");
+        }
+        
+        public String get(int code)
+        {
+            return mInfo.get(code);
+        }
+        
+        public boolean isFatalError(int error)
+        {
+            return false;
+        }
+    }
+
+    public static String getInfo(int code)
+    {
+        return sInfo.get(code);
     };
 };
