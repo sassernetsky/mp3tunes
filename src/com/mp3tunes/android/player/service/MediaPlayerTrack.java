@@ -16,6 +16,7 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
+import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
 
 public class MediaPlayerTrack
@@ -37,6 +38,7 @@ public class MediaPlayerTrack
     private OnBufferingUpdateListener mOnBufferingUpdateListener;
     private OnCompletionListener      mOnCompletionListener;
     private OnErrorListener           mOnErrorListener;
+    private OnInfoListener            mOnInfoListener;
     private OnPreparedListener        mOnPreparedListener;
     private TrackFinishedHandler      mTrackFinishedHandler;
     private BufferedCallback          mBufferedCallback;
@@ -60,6 +62,7 @@ public class MediaPlayerTrack
         mOnCompletionListener      = new MyOnCompletionListener(this);
         mOnErrorListener           = new MyOnErrorListener();
         mOnPreparedListener        = new MyOnPreparedListener();
+        mOnInfoListener            = new MyOnInfoListener();
     }
     
     synchronized public void setPlayNow(boolean b)
@@ -117,6 +120,13 @@ public class MediaPlayerTrack
     
     synchronized public boolean stop()
     {
+        if (mPreparing) {
+          //state stopped
+            mIsInitialized = false;
+            mPreparing     = false;
+            mMp.stop();
+            return true;
+        }
         if (mIsInitialized) {
             //state stopped
             mIsInitialized = false;
@@ -226,6 +236,7 @@ public class MediaPlayerTrack
         mMp.setOnCompletionListener(mOnCompletionListener);
         mMp.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
         mMp.setOnErrorListener(mOnErrorListener);
+        mMp.setOnInfoListener(mOnInfoListener);
     }
     
     private class MyOnCompletionListener implements MediaPlayer.OnCompletionListener 
@@ -404,6 +415,9 @@ public class MediaPlayerTrack
                         return true;
                 }
             }
+        } else if (extra == -11){ 
+            mErroredOut = false;
+            return false;
         } else if (extra == -1) {
             Locker l = new Locker();
             if (!l.testSession()) {
@@ -425,6 +439,16 @@ public class MediaPlayerTrack
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
             return MediaPlayerTrack.this.onError(mp, what, extra);
+        }
+    };
+    
+    private class MyOnInfoListener implements MediaPlayer.OnInfoListener
+    {  
+        public boolean onInfo(MediaPlayer mp, int what, int extra)
+        {
+            if (what == 1)
+                Logger.log(PlaybackErrorCodes.getInfo(extra));
+            return false;
         }
     };
     
