@@ -56,6 +56,8 @@ import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.content.CurrentPlaylist;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.DbTables;
+import com.mp3tunes.android.player.content.LoadLockerCache;
+import com.mp3tunes.android.player.content.LoadLockerCacheService;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.service.Mp3tunesService;
 import com.mp3tunes.android.player.service.ITunesService;
@@ -218,6 +220,24 @@ public class Music
         }
     }
     
+//    private static LockerCacheServiceBinder mCacheBinder;
+//    public static LoadLockerCacheService getCacheService(Context context)
+//    {
+//        if (mCacheBinder == null) {
+//            Log.w("Mp3Tunes", "Trying to bind to LockerCaching service");
+//            mCacheBinder = LockerCacheServiceBinder.getBinder(context);
+//            if (!mCacheBinder.bindToService())
+//                Log.e("Mp3Tunes", "Failed to bind to LockerCaching service");
+//        }
+//        
+//        return mCacheBinder.getService();
+//    }
+//    
+//    public static void unbindCacheService(Context context)
+//    {
+//        if (mCacheBinder != null) mCacheBinder.unbindFromService();
+//    }
+    
     private static LockerDb        sDb = null;
 //    private static CurrentPlaylist sCp = null;
     private static ArrayList<Context> sDbConnectionMap = new ArrayList<Context>();
@@ -320,6 +340,69 @@ public class Music
             sService = null;
         }
     }
+    
+    public static LoadLockerCacheService sCacheService = null;
+    private static HashMap<Context, LockerCacheServiceBinder> sCacheConnectionMap = new HashMap<Context, LockerCacheServiceBinder>();
+    
+    public static boolean bindToCacheService(Context context) {
+        return bindToCacheService(context, null);
+    }
+
+    public static boolean bindToCacheService(Context context, ServiceConnection callback) {
+        context.startService(new Intent(context, LoadLockerCache.class));
+        LockerCacheServiceBinder sb = new LockerCacheServiceBinder(callback);
+        sCacheConnectionMap.put(context, sb);
+        return context.bindService((new Intent()).setClass(context,
+                LoadLockerCache.class), sb, 0);
+    }
+    
+    public static void unbindFromCacheService(Context context) {
+        if (sConnectionMap.isEmpty()) {
+            // presumably there is nobody interested in the service at this point,
+            // so don't hang on to the ServiceConnection
+            sService = null;
+            return;
+        }
+        LockerCacheServiceBinder sb = (LockerCacheServiceBinder) sCacheConnectionMap.remove(context);
+        if (sb == null) {
+            Log.e("MusicUtils", "Trying to unbind for unknown Context");
+            return;
+        }
+        context.unbindService(sb);
+        if (sConnectionMap.isEmpty()) {
+            // presumably there is nobody interested in the service at this point,
+            // so don't hang on to the ServiceConnection
+            sService = null;
+        }
+    }
+
+    private static class LockerCacheServiceBinder implements ServiceConnection {
+        ServiceConnection mCallback;
+        LockerCacheServiceBinder(ServiceConnection callback) {
+            mCallback = callback;
+        }
+        
+        public void onServiceConnected(ComponentName className, android.os.IBinder service) {
+            sCacheService = LoadLockerCacheService.Stub.asInterface(service);
+//            initAlbumArtCache();
+            if (mCallback != null) {
+                mCallback.onServiceConnected(className, service);
+            }
+        }
+        
+        public void onServiceDisconnected(ComponentName className) {
+            if (mCallback != null) {
+                mCallback.onServiceDisconnected(className);
+            }
+            sService = null;
+        }
+    }
+    
+    
+    
+    
+    
+    
     
     /*  Try to use String.format() as little as possible, because it creates a
      *  new Formatter every time you call it, which is very inefficient.
@@ -452,7 +535,15 @@ public class Music
     }
     
     private static void playAll(Context context, Id[] list, int position, boolean force_shuffle) {
-        if (list.length == 0 || sService == null || sDb == null) {
+        if (sService == null) {
+            Toast.makeText(context, "Music service died", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (sDb == null) {
+            Toast.makeText(context, "Database connection died", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (list.length == 0) {
             Log.d("MusicUtils", "attempt to play empty song list");
             // Don't try to play empty playlists. Nothing good will come of it.
             String message = context.getString(R.string.emptyplaylist, list.length);

@@ -15,6 +15,8 @@
  */
 package com.mp3tunes.android.player.activity;
 
+import java.util.concurrent.ExecutionException;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,6 +29,10 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.RemoteException;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -49,6 +55,8 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.LockerDb.RefreshArtistsTask;
+import com.mp3tunes.android.player.content.LockerDb.RefreshTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
@@ -60,9 +68,11 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     private String mCurrentArtistName;
     private SimpleCursorAdapter mAdapter;
     private boolean mAdapterSent;
-    private AsyncTask<Void, Void, Boolean> mArtistTask;
     private AsyncTask<Void, Void, Boolean> mTracksTask;
     
+    private boolean mShowingDialog;
+    
+    private static final int REFRESH = 0;
     
     String[] mFrom = new String[] {
             DbKeys.ID,
@@ -94,6 +104,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
             mArtistId = icicle.getString("artist");
         }
         super.onCreate(icicle);
+        
+        
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.bindToService(this);
@@ -111,21 +123,30 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         mAdapter = (SimpleCursorAdapter) getLastNonConfigurationInstance();
        
         if (mAdapter == null) {
-            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, mArtistCursor, mFrom, mTo);
+            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, mCursor, mFrom, mTo);
             setListAdapter(mAdapter);
             setTitle(R.string.title_working_artists);
             mAdapter.setViewBinder(new Binder());
-            fetch(new FetchArtistsTask());
+            mLoadingCursor = true;
+            mCursorTask = new FetchArtistsTask(Music.getDb(getBaseContext()));
+            mCursorTask.execute((Void[])null);
+            showDialog(PROGRESS_DIALOG);
+            mShowingDialog = true;
         } else {
             setListAdapter(mAdapter);
-            mArtistCursor = mAdapter.getCursor();
-            if (mArtistCursor != null) {
-                init(mArtistCursor);
+            mCursor = mAdapter.getCursor();
+            if (mCursor == null) {
+                mLoadingCursor = true;
+                mCursorTask = new FetchArtistsTask(Music.getDb(getBaseContext()));
+                mCursorTask.execute((Void[])null);
+                showDialog(PROGRESS_DIALOG);
+                mShowingDialog = true;
             } else {
-                fetch(new FetchArtistsTask());
+                mShowingDialog = false;
             }
         }
-
+        
+        init(mCursor, 100);
     }
     
     class Binder implements SimpleCursorAdapter.ViewBinder
@@ -190,6 +211,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         killTasks();
 
         Music.unbindFromService(this);
+        Music.unbindFromCacheService(this);
         Music.unconnectFromDb( this );
         if (!mAdapterSent) {
             Cursor c = mAdapter.getCursor();
@@ -223,13 +245,15 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         super.onPause();
     }
 
-    @Override
-    public void init(Cursor c) 
+    public void init(Cursor c, int nextRefresh) 
     {
+        tryDismissProgress(mShowingDialog, c);
+        
         mAdapter.changeCursor(c); // also sets mArtistCursor
-        mArtistCursor = c;
+        mCursor = c;
         
         setTitle();
+        super.init(c, nextRefresh);
     }
 
     private void setTitle() 
@@ -242,9 +266,9 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
 
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
-        mArtistCursor.moveToPosition(mi.position);
-        mCurrentArtistId = cursorToId(mArtistCursor);
-        mCurrentArtistName = mArtistCursor.getString(FROM_MAPPING.NAME);
+        mCursor.moveToPosition(mi.position);
+        mCurrentArtistId = cursorToId(mCursor);
+        mCurrentArtistName = mCursor.getString(FROM_MAPPING.NAME);
         menu.setHeaderTitle(mCurrentArtistName);
     }
 
@@ -276,7 +300,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     {
         Cursor c = (Cursor) getListAdapter().getItem( position );
         Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/album");
+        intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
         intent.putExtra("artist", new IdParcel(cursorToId(c)));
         intent.putExtra("name", c.getString(FROM_MAPPING.NAME));
         startActivity(intent);
@@ -319,29 +343,44 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     
     private void killTasks()
     {
-        if( mArtistTask != null && mArtistTask.getStatus() == AsyncTask.Status.RUNNING)
-            mArtistTask.cancel( true );
+        if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
+            mCursorTask.cancel(true);
+            mLoadingCursor = false;
+        }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
             mTracksTask.cancel( true );
     }
     
-    private Cursor mArtistCursor;
     private String mArtistId;
-      
-    private class FetchArtistsTask extends FetchBrowserCursor
+    
+    private class FetchArtistsTask extends RefreshArtistsTask
     {
-        @Override
-        public Boolean doInBackground( Void... params )
+
+        public FetchArtistsTask(LockerDb db)
         {
-            try {
-                //mCursor = Music.getDb(getBaseContext()).getArtistData(mFrom);
-                MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
-                mCursor = ms.getArtistData(mFrom);
-            } catch ( Exception e ) {
-                e.printStackTrace();
-                return false;
+            super(db);
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            mLoadingCursor = false;
+            if (!result) {
+                Log.w("Mp3Tunes", "Got Error Fetching Artists");
             }
-            return true;
+            mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
+            mTracksTask.execute((Void[])null);
+        }
+    };
+    
+    @Override
+    protected void updateCursor()
+    {
+        try {
+            MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
+            mCursor = ms.getArtistData(mFrom);
+        } catch ( Exception e ) {
+            e.printStackTrace();
         }
     }
     

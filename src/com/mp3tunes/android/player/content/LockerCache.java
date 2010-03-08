@@ -22,171 +22,209 @@ import com.mp3tunes.android.player.MP3tunesApplication;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 
 public class LockerCache
 {
-
-    long mArtistsLastUpdate = -1; // time of the last locker update
-    long mAlbumsLastUpdate = -1; 
-    long mTracksLastUpdate = -1; 
-    long mPlaylistLastUpdate = -1; // time of the last playlist update
-    long mPrefsLastUpdate = -1; // time of the last preferences update
-    long mArtistsTokensLastUpdate = -1; // time of the last locker update
-    long mAlbumsTokensLastUpdate = -1; 
-    long mTracksTokensLastUpdate = -1;
-    
-    
-    // the length of time the cache should last before being 
-    // considered expired expires
-    long mCacheLifetime; 
-    
-
-    /* LOCKER CACHE TYPES */
-    static final int ARTIST = 0;
-    static final int ALBUM = 1;
-    static final int TRACK = 2;
-    static final int PLAYLIST = 3;
-    static final int PREFS = 4;
-    static final int ARTIST_TOKENS = 5;
-    static final int ALBUM_TOKENS = 6;
-    static final int TRACK_TOKENS = 7;
-    static final int RADIO = 8;
-    
-
-    private LockerCache()
-    {}
-    public LockerCache( long lastUpdate, long lifetime  )
-    {
-
-        this( lastUpdate, lastUpdate, lastUpdate, lastUpdate, lastUpdate, lifetime  );
+    public class CacheState {
+        public static final int UNCACHED = 0;
+        public static final int CACHED   = 1;
+        public static final int CACHING  = 2;
     }
-
-    public LockerCache( long artistUpdate, long albumUpdate, long trackUpdate, long playlistUpdate, long prefUpdate, long lifetime )
-    {
-
-        mArtistsLastUpdate = artistUpdate;
-        mAlbumsLastUpdate = albumUpdate;
-        mTracksLastUpdate = trackUpdate;
-        mPlaylistLastUpdate = playlistUpdate;
-        mPrefsLastUpdate = prefUpdate;
-        mCacheLifetime = lifetime;
-        mArtistsTokensLastUpdate =  artistUpdate;
-        mAlbumsTokensLastUpdate =  albumUpdate;
-        mTracksTokensLastUpdate =  trackUpdate;
+    
+    public class CACHES {
+        public static final int ARTIST   = 0;
+        public static final int ALBUM    = 1;
+        public static final int TRACK    = 2;
+        public static final int PLAYLIST = 3;
     }
+    
+    private int mArtistCacheState;
+    private int mAlbumCacheState;
+    private int mTrackCacheState;
+    private int mPlaylistCacheState;
+    
+    private long mArtistCacheLastUpdate;
+    private long mAlbumCacheLastUpdate;
+    private long mTrackCacheLastUpdate;
+    private long mPlaylistCacheLastUpdate;
+    
+    private Progress mArtistProgress;
+    private Progress mAlbumProgress;
+    private Progress mTrackProgress;
+    private Progress mPlaylistProgress;
 
-    /**
-     * Determines if a particular part of the Locker has expired.
-     * 
-     * @param type
-     *            the locker cache type, ARTIST, ALBUM, TRACK, PLAYLIST, PREFS
-     * @return true if the supplied type is still valid, false if it has expired
-     */
-    public boolean isCacheValid( int type )
+    //TODO: remove the ugly siwtches
+    
+    public int getCacheState(int cacheId)
     {
-        long now = System.currentTimeMillis();
-        switch ( type )
-        {
-        case ARTIST:
-            return mArtistsLastUpdate > 0 && ( ( mArtistsLastUpdate + mCacheLifetime ) > now );
-        case ALBUM:
-            return mAlbumsLastUpdate > 0 && ( ( mAlbumsLastUpdate + mCacheLifetime ) > now );
-        case TRACK:
-            return mTracksLastUpdate > 0 && ( ( mTracksLastUpdate + mCacheLifetime ) > now );
-        case ARTIST_TOKENS:
-            return mArtistsTokensLastUpdate > 0 && ( ( mArtistsTokensLastUpdate + mCacheLifetime ) > now );
-        case ALBUM_TOKENS:
-            return mAlbumsTokensLastUpdate > 0 && ( ( mAlbumsTokensLastUpdate + mCacheLifetime ) > now );
-        case TRACK_TOKENS:
-            return mTracksTokensLastUpdate > 0 && ( ( mTracksTokensLastUpdate + mCacheLifetime ) > now );
-        case PLAYLIST:
-            return mPlaylistLastUpdate > 0 && ( ( mPlaylistLastUpdate + mCacheLifetime ) > now );
-        case PREFS:
-            return mPrefsLastUpdate > 0 && ( ( mPrefsLastUpdate + mCacheLifetime ) > now );
-
+        switch (cacheId) {
+            case CACHES.ARTIST:
+                return mArtistCacheState;
+            case CACHES.ALBUM:
+                return mAlbumCacheState;
+            case CACHES.TRACK:
+                return mTrackCacheState;
+            case CACHES.PLAYLIST:
+                return mPlaylistCacheState;
         }
-        return false;
+        return CacheState.UNCACHED;
     }
-
-    public void setUpdate( long timestamp, int type )
+    
+    public void beginCaching(int cacheId, long time)
     {
-        switch ( type )
-        {
-        case ARTIST:
-            mArtistsLastUpdate = timestamp;
-            break;
-        case ALBUM:
-            mAlbumsLastUpdate = timestamp;
-            break;
-        case TRACK:
-            mTracksLastUpdate = timestamp;
-            break;
-        case ARTIST_TOKENS:
-            mArtistsTokensLastUpdate = timestamp;
-            break;
-        case ALBUM_TOKENS:
-            mAlbumsTokensLastUpdate = timestamp;
-            break;
-        case TRACK_TOKENS:
-            mTracksTokensLastUpdate = timestamp;
-            break;
-        case PLAYLIST:
-            mPlaylistLastUpdate = timestamp;
-            break;
-        case PREFS:
-            mPrefsLastUpdate = timestamp;
-            break;
-
+        Progress progress = new Progress(20);
+        switch (cacheId) {
+            case CACHES.ARTIST:
+                mArtistCacheState      = CacheState.CACHING;
+                mArtistCacheLastUpdate = time;
+                mArtistProgress        = progress;
+                break;
+            case CACHES.ALBUM:
+                mAlbumCacheState      = CacheState.CACHING;
+                mAlbumCacheLastUpdate = time;
+                mAlbumProgress        = progress;
+                break;
+            case CACHES.TRACK:
+                mTrackCacheState      = CacheState.CACHING;
+                mTrackCacheLastUpdate = time;
+                mTrackProgress        = progress;
+                break;
+            case CACHES.PLAYLIST:
+                mPlaylistCacheState      = CacheState.CACHING;
+                mPlaylistCacheLastUpdate = time;
+                mPlaylistProgress        = progress;
+                break;
         }
     }
-
-    public void setCacheLifetime( long length )
+    
+    public void finishCaching(int cacheId)
     {
-
-        mCacheLifetime = length;
+        switch (cacheId) {
+            case CACHES.ARTIST:
+                mArtistCacheState = CacheState.CACHED;
+                break;
+            case CACHES.ALBUM:
+                mAlbumCacheState = CacheState.CACHED;
+                break;
+            case CACHES.TRACK:
+                mTrackCacheState = CacheState.CACHED;
+                break;
+            case CACHES.PLAYLIST:
+                mPlaylistCacheState = CacheState.CACHED;
+                break;
+        }
+    }
+    
+    public Progress getProgress(int cacheId)
+    {
+        switch (cacheId) {
+            case CACHES.ARTIST:
+                return mArtistProgress;
+            case CACHES.ALBUM:
+                return mAlbumProgress;
+            case CACHES.TRACK:
+                return mTrackProgress;
+            case CACHES.PLAYLIST:
+                return mPlaylistProgress;
+        }
+        return null;
     }
     
     public void clearCache()
     {
-        mArtistsLastUpdate = -1;
-        mAlbumsLastUpdate = -1;
-        mTracksLastUpdate = -1;
-        mPlaylistLastUpdate = -1;
-        mPrefsLastUpdate = -1;
-        mArtistsTokensLastUpdate = -1;
-        mAlbumsTokensLastUpdate = -1;
-        mTracksTokensLastUpdate = -1;
+        makeMemoryCacheClean();
     }
     
-    public void saveCache(Context context)
+    public void saveCache(LockerDb db)
     {
-        SharedPreferences prefs = context.getSharedPreferences( MP3tunesApplication.LAST_UPDATE, 0 );
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putLong( "ArtistsLastUpdate", mArtistsLastUpdate );
-        editor.putLong( "AlbumsLastUpdate", mAlbumsLastUpdate);
-        editor.putLong( "TracksLastUpdate", mTracksLastUpdate);
-        editor.putLong( "PlaylistLastUpdate", mPlaylistLastUpdate);
-        editor.putLong( "PrefsLastUpdate", mPrefsLastUpdate);
-        editor.putLong( "ArtistsTokensLastUpdate", mArtistsTokensLastUpdate);
-        editor.putLong( "AlbumsTokensLastUpdate", mAlbumsTokensLastUpdate);
-        editor.putLong( "TracksTokensLastUpdate", mTracksTokensLastUpdate);
-        editor.commit();
+        db.updateCache(CACHES.ARTIST, mArtistCacheLastUpdate, mArtistCacheState, mArtistProgress);
+        db.updateCache(CACHES.ALBUM, mAlbumCacheLastUpdate, mAlbumCacheState, mAlbumProgress);
+        db.updateCache(CACHES.TRACK, mTrackCacheLastUpdate, mTrackCacheState, mTrackProgress);
+        db.updateCache(CACHES.PLAYLIST, mPlaylistCacheLastUpdate, mPlaylistCacheState, mPlaylistProgress);
+    }
+  
+    public static LockerCache loadCache(LockerDb db)
+    {
+      LockerCache cache = new LockerCache();
+      String[] projection = new String[] {
+              DbKeys.ID,
+              DbKeys.LAST_UPDATE,
+              DbKeys.SET,
+              DbKeys.COUNT,
+              DbKeys.STATE
+      };
+      
+      Cursor c = db.getCache(projection);
+      
+      if (c.moveToFirst()) {
+          do {
+              int  id     = c.getInt(0);
+              long update = c.getLong(1);
+              Progress progress = cache.new Progress(c.getInt(3));
+              progress.mCurrentSet = c.getInt(2);
+              int  state  = c.getInt(4);
+              switch (id) {
+                  case CACHES.ARTIST:
+                      cache.mArtistCacheLastUpdate = update;
+                      cache.mArtistProgress        = progress;
+                      cache.mArtistCacheState      = state;
+                      break;
+                  case CACHES.ALBUM:
+                      cache.mAlbumCacheLastUpdate = update;
+                      cache.mAlbumProgress        = progress;
+                      cache.mAlbumCacheState      = state;
+                      break;
+                  case CACHES.TRACK:
+                      cache.mTrackCacheLastUpdate = update;
+                      cache.mTrackProgress        = progress;
+                      cache.mTrackCacheState      = state;
+                      break;
+                  case CACHES.PLAYLIST:
+                      cache.mPlaylistCacheLastUpdate = update;
+                      cache.mPlaylistProgress        = progress;
+                      cache.mPlaylistCacheState      = state;
+                      break;
+              }
+          } while (c.moveToNext());
+      }
+      c.close();
+
+      return cache;
     }
     
-    public static LockerCache loadCache( Context context, long lifetime )
+    private LockerCache()
     {
-        LockerCache cache = new LockerCache();
-        SharedPreferences prefs = context.getSharedPreferences( MP3tunesApplication.LAST_UPDATE, 0 );
+        makeMemoryCacheClean();
+    }
+    
+    private void makeMemoryCacheClean()
+    {
+        mArtistCacheState   = CacheState.UNCACHED;
+        mAlbumCacheState    = CacheState.UNCACHED;
+        mTrackCacheState    = CacheState.UNCACHED;
+        mPlaylistCacheState = CacheState.UNCACHED;
         
-        cache.mArtistsLastUpdate = prefs.getLong( "ArtistsLastUpdate", -1 );
-        cache.mAlbumsLastUpdate = prefs.getLong( "AlbumsLastUpdate", -1 );
-        cache.mTracksLastUpdate = prefs.getLong( "TracksLastUpdate", -1 );
-        cache.mPlaylistLastUpdate = prefs.getLong( "PlaylistLastUpdate", -1 );
-        cache.mPrefsLastUpdate = prefs.getLong( "PrefsLastUpdate", -1 );
-        cache.mArtistsTokensLastUpdate = prefs.getLong( "ArtistsTokensLastUpdate", -1 );
-        cache.mAlbumsTokensLastUpdate = prefs.getLong( "AlbumsTokensLastUpdate", -1 );
-        cache.mTracksTokensLastUpdate = prefs.getLong( "TracksTokensLastUpdate", -1 );
-        cache.mCacheLifetime = lifetime;
-        return cache;
+        mArtistCacheLastUpdate   = -1;
+        mAlbumCacheLastUpdate    = -1;
+        mTrackCacheLastUpdate    = -1;
+        mPlaylistCacheLastUpdate = -1;
+        
+        mArtistProgress   = null;
+        mAlbumProgress    = null;
+        mTrackProgress    = null;
+        mPlaylistProgress = null;
+    }
+    
+    class Progress
+    {
+        int mCurrentSet;
+        int mCount;
+        
+        Progress( int count)
+        {
+            mCurrentSet = 0;
+            mCount      = count;
+        }
     }
 }

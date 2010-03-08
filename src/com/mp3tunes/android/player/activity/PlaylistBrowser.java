@@ -47,6 +47,8 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistsTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
@@ -59,8 +61,10 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     private SimpleCursorAdapter mAdapter;
     private boolean             mAdapterSent;
     
-    private AsyncTask<Void, Void, Boolean>   mPlaylistTask;
+    //private AsyncTask<Void, Void, Boolean>   mPlaylistTask;
     private AsyncTask<Void, Void, Boolean> mTracksTask;
+    
+    private boolean mShowingDialog;
     
     private int         mWorkingTitle;
     private int         mTitle;
@@ -136,21 +140,30 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                
         mAdapter = (SimpleCursorAdapter) getLastNonConfigurationInstance();
         if (mAdapter == null) {
-            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, mPlaylistCursor, mFrom, mTo);
+            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, mCursor, mFrom, mTo);
             setListAdapter(mAdapter);
             setTitle(mWorkingTitle);
             mAdapter.setViewBinder(new Binder());
-            fetch(new FetchPlaylistsTask());
+            mLoadingCursor = true;
+            mCursorTask = new FetchPlaylistsTask(Music.getDb(getBaseContext()));
+            mCursorTask.execute((Void[])null);
+            showDialog(PROGRESS_DIALOG);
+            mShowingDialog = true;
         } else {
             setListAdapter(mAdapter);
-            mPlaylistCursor = mAdapter.getCursor();
-            if (mPlaylistCursor != null) {
-                init(mPlaylistCursor);
-            } else {
+            mCursor = mAdapter.getCursor();
+            if (mCursor == null) {
                 setTitle(mWorkingTitle);
-                fetch(new FetchPlaylistsTask());
+                mLoadingCursor = true;
+                mCursorTask = new FetchPlaylistsTask(Music.getDb(getBaseContext()));
+                mCursorTask.execute((Void[])null);
+                showDialog(PROGRESS_DIALOG);
+                mShowingDialog = true;
+            } else {
+                mShowingDialog = false;
             }
         }
+        init(mCursor, 100);
     }
 
     @Override
@@ -212,12 +225,14 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         super.onPause();
     }
 
-    public void init(Cursor c) {
-
+    public void init(Cursor c, int refreshNext) 
+    {
+        tryDismissProgress(mShowingDialog, c);
         mAdapter.changeCursor(c);
 
-        mPlaylistCursor = c;
+        mCursor = c;
         setTitle();
+        super.init(c, refreshNext);
     }
 
     private void setTitle() {
@@ -230,9 +245,9 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
 
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
 
-        mPlaylistCursor.moveToPosition(mi.position);
-        mCurrentPlaylistName = mPlaylistCursor.getString(FROM_MAPPING.NAME);
-        mCurrentPlaylistId = new LockerId(mPlaylistCursor.getString(FROM_MAPPING.ID));
+        mCursor.moveToPosition(mi.position);
+        mCurrentPlaylistName = mCursor.getString(FROM_MAPPING.NAME);
+        mCurrentPlaylistId = new LockerId(mCursor.getString(FROM_MAPPING.ID));
         
         if (mIsRadio) {
             mCurrentPlaylistName = mCurrentPlaylistName
@@ -356,30 +371,45 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
             Log.w("Mp3Tunes", "Killing tracks task");
             mTracksTask.cancel( true );
         }
-        if( mPlaylistTask != null && mPlaylistTask.getStatus() == AsyncTask.Status.RUNNING) {
+        if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing playlist task");
-            mPlaylistTask.cancel( true );
+            mCursorTask.cancel( true );
+            mLoadingCursor = false;
         }
     }
     
-    private Cursor mPlaylistCursor;
     private String mArtistId;
     
-    private class FetchPlaylistsTask extends FetchBrowserCursor
+    
+    private class FetchPlaylistsTask extends RefreshPlaylistsTask
     {
-        @Override
-        public Boolean doInBackground( Void... params )
+        public FetchPlaylistsTask(LockerDb db)
         {
-            try {
-                if (PlaylistBrowser.this.mIsRadio)
-                    mCursor = Music.getDb(getBaseContext()).getRadioData(mFrom);
-                else 
-                    mCursor = Music.getDb(getBaseContext()).getPlaylistData(mFrom);
-            } catch ( Exception e ) {
-                e.printStackTrace();
-                return false;
+            super(db);
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            mLoadingCursor = false;
+            if (!result) {
+                Log.w("Mp3Tunes", "Got Error Fetching Playlists");
             }
-            return true;
+            mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+            mTracksTask.execute((Void[])null);
+        }
+    };
+    
+    @Override
+    protected void updateCursor()
+    {
+        try {
+            if (PlaylistBrowser.this.mIsRadio)
+                mCursor = Music.getDb(getBaseContext()).getRadioData(mFrom);
+            else 
+                mCursor = Music.getDb(getBaseContext()).getPlaylistData(mFrom);
+        } catch ( Exception e ) {
+            e.printStackTrace();
         }
     }
 }

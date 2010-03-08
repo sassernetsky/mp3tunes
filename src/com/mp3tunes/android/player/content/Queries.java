@@ -12,6 +12,7 @@ import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerCache.Progress;
 import com.mp3tunes.android.player.content.LockerDb.IdPolicyException;
 
 public class Queries
@@ -33,6 +34,10 @@ public class Queries
     private SQLiteStatement    mAlbumExists;
     private SQLiteStatement    mTrackExists;
     private SQLiteStatement    mPlaylistExists;
+    
+    private SQLiteStatement    mCacheExists;
+    private SQLiteStatement    mInsertCache;
+    private SQLiteStatement    mUpdateCache;
 
     Queries(LockerDb db)
     {
@@ -57,6 +62,11 @@ public class Queries
     public boolean playlistExists(String id)
     {
         return runExistsQuery(mDb.mDb, mPlaylistExists, DbTables.PLAYLIST, id);
+    }
+    
+    public boolean cacheExists(int id)
+    {
+        return runExistsQuery(mDb.mDb, mCacheExists, DbTables.CACHE, Integer.toString(id));
     }
     
     public boolean updateArtist(Artist a)
@@ -205,7 +215,46 @@ public class Queries
         return false;
     }
     
-    
+    public void updateCache(int id, long time, int state, Progress progress)
+    {
+        if (mUpdateCache == null)
+            mUpdateCache = makeUpdateCacheStatement(mDb.mDb);
+        
+        int set   = 0;
+        int count = 0;
+        if (progress != null) {
+            set   = progress.mCurrentSet;
+            count = progress.mCount;
+        }
+        
+        mUpdateCache.bindLong(1, time);
+        mUpdateCache.bindLong(2, set);
+        mUpdateCache.bindLong(3, count);
+        mUpdateCache.bindLong(4, state);
+        mUpdateCache.bindLong(5, id);
+        mUpdateCache.execute();
+    }
+
+    public void insertCache(int id, long time, int state, Progress progress)
+    {
+        if (mInsertCache == null)
+            mInsertCache = makeInsertCacheStatement(mDb.mDb);
+        
+        int set   = 0;
+        int count = 0;
+        if (progress != null) {
+            set   = progress.mCurrentSet;
+            count = progress.mCount;
+        }
+        
+        mInsertCache.bindLong(1, id);
+        mInsertCache.bindLong(2, time);
+        mInsertCache.bindLong(3, set);
+        mInsertCache.bindLong(4, count);
+        mInsertCache.bindLong(5, state);
+        mInsertCache.execute();
+    }
+
     static private boolean runExistsQuery(SQLiteDatabase db, SQLiteStatement stmt, String table, String id)
     {
         if (stmt == null)
@@ -324,6 +373,30 @@ public class Queries
                             DbKeys.FILE_NAME      + ", " +
                             DbKeys.PLAYLIST_ORDER +
                        ") VALUES (?, ?, ?, ?, ?)";
+        return db.compileStatement(query);
+    }
+    
+    private SQLiteStatement makeInsertCacheStatement(SQLiteDatabase db)
+    {
+        String query = "INSERT INTO " + DbTables.CACHE + " (" +
+                            DbKeys.ID          + ", " +
+                            DbKeys.LAST_UPDATE + ", " +
+                            DbKeys.SET         + ", " +
+                            DbKeys.COUNT       + ", " +
+                            DbKeys.STATE       + "" +
+                       ") VALUES (?, ?, ?, ?, ?)";
+        return db.compileStatement(query);
+    }
+    
+    private SQLiteStatement makeUpdateCacheStatement(SQLiteDatabase db)
+    {
+        String query = 
+            "UPDATE " + DbTables.CACHE     + " "    +
+            "SET "    + DbKeys.LAST_UPDATE + "=?, " +
+                        DbKeys.SET         + "=?, " +
+                        DbKeys.COUNT       + "=?, " +
+                        DbKeys.STATE       + "=? "  +
+            "WHERE " +  DbKeys.ID          + "=?";
         return db.compileStatement(query);
     }
    

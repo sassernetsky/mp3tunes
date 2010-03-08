@@ -151,12 +151,12 @@ public class Locker
         .create());
     }
     
-    public List<Artist> getArtistsFromJson() throws LockerException, InvalidSessionException, JSONException, LoginException
+    public List<Artist> getArtists(int count, int set) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getArtistsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
-                .addParam("type", "artist")
-                .addParam("count", "200")
-                .addParam("set", "0")
+                .addParam("type",  "artist")
+                .addParam("count", Integer.toString(count))
+                .addParam("set",   Integer.toString(set))
                 .create());
     }
     
@@ -175,7 +175,8 @@ public class Locker
         ArrayList<Artist> artists = new ArrayList<Artist>();
         if (numResults == 0) return artists;
         
-        JSONArray jsonArtists = json.getJSONArray("artistList");
+        JSONArray jsonArtists = json.optJSONArray("artistList");
+        if (jsonArtists == null) return artists;
         for (int i = 0; i < jsonArtists.length(); i++) {
             JSONObject obj = jsonArtists.getJSONObject(i);
             Artist a = Artist.artistFromJson(obj);
@@ -202,12 +203,12 @@ public class Locker
         .create());
     }
 
-    public List<Album> getAlbumsFromJson() throws LockerException, InvalidSessionException, JSONException, LoginException
+    public List<Album> getAlbums(int count, int set) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getAlbumsList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
-                            .addParam("type", "album")
-                            .addParam("count", "200")
-                            .addParam("set", "0")
+                            .addParam("type",  "album")
+                            .addParam("count", Integer.toString(count))
+                            .addParam("set",   Integer.toString(set))
                             .create());
     }
     
@@ -219,14 +220,15 @@ public class Locker
         } catch (IOException e) {
             throw new LockerException("download failed");
         }
-        
+
         JSONObject json = new JSONObject(text);
         int numResults = json.getJSONObject("summary").getInt("totalResults");
         Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
         ArrayList<Album> albums = new ArrayList<Album>();
         if (numResults == 0) return albums;
         
-        JSONArray jsonAlbums = json.getJSONArray("albumList");
+        JSONArray jsonAlbums = json.optJSONArray("albumList");
+        if (jsonAlbums == null) return albums;
         for (int i = 0; i < jsonAlbums.length(); i++) {
             JSONObject obj = jsonAlbums.getJSONObject(i);
             Album a = Album.albumFromJson(obj);
@@ -253,7 +255,8 @@ public class Locker
         ArrayList<Track> tracks = new ArrayList<Track>();
         if (numResults == 0) return tracks;
         
-        JSONArray jsonTracks = json.getJSONArray("trackList");
+        JSONArray jsonTracks = json.optJSONArray("trackList");
+        if (jsonTracks == null) return tracks;
         for (int i = 0; i < jsonTracks.length(); i++) {
             JSONObject obj = jsonTracks.getJSONObject(i);
             Track t = ConcreteTrack.trackFromJson(obj);
@@ -264,6 +267,15 @@ public class Locker
         }
         if (tracks.size() < 1) throw new LockerException("Sever Sent Corrupt Data");
         return tracks;
+    }
+    
+    public List<Track> getTracks(int count, int set) throws LockerException, InvalidSessionException, JSONException, LoginException
+    {
+        return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
+                .addParam("type", "track")
+                .addParam("count", Integer.toString(count))
+                .addParam("set",   Integer.toString(set))
+                .create());
     }
     
     public List<Track> getTracksForArtistFromJson(int id) throws LockerException, InvalidSessionException, JSONException, LoginException
@@ -305,7 +317,8 @@ public class Locker
         ArrayList<Playlist> playlists = new ArrayList<Playlist>();
         if (numResults == 0) return playlists;
         
-        JSONArray jsonPlaylists = json.getJSONArray("playlistList");
+        JSONArray jsonPlaylists = json.optJSONArray("playlistList");
+        if (jsonPlaylists == null) return playlists;
         for (int i = 0; i < jsonPlaylists.length(); i++) {
             JSONObject obj = jsonPlaylists.getJSONObject(i);
             Playlist p = Playlist.playlistFromJson(obj);
@@ -319,10 +332,12 @@ public class Locker
         return playlists;
     }
     
-    public List<Playlist> getPlaylists() throws LockerException, InvalidSessionException, JSONException, LoginException
+    public List<Playlist> getPlaylists(int count, int set) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getPlaylistList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "playlist")
+                .addParam("count", Integer.toString(count))
+                .addParam("set",   Integer.toString(set))
                 .create());
     }
     
