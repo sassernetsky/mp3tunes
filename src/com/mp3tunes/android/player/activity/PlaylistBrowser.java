@@ -61,10 +61,9 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     private SimpleCursorAdapter mAdapter;
     private boolean             mAdapterSent;
     
-    //private AsyncTask<Void, Void, Boolean>   mPlaylistTask;
-    private AsyncTask<Void, Void, Boolean> mTracksTask;
-    
     private boolean mShowingDialog;
+    
+    private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
     
     private int         mWorkingTitle;
     private int         mTitle;
@@ -187,6 +186,13 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     }
 
     @Override
+    public void onStop()
+    {
+        killTasks();
+        super.onStop();
+    }
+    
+    @Override
     public void onDestroy() 
     {
         killTasks();
@@ -262,7 +268,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected playlist
-                mTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
+                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
                 return true;
             }
         }
@@ -369,11 +375,11 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         Log.w("Mp3Tunes", "Trying to kill tasks");
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing tracks task");
-            mTracksTask.cancel( true );
+            mTracksTask.cancel(true);
         }
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing playlist task");
-            mCursorTask.cancel( true );
+            mCursorTask.cancel(true);
             mLoadingCursor = false;
         }
     }

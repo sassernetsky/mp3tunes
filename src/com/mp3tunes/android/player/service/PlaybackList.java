@@ -71,6 +71,16 @@ public class PlaybackList
     {
         private static final long serialVersionUID = 3760111211345101285L;
     }
+
+    public void clear()
+    {
+        for(MediaPlayerTrack track : mList) {
+            try {
+                track.stop();
+            } catch (NullPointerException e) {}
+        }
+        mList.clear();
+    }
     
 //    private void getTracksForList(int[] trackIds, Context c)
 //    {

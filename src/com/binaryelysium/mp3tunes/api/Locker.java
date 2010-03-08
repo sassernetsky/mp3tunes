@@ -299,6 +299,8 @@ public class Locker
         return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "track")
                 .addParam("playlist_id", id)
+                .addParam("count", "75")
+                .addParam("set", "0")
                 .create());
     }
 
