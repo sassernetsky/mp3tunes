@@ -92,7 +92,16 @@ public class MediaStore
         //cols = ensureColInColumns(cols, DbKeys.ARTIST_NAME);
         
         Cursor locker = mLockerDb.getTrackDataByPlaylist(cols, lockerId);
-        return locker;
+        MatrixCursor output = new MatrixCursor(columns);
+        int len = columns.length - 1;
+        if (locker.moveToFirst()) {
+            do {
+                MatrixCursor.RowBuilder builder = output.newRow();
+                buildRow(builder, locker, len, 0);
+            } while (locker.moveToNext());
+        }
+        locker.close();
+        return output;
         
         //This is too slow we need to make it faster to reach production
 //        int titleIndex  = locker.getColumnIndexOrThrow(DbKeys.TITLE);

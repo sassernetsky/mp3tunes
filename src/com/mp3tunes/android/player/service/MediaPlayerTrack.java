@@ -176,7 +176,7 @@ public class MediaPlayerTrack
         Logger.log("preparing track: " + mTrack.getTitle());
         try {
             String url = mTrack.getPlayUrl(Bitrate.getBitrate(mService, mContext));
-            if (!LockerId.class.isInstance(mTrack.getId())) {
+            if (LockerId.class.isInstance(mTrack.getId())) {
                 mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
                 if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
                     url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);

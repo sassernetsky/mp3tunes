@@ -152,21 +152,21 @@ public class LockerDb
     {
         System.out.println("querying for tracks on album: " + id.asString());
         if (id == null) return null;
-        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.TRACK_COUNT
-                + " FROM album WHERE " + DbKeys.ID + "=" + id.asString());
+//        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.TRACK_COUNT
+//                + " FROM album WHERE " + DbKeys.ID + "=" + id.asString());
         
-        int idNum = id.asInt();
-        try {
-            long count = albumTrackCount.simpleQueryForLong();
-            
-            Cursor c = mDb.query(DbTables.TRACK, from, DbKeys.ALBUM_ID + "=" + id.asString(), 
-                                 null, null, null, "lower(" + DbKeys.TITLE + ")");
-            if (c.getCount() == count)
-                return c;
-            else
-                c.close();
-        } catch (SQLiteDoneException e) {}
-        refreshTracksforAlbum(idNum);
+//        int idNum = id.asInt();
+//        try {
+//            long count = albumTrackCount.simpleQueryForLong();
+//            
+//            Cursor c = mDb.query(DbTables.TRACK, from, DbKeys.ALBUM_ID + "=" + id.asString(), 
+//                                 null, null, null, "lower(" + DbKeys.TITLE + ")");
+//            if (c.getCount() == count)
+//                return c;
+//            else
+//                c.close();
+//        } catch (SQLiteDoneException e) {}
+//        refreshTracksforAlbum(idNum);
         return mDb.query(DbTables.TRACK, from, DbKeys.ALBUM_ID + "=" + id.asString(), 
                 null, null, null, "lower(" + DbKeys.TITLE + ")");
     }
@@ -175,20 +175,20 @@ public class LockerDb
     {
         System.out.println("querying for tracks on album: " + mId.asString());
         if (mId == null) return null;
-        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.TRACK_COUNT
-                + " FROM artist WHERE " + DbKeys.ID + "=" + mId.asString());
-        int idNum = mId.asInt();
-        try {
-            long count = albumTrackCount.simpleQueryForLong();
-            
-            Cursor c = mDb.query(DbTables.TRACK, from, DbKeys.ARTIST_ID + "=" + mId.asString(), 
-                    null, null, null, "lower(" + DbKeys.TITLE + ")");
-            if (c.getCount() == count)
-                return c;
-            else
-                c.close();
-        } catch (SQLiteDoneException e) {}
-        refreshTracksforArtist(idNum);
+//        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.TRACK_COUNT
+//                + " FROM artist WHERE " + DbKeys.ID + "=" + mId.asString());
+//        int idNum = mId.asInt();
+//        try {
+//            long count = albumTrackCount.simpleQueryForLong();
+//            
+//            Cursor c = mDb.query(DbTables.TRACK, from, DbKeys.ARTIST_ID + "=" + mId.asString(), 
+//                    null, null, null, "lower(" + DbKeys.TITLE + ")");
+//            if (c.getCount() == count)
+//                return c;
+//            else
+//                c.close();
+//        } catch (SQLiteDoneException e) {}
+//        refreshTracksforArtist(idNum);
         return mDb.query(DbTables.TRACK, from, DbKeys.ARTIST_ID + "=" + mId.asString(), 
                 null, null, null, "lower(" + DbKeys.TITLE + ")");
     }
@@ -197,8 +197,8 @@ public class LockerDb
     {
         System.out.println("querying for tracks on album: " + mId.asString());
         if (mId == null) return null;
-        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.FILE_COUNT
-                + " FROM playlist WHERE " + DbKeys.ID + "=\"" + mId.asString() + "\"");
+//        SQLiteStatement albumTrackCount = mDb.compileStatement("SELECT " + DbKeys.FILE_COUNT
+//                + " FROM playlist WHERE " + DbKeys.ID + "=\"" + mId.asString() + "\"");
         
         StringBuilder query = new StringBuilder("SELECT DISTINCT ")
         .append(DbTables.TRACK).append(".").append(DbKeys.ID).append(" ");
@@ -218,19 +218,21 @@ public class LockerDb
         .append(mId.asString()).append("' ").append("ORDER BY ")
         .append(DbKeys.PLAYLIST_INDEX);
 
-        try {
-            if (!Playlist.isDynamicPlaylist(mId.asString())) {
-                long count = albumTrackCount.simpleQueryForLong();
-            
-                Cursor c = mDb.rawQuery(query.toString(), null);
-                if (c.getCount() == count)
-                    return c;
-                else
-                    c.close();
-            }
-        } catch (SQLiteDoneException e) {}
-        refreshTracksforPlaylist(mId.asString());
+        
         return mDb.rawQuery(query.toString(), null);
+//        try {
+//            if (!Playlist.isDynamicPlaylist(mId.asString())) {
+//                long count = albumTrackCount.simpleQueryForLong();
+//            
+//                Cursor c = mDb.rawQuery(query.toString(), null);
+//                if (c.getCount() == count)
+//                    return c;
+//                else
+//                    c.close();
+//            }
+//        } catch (SQLiteDoneException e) {}
+//        refreshTracksforPlaylist(mId.asString());
+//        return mDb.rawQuery(query.toString(), null);
     }
     
     
@@ -698,18 +700,21 @@ public class LockerDb
         return tracks;
     }
     
-    private boolean insertTracksForPlaylist(List<Track> tracks, String playlist_id) throws SQLiteException, IOException
+    private void deleteOldPlaylistTracks(String playlist_id)
     {
-        System.out.println("beginning insertion of " + tracks.size()
-                + " tracks for playlist id " + playlist_id);
-
         String   where     = "playlist_id=?";
         String[] whereArgs = new String[] {playlist_id};
         mDb.delete(DbTables.PLAYLIST_TRACKS, where, whereArgs);
+    }
+    
+    private boolean insertTracksForPlaylist(List<Track> tracks, String playlist_id, LockerCache.Progress progress) throws SQLiteException, IOException
+    {
+        System.out.println("beginning insertion of " + tracks.size()
+                + " tracks for playlist id " + playlist_id);
         
         insertTracks(tracks);
         
-        int index = 0;
+        int index = 0 + (progress.mCount * progress.mCurrentSet);
         ContentValues cv = new ContentValues();
         for (Track t : tracks) { 
             cv.put(DbKeys.PLAYLIST_ID, playlist_id);
@@ -964,7 +969,8 @@ public class LockerDb
         } else {
             List<Track> tracks = getTracksForPlaylist(p, id);
             if (task.isCancelled()) return false;
-            return insertTracksForPlaylist(tracks, id);
+            if (p.mCurrentSet == 0) deleteOldPlaylistTracks(id);
+            return insertTracksForPlaylist(tracks, id, p);
         }
     }
     
@@ -1089,10 +1095,60 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshTracks");
+            Log.w("Mp3Tunes", "Starting RefreshTracks for playlist");
             if (LockerId.class.isInstance(mId))
                 return mDb.refreshTask(mId.asString(), this, mId.asString());
             return false;
+        }
+    }
+    
+    static public class RefreshAlbumTracksTask extends RefreshTask
+    {
+        Id mId;
+        
+        public RefreshAlbumTracksTask(LockerDb db, Id id)
+        {
+            super(db);
+            mId = id;
+        }
+        
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            Log.w("Mp3Tunes", "Starting RefreshTracks for album");
+            if (LockerId.class.isInstance(mId))
+                try {
+                    mDb.refreshTracksforAlbum(mId.asInt());
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+        }
+    }
+    
+    static public class RefreshArtistTracksTask extends RefreshTask
+    {
+        Id mId;
+        
+        public RefreshArtistTracksTask(LockerDb db, Id id)
+        {
+            super(db);
+            mId = id;
+        }
+        
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            Log.w("Mp3Tunes", "Starting RefreshTracks for artist");
+            if (LockerId.class.isInstance(mId))
+                try {
+                    mDb.refreshTracksforArtist(mId.asInt());
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
         }
     }
     

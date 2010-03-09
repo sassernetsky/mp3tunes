@@ -253,10 +253,10 @@ public class Locker
         //the same way as no
         JSONObject json  = new JSONObject(text);
         JSONObject obj   = json.getJSONObject("summary");
-        int numResults   = obj.getInt("totalResults");
-        int set          = obj.getInt("set");
-        int count        = obj.getInt("count");
-        double totalSets = obj.getDouble("totalResultSets");
+        int numResults   = obj.optInt("totalResults");
+        int set          = obj.optInt("set");
+        int count        = obj.optInt("count");
+        double totalSets = obj.optDouble("totalResultSets");
         
         Log.w("Mp3Tunes", "Get Tracks call got: " + Integer.toString(numResults) + " results");
         ArrayList<Track> tracks = new ArrayList<Track>();

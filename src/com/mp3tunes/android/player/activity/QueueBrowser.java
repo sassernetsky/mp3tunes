@@ -64,6 +64,8 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumTracksTask;
+import com.mp3tunes.android.player.content.LockerDb.RefreshArtistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
@@ -180,6 +182,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             setListAdapter(mAdapter);
             setTitle(R.string.title_working_songs);
             mAdapter.setViewBinder(new Binder());
+            mLoadingCursor = true;
             getTrackCursor(null);
             showDialog(PROGRESS_DIALOG);
             mShowingDialog = true;
@@ -193,11 +196,12 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             // Worst case, we end up doing the same query twice.
             if (mTrackCursor == null) {
                 setTitle(R.string.title_working_songs);
+                mLoadingCursor = true;
                 getTrackCursor(null);
                 showDialog(PROGRESS_DIALOG);
                 mShowingDialog = true;
             } else {
-                
+                mShowingDialog = false;
             }
         }
         init(mTrackCursor, 100);
@@ -303,6 +307,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
 
     public void init(Cursor newCursor, int nextRefresh)
     {
+        Log.w("Mp3Tunes", "init called");
         tryDismissProgress(mShowingDialog, newCursor);
         if (newCursor != null) {
             Log.w("Mp3Tunes", "cursor count: "
@@ -312,12 +317,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
 
         mTrackCursor = newCursor;
         setTitle();
+        super.init(newCursor, nextRefresh);
 
         // When showing the queue, position the selection on the currently
         // playing track
         // Otherwise, position the selection on the first matching artist, if
         // any
-        IntentFilter f = new IntentFilter();
+       /* IntentFilter f = new IntentFilter();
 
         if ("nowplaying".equals(mPlaylist)) {
             try {
@@ -328,7 +334,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                         GuiNotifier.META_CHANGED));
             } catch (RemoteException ex) {
             }
-        }
+        }*/
     }
 
     private void setTitle()
@@ -552,7 +558,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         }
     };
     
-    private class FetchArtistTracksTask extends RefreshPlaylistTracksTask
+    private class FetchArtistTracksTask extends RefreshArtistTracksTask
     {
 
         public FetchArtistTracksTask(LockerDb db, Id id)
@@ -573,7 +579,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         }
     };
     
-    private class FetchAlbumTracksTask extends RefreshPlaylistTracksTask
+    private class FetchAlbumTracksTask extends RefreshAlbumTracksTask
     {
 
         public FetchAlbumTracksTask(LockerDb db, Id id)
@@ -598,6 +604,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     protected void updateCursor()
     {
         try {
+            Log.w("Mp3Tunes", "Updating cursor");
             LockerDb db = Music.getDb(getBaseContext());
             MediaStore store = new MediaStore(db, getContentResolver());
             if (mAlbumId != null)

@@ -121,7 +121,8 @@ public class Playlist implements LockerData
         return (playlistId.equals(RANDOM_TRACKS)   ||
                 playlistId.equals(NEWEST_TRACKS)   ||
                 playlistId.equals(RECENTLY_PLAYED) ||
-                playlistId.equals(INBOX));
+                playlistId.equals(INBOX)            ||
+                playlistId.startsWith("BYO_"));
     }
 
 }
