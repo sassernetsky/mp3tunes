@@ -18,6 +18,10 @@
 ***************************************************************************/
 package com.mp3tunes.android.player.content;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import com.binaryelysium.mp3tunes.api.Playlist;
 import com.mp3tunes.android.player.MP3tunesApplication;
 
 import android.content.Context;
@@ -33,102 +37,90 @@ public class LockerCache
     }
     
     public class CACHES {
-        public static final int ARTIST   = 0;
-        public static final int ALBUM    = 1;
-        public static final int TRACK    = 2;
-        public static final int PLAYLIST = 3;
+        public static final String ARTIST   = "ARTIST_CACHE";
+        public static final String ALBUM    = "ALBUM_CACHE";
+        public static final String TRACK    = "TRACK_CACHE";
+        public static final String PLAYLIST = "PLAYLIST_CACHE";
     }
     
-    private int mArtistCacheState;
-    private int mAlbumCacheState;
-    private int mTrackCacheState;
-    private int mPlaylistCacheState;
+    Map<String, CacheItem> mMap = new HashMap<String, CacheItem>();
     
-    private long mArtistCacheLastUpdate;
-    private long mAlbumCacheLastUpdate;
-    private long mTrackCacheLastUpdate;
-    private long mPlaylistCacheLastUpdate;
-    
-    private Progress mArtistProgress;
-    private Progress mAlbumProgress;
-    private Progress mTrackProgress;
-    private Progress mPlaylistProgress;
-
-    //TODO: remove the ugly siwtches
-    
-    public int getCacheState(int cacheId)
+    static public class CacheItem 
     {
-        switch (cacheId) {
-            case CACHES.ARTIST:
-                return mArtistCacheState;
-            case CACHES.ALBUM:
-                return mAlbumCacheState;
-            case CACHES.TRACK:
-                return mTrackCacheState;
-            case CACHES.PLAYLIST:
-                return mPlaylistCacheState;
+        int      mState;
+        long     mUpdate;
+        Progress mProgress;
+        @Override
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result
+                    + ((mProgress == null) ? 0 : mProgress.hashCode());
+            result = prime * result + mState;
+            result = prime * result + (int) (mUpdate ^ (mUpdate >>> 32));
+            return result;
         }
-        return CacheState.UNCACHED;
-    }
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            CacheItem other = (CacheItem) obj;
+            if (mProgress == null) {
+                if (other.mProgress != null)
+                    return false;
+            } else if (!mProgress.equals(other.mProgress))
+                return false;
+            if (mState != other.mState)
+                return false;
+            if (mUpdate != other.mUpdate)
+                return false;
+            return true;
+        }
+        
+        
+    };
     
-    public void beginCaching(int cacheId, long time)
+    public int getCacheState(String cacheId)
     {
-        Progress progress = new Progress(20);
-        switch (cacheId) {
-            case CACHES.ARTIST:
-                mArtistCacheState      = CacheState.CACHING;
-                mArtistCacheLastUpdate = time;
-                mArtistProgress        = progress;
-                break;
-            case CACHES.ALBUM:
-                mAlbumCacheState      = CacheState.CACHING;
-                mAlbumCacheLastUpdate = time;
-                mAlbumProgress        = progress;
-                break;
-            case CACHES.TRACK:
-                mTrackCacheState      = CacheState.CACHING;
-                mTrackCacheLastUpdate = time;
-                mTrackProgress        = progress;
-                break;
-            case CACHES.PLAYLIST:
-                mPlaylistCacheState      = CacheState.CACHING;
-                mPlaylistCacheLastUpdate = time;
-                mPlaylistProgress        = progress;
-                break;
+        try {
+            return mMap.get(cacheId).mState;
+        } catch (Exception e) {
+            return CacheState.UNCACHED;
         }
     }
     
-    public void finishCaching(int cacheId)
+    public void beginCaching(String cacheId, long time)
     {
-        switch (cacheId) {
-            case CACHES.ARTIST:
-                mArtistCacheState = CacheState.CACHED;
-                break;
-            case CACHES.ALBUM:
-                mAlbumCacheState = CacheState.CACHED;
-                break;
-            case CACHES.TRACK:
-                mTrackCacheState = CacheState.CACHED;
-                break;
-            case CACHES.PLAYLIST:
-                mPlaylistCacheState = CacheState.CACHED;
-                break;
+        CacheItem item = mMap.get(cacheId);
+        if (item == null) {
+            item = new CacheItem();
+            mMap.put(cacheId, item);
+        }
+        item.mProgress = new Progress(20);
+        item.mState    = CacheState.CACHING;
+        item.mUpdate   = time;
+    }
+    
+    public void finishCaching(String cacheId)
+    {
+        CacheItem item = mMap.get(cacheId);
+        if (Playlist.isDynamicPlaylist(cacheId)) {
+            item.mState    = CacheState.UNCACHED;
+        } else {
+            item.mState    = CacheState.CACHED;
         }
     }
     
-    public Progress getProgress(int cacheId)
+    public Progress getProgress(String cacheId)
     {
-        switch (cacheId) {
-            case CACHES.ARTIST:
-                return mArtistProgress;
-            case CACHES.ALBUM:
-                return mAlbumProgress;
-            case CACHES.TRACK:
-                return mTrackProgress;
-            case CACHES.PLAYLIST:
-                return mPlaylistProgress;
-        }
-        return null;
+        CacheItem item = mMap.get(cacheId);
+        return item.mProgress;
     }
     
     public void clearCache()
@@ -138,10 +130,10 @@ public class LockerCache
     
     public void saveCache(LockerDb db)
     {
-        db.updateCache(CACHES.ARTIST, mArtistCacheLastUpdate, mArtistCacheState, mArtistProgress);
-        db.updateCache(CACHES.ALBUM, mAlbumCacheLastUpdate, mAlbumCacheState, mAlbumProgress);
-        db.updateCache(CACHES.TRACK, mTrackCacheLastUpdate, mTrackCacheState, mTrackProgress);
-        db.updateCache(CACHES.PLAYLIST, mPlaylistCacheLastUpdate, mPlaylistCacheState, mPlaylistProgress);
+        for (Map.Entry<String, CacheItem> entry : mMap.entrySet()) {
+            CacheItem item = entry.getValue();
+            db.updateCache(entry.getKey(), item.mUpdate, item.mState, item.mProgress);
+        }
     }
   
     public static LockerCache loadCache(LockerDb db)
@@ -159,33 +151,15 @@ public class LockerCache
       
       if (c.moveToFirst()) {
           do {
-              int  id     = c.getInt(0);
-              long update = c.getLong(1);
-              Progress progress = cache.new Progress(c.getInt(3));
-              progress.mCurrentSet = c.getInt(2);
-              int  state  = c.getInt(4);
-              switch (id) {
-                  case CACHES.ARTIST:
-                      cache.mArtistCacheLastUpdate = update;
-                      cache.mArtistProgress        = progress;
-                      cache.mArtistCacheState      = state;
-                      break;
-                  case CACHES.ALBUM:
-                      cache.mAlbumCacheLastUpdate = update;
-                      cache.mAlbumProgress        = progress;
-                      cache.mAlbumCacheState      = state;
-                      break;
-                  case CACHES.TRACK:
-                      cache.mTrackCacheLastUpdate = update;
-                      cache.mTrackProgress        = progress;
-                      cache.mTrackCacheState      = state;
-                      break;
-                  case CACHES.PLAYLIST:
-                      cache.mPlaylistCacheLastUpdate = update;
-                      cache.mPlaylistProgress        = progress;
-                      cache.mPlaylistCacheState      = state;
-                      break;
-              }
+              String id   = c.getString(0);
+              
+              CacheItem item = new CacheItem();
+              item.mUpdate               = c.getLong(1);
+              item.mProgress             = cache.new Progress(c.getInt(3));
+              item.mProgress.mCurrentSet = c.getInt(2);
+              item.mState                = c.getInt(4);
+              
+              cache.mMap.put(id, item);
           } while (c.moveToNext());
       }
       c.close();
@@ -200,20 +174,7 @@ public class LockerCache
     
     private void makeMemoryCacheClean()
     {
-        mArtistCacheState   = CacheState.UNCACHED;
-        mAlbumCacheState    = CacheState.UNCACHED;
-        mTrackCacheState    = CacheState.UNCACHED;
-        mPlaylistCacheState = CacheState.UNCACHED;
-        
-        mArtistCacheLastUpdate   = -1;
-        mAlbumCacheLastUpdate    = -1;
-        mTrackCacheLastUpdate    = -1;
-        mPlaylistCacheLastUpdate = -1;
-        
-        mArtistProgress   = null;
-        mAlbumProgress    = null;
-        mTrackProgress    = null;
-        mPlaylistProgress = null;
+        mMap.clear();
     }
     
     class Progress
@@ -226,5 +187,41 @@ public class LockerCache
             mCurrentSet = 0;
             mCount      = count;
         }
+
+        @Override
+        public int hashCode()
+        {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + getOuterType().hashCode();
+            result = prime * result + mCount;
+            result = prime * result + mCurrentSet;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            Progress other = (Progress) obj;
+            if (!getOuterType().equals(other.getOuterType()))
+                return false;
+            if (mCount != other.mCount)
+                return false;
+            if (mCurrentSet != other.mCurrentSet)
+                return false;
+            return true;
+        }
+
+        private LockerCache getOuterType()
+        {
+            return LockerCache.this;
+        }
+        
     }
 }

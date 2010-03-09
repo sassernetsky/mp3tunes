@@ -64,6 +64,7 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
@@ -86,8 +87,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private boolean mPlayNow;
     private long mSelectedId;
     private String mTrackName;
-    private FetchTracksTask mTrackTask;
+    //private FetchTracksTask mTrackTask;
     private Id    mTrackId;
+    private boolean mShowingDialog;
     
     private TrackAdder mTrackAdder;
     
@@ -179,6 +181,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             setTitle(R.string.title_working_songs);
             mAdapter.setViewBinder(new Binder());
             getTrackCursor(null);
+            showDialog(PROGRESS_DIALOG);
+            mShowingDialog = true;
         } else {
             mTrackCursor = mAdapter.getCursor();
             // If mTrackCursor is null, this can be because it doesn't have
@@ -187,13 +191,16 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             // In order to not flash the error dialog at the user for the
             // first case, simply retry the query when the cursor is null.
             // Worst case, we end up doing the same query twice.
-            if (mTrackCursor != null) {
-                init(mTrackCursor);
-            } else {
+            if (mTrackCursor == null) {
                 setTitle(R.string.title_working_songs);
                 getTrackCursor(null);
+                showDialog(PROGRESS_DIALOG);
+                mShowingDialog = true;
+            } else {
+                
             }
         }
+        init(mTrackCursor, 100);
     }
 
     public void onServiceDisconnected(ComponentName name)
@@ -213,18 +220,14 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     @Override
     public void onStop()
     {
-        if (mTrackTask != null
-                && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTrackTask.cancel(true);
+        killTasks();
         super.onStop();
     }
     
     @Override
     public void onDestroy()
     {
-        if (mTrackTask != null
-                && mTrackTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTrackTask.cancel(true);
+        killTasks();
         Music.unbindFromService(this);
         try {
             if ("nowplaying".equals(mPlaylist)) {
@@ -298,8 +301,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         super.onSaveInstanceState(outcicle);
     }
 
-    public void init(Cursor newCursor)
+    public void init(Cursor newCursor, int nextRefresh)
     {
+        tryDismissProgress(mShowingDialog, newCursor);
         if (newCursor != null) {
             Log.w("Mp3Tunes", "cursor count: "
                     + Integer.toString(newCursor.getCount()));
@@ -440,9 +444,20 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
 
     private Cursor getTrackCursor(String filter)
     {
+        Log.w("Mp3Tunes", "Trying to get tracks cursor");
         Cursor ret = null;
-        mTrackTask = new FetchTracksTask();
-        fetch(mTrackTask);
+        if (mAlbumId != null) {
+            mCursorTask = new FetchAlbumTracksTask(Music.getDb(getBaseContext()), mAlbumId);
+            mCursorTask.execute((Void[])null);
+        } else if (mPlaylist != null) {
+            mCursorTask = new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), new LockerId(mPlaylist));
+            mCursorTask.execute((Void[])null);
+        } else if (mArtistId != null) {
+            mCursorTask = new FetchArtistTracksTask(Music.getDb(getBaseContext()), mArtistId);
+            mCursorTask.execute((Void[])null);
+        }
+        //mTrackTask = new FetchTracksTask();
+        //fetch(mTrackTask);
         return ret;
     }
 
@@ -481,28 +496,118 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         }
     }
     
-    private class FetchTracksTask extends FetchBrowserCursor
+    private void killTasks()
     {
-        @Override
-        public Boolean doInBackground(Void... params)
+        if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
+            mCursorTask.cancel(true);
+            mLoadingCursor = false;
+        }
+        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+            mTracksTask.cancel(true);
+    }
+    
+//    private class FetchTracksTask extends FetchBrowserCursor
+//    {
+//        @Override
+//        public Boolean doInBackground(Void... params)
+//        {
+//            Timer timer = new Timer("Fetching tracks");
+//            try {
+//                LockerDb db = Music.getDb(getBaseContext());
+//                MediaStore store = new MediaStore(db, getContentResolver());
+//                if (mAlbumId != null)
+//                    mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
+//                else if (mPlaylist != null)
+//                    mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
+//                else if (mArtistId != null)
+//                    mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
+//            } catch (Exception e) {
+//                Log.w("Mp3Tunes", Log.getStackTraceString(e));
+//                return false;
+//            } finally {
+//                timer.push();
+//            }
+//            return true;
+//        }
+//    }
+    
+    private class FetchPlaylistTracksTask extends RefreshPlaylistTracksTask
+    {
+
+        public FetchPlaylistTracksTask(LockerDb db, Id id)
         {
-            Timer timer = new Timer("Fetching tracks");
-            try {
-                LockerDb db = Music.getDb(getBaseContext());
-                MediaStore store = new MediaStore(db, getContentResolver());
-                if (mAlbumId != null)
-                    mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
-                else if (mPlaylist != null)
-                    mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
-                else if (mArtistId != null)
-                    mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
-            } catch (Exception e) {
-                Log.w("Mp3Tunes", Log.getStackTraceString(e));
-                return false;
-            } finally {
-                timer.push();
+            super(db, id);
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            mLoadingCursor = false;
+            if (!result) {
+                    Log.w("Mp3Tunes", "Got Error Fetching Playlist Tracks");
+            } else {
+                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
             }
-            return true;
+        }
+    };
+    
+    private class FetchArtistTracksTask extends RefreshPlaylistTracksTask
+    {
+
+        public FetchArtistTracksTask(LockerDb db, Id id)
+        {
+            super(db, id);
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            mLoadingCursor = false;
+            if (!result) {
+                    Log.w("Mp3Tunes", "Got Error Fetching Artist Tracks");
+            } else {
+                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
+            }
+        }
+    };
+    
+    private class FetchAlbumTracksTask extends RefreshPlaylistTracksTask
+    {
+
+        public FetchAlbumTracksTask(LockerDb db, Id id)
+        {
+            super(db, id);
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            mLoadingCursor = false;
+            if (!result) {
+                    Log.w("Mp3Tunes", "Got Error Fetching Album Tracks");
+            } else {
+                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
+            }
+        }
+    };
+    
+    @Override
+    protected void updateCursor()
+    {
+        try {
+            LockerDb db = Music.getDb(getBaseContext());
+            MediaStore store = new MediaStore(db, getContentResolver());
+            if (mAlbumId != null)
+                mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
+            else if (mPlaylist != null)
+                mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
+            else if (mArtistId != null)
+                mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
+        } catch ( Exception e ) {
+            e.printStackTrace();
         }
     }
     
