@@ -1131,9 +1131,11 @@ public class LockerDb
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshTracks for album");
-            if (LockerId.class.isInstance(mId))
                 try {
-                    mDb.refreshTracksforAlbum(mId.asInt());
+                    AlbumGetter getter = new AlbumGetter(mDb, mDb.mContext.getContentResolver());
+                    LockerId id = getter.getLockerId(mId);
+                    if (id == null) return true;
+                    mDb.refreshTracksforAlbum(id.asInt());
                     return true;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -1156,14 +1158,16 @@ public class LockerDb
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting RefreshTracks for artist");
-            if (LockerId.class.isInstance(mId))
-                try {
-                    mDb.refreshTracksforArtist(mId.asInt());
-                    return true;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return false;
+            try {            
+                ArtistGetter getter = new ArtistGetter(mDb, mDb.mContext.getContentResolver());
+                LockerId id = getter.getLockerId(mId);
+                if (id == null) return true;
+                mDb.refreshTracksforArtist(id.asInt());
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
         }
     }
     
