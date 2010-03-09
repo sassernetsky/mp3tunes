@@ -907,33 +907,48 @@ public class LockerDb
             super(db);
         }
         
+        private void cacheData(String cache) throws SQLiteException, IOException, LockerException
+        {
+            if (mDb.mCache.getCacheState(cache) == LockerCache.CacheState.UNCACHED) {
+                mDb.mCache.beginCaching(cache, System.currentTimeMillis());
+                LockerCache.Progress p = mDb.mCache.getProgress(cache);
+                mDb.refreshDispatcher(cache, p, this, null);
+                p.mCurrentSet++;
+            }
+        }
+        
         @Override
         protected Boolean doInBackground(Void... params)
         {
             Log.w("Mp3Tunes", "Starting PreCache");
             try {
-                if (mDb.mCache.getCacheState(LockerCache.CACHES.ARTIST) == LockerCache.CacheState.UNCACHED) {
-                    mDb.mCache.beginCaching(LockerCache.CACHES.ARTIST, System.currentTimeMillis());
-                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.ARTIST);
-                    mDb.refreshArtists(p);
-                    p.mCurrentSet++;
-                    
-                }
-                mDb.mCache.saveCache(mDb);
-                if (mDb.mCache.getCacheState(LockerCache.CACHES.ALBUM) == LockerCache.CacheState.UNCACHED) {
-                    mDb.mCache.beginCaching(LockerCache.CACHES.ALBUM, System.currentTimeMillis());
-                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.ALBUM);
-                    mDb.refreshAlbums(p);
-                    p.mCurrentSet++;
-                }
-                mDb.mCache.saveCache(mDb);
-                if (mDb.mCache.getCacheState(LockerCache.CACHES.PLAYLIST) == LockerCache.CacheState.UNCACHED) {
-                    mDb.mCache.beginCaching(LockerCache.CACHES.PLAYLIST, System.currentTimeMillis());
-                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.PLAYLIST);
-                    mDb.refreshPlaylists(p);
-                    p.mCurrentSet++;
-                }
-                mDb.mCache.saveCache(mDb);
+                cacheData(LockerCache.CACHES.ARTIST);
+                cacheData(LockerCache.CACHES.ALBUM);
+                cacheData(LockerCache.CACHES.PLAYLIST);
+//                String cache = LockerCache.CACHES.ARTIST;
+//                if (mDb.mCache.getCacheState(cache) == LockerCache.CacheState.UNCACHED) {
+//                    mDb.mCache.beginCaching(cache, System.currentTimeMillis());
+//                    LockerCache.Progress p = mDb.mCache.getProgress(cache);
+//                    //mDb.refreshArtists(p);
+//                    mDb.refreshDispatcher(LockerCache.CACHES.ARTIST, p, this, null);
+//                    p.mCurrentSet++;
+//                    
+//                }
+//                mDb.mCache.saveCache(mDb);
+//                if (mDb.mCache.getCacheState(LockerCache.CACHES.ALBUM) == LockerCache.CacheState.UNCACHED) {
+//                    mDb.mCache.beginCaching(LockerCache.CACHES.ALBUM, System.currentTimeMillis());
+//                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.ALBUM);
+//                    mDb.refreshAlbums(p);
+//                    p.mCurrentSet++;
+//                }
+//                mDb.mCache.saveCache(mDb);
+//                if (mDb.mCache.getCacheState(LockerCache.CACHES.PLAYLIST) == LockerCache.CacheState.UNCACHED) {
+//                    mDb.mCache.beginCaching(LockerCache.CACHES.PLAYLIST, System.currentTimeMillis());
+//                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.PLAYLIST);
+//                    mDb.refreshPlaylists(p);
+//                    p.mCurrentSet++;
+//                }
+//                mDb.mCache.saveCache(mDb);
                 Log.w("Mp3Tunes", "PreCache done");
                 return true;
             } catch (SQLiteException e) {

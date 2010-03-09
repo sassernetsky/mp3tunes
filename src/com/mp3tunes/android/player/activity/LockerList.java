@@ -116,6 +116,7 @@ public class LockerList extends ListActivity
     @Override
     protected void onDestroy()
     {
+        killTasks();
         //Music.unbindFromCacheService(this);
         super.onDestroy();    
     }
@@ -136,9 +137,18 @@ public class LockerList extends ListActivity
     @Override
     public void onStop() 
     {
+        killTasks();
         if (mAboutDialog.isShowing()) dismissDialog(ABOUT_DIALOG);
         super.onStop();
     }
+    
+    private void killTasks()
+    {
+        if( mPreCacher != null && mPreCacher.getStatus() == AsyncTask.Status.RUNNING) {
+            mPreCacher.cancel(true);
+        }
+    }
+    
     
     @Override
     protected Dialog onCreateDialog(int id) {
@@ -149,7 +159,6 @@ public class LockerList extends ListActivity
         }
         return d;
     }
-
     
     private BroadcastReceiver mStatusListener = new BroadcastReceiver()
     {
