@@ -64,9 +64,9 @@ public class Queries
         return runExistsQuery(mDb.mDb, mPlaylistExists, DbTables.PLAYLIST, id);
     }
     
-    public boolean cacheExists(int id)
+    public boolean cacheExists(String id)
     {
-        return runExistsQuery(mDb.mDb, mCacheExists, DbTables.CACHE, Integer.toString(id));
+        return runExistsQuery(mDb.mDb, mCacheExists, DbTables.CACHE, id);
     }
     
     public boolean updateArtist(Artist a)
@@ -215,7 +215,7 @@ public class Queries
         return false;
     }
     
-    public void updateCache(int id, long time, int state, Progress progress)
+    public void updateCache(String id, long time, int state, Progress progress)
     {
         if (mUpdateCache == null)
             mUpdateCache = makeUpdateCacheStatement(mDb.mDb);
@@ -231,11 +231,11 @@ public class Queries
         mUpdateCache.bindLong(2, set);
         mUpdateCache.bindLong(3, count);
         mUpdateCache.bindLong(4, state);
-        mUpdateCache.bindLong(5, id);
+        mUpdateCache.bindString(5, id);
         mUpdateCache.execute();
     }
 
-    public void insertCache(int id, long time, int state, Progress progress)
+    public void insertCache(String id, long time, int state, Progress progress)
     {
         if (mInsertCache == null)
             mInsertCache = makeInsertCacheStatement(mDb.mDb);
@@ -247,7 +247,7 @@ public class Queries
             count = progress.mCount;
         }
         
-        mInsertCache.bindLong(1, id);
+        mInsertCache.bindString(1, id);
         mInsertCache.bindLong(2, time);
         mInsertCache.bindLong(3, set);
         mInsertCache.bindLong(4, count);

@@ -294,13 +294,13 @@ public class Locker
                 .create());
     }
     
-    public List<Track> getTracksForPlaylistFromJson(String id) throws LockerException, InvalidSessionException, JSONException, LoginException
+    public List<Track> getTracksForPlaylist(String id, int count, int set) throws LockerException, InvalidSessionException, JSONException, LoginException
     {
         return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
                 .addParam("type", "track")
                 .addParam("playlist_id", id)
-                .addParam("count", "75")
-                .addParam("set", "0")
+                .addParam("count", Integer.toString(count))
+                .addParam("set", Integer.toString(set))
                 .create());
     }
 

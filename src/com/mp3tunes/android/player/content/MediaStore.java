@@ -81,49 +81,51 @@ public class MediaStore
     
     public Cursor getTrackDataByPlaylist(String[] columns, LockerId lockerId) throws SQLiteException, IOException, LockerException
     {
-        String[] joinBy = new String[] {DbKeys.TITLE};
+        //String[] joinBy = new String[] {DbKeys.TITLE};
         String[] cols = rmLocalCol(columns);
-        String[] projection = lockerDbToMediaStoreColumns(cols);
+        //String[] projection = lockerDbToMediaStoreColumns(cols);
         
         //no matter what columns the caller requests we need the Artist, Album, and Title to be returned
         //so we make sure they are in the projection here
-        cols = ensureColInColumns(cols, DbKeys.TITLE);
-        cols = ensureColInColumns(cols, DbKeys.ALBUM_NAME); 
-        cols = ensureColInColumns(cols, DbKeys.ARTIST_NAME);
+        //cols = ensureColInColumns(cols, DbKeys.TITLE);
+        //cols = ensureColInColumns(cols, DbKeys.ALBUM_NAME); 
+        //cols = ensureColInColumns(cols, DbKeys.ARTIST_NAME);
         
         Cursor locker = mLockerDb.getTrackDataByPlaylist(cols, lockerId);
+        return locker;
         
-        int titleIndex  = locker.getColumnIndexOrThrow(DbKeys.TITLE);
-        int artistIndex = locker.getColumnIndexOrThrow(DbKeys.ARTIST_NAME);
-        int albumIndex  = locker.getColumnIndexOrThrow(DbKeys.ALBUM_NAME);
-        
-        String   where = android.provider.MediaStore.Audio.Media.ARTIST + "=? AND " +
-                         android.provider.MediaStore.Audio.Media.ALBUM  + "=? AND " +
-                         android.provider.MediaStore.Audio.Media.TITLE  + "=?";
-        String[] whereArgs = new String[3];
-        
-        MatrixCursor output = new MatrixCursor(columns);
-        int len = columns.length - 1;
-        if (locker.moveToFirst()) {
-            Timer timer = new Timer("checking for playlist tracks");
-            do {
-                MatrixCursor.RowBuilder builder = output.newRow();
-                
-                whereArgs[0] = locker.getString(artistIndex);
-                whereArgs[1] = locker.getString(albumIndex);
-                whereArgs[2] = locker.getString(titleIndex);
-                Cursor cursor = mCr.query(sTracksUri, projection, where, whereArgs, null);
-                if (cursor.moveToFirst()) {
-                    buildRow(builder, cursor, len, 1);
-                } else {
-                    buildRow(builder, locker, len, 0);
-                }
-                cursor.close();
-            } while (locker.moveToNext());
-            timer.push();
-        }
-        locker.close();
-        return output;
+        //This is too slow we need to make it faster to reach production
+//        int titleIndex  = locker.getColumnIndexOrThrow(DbKeys.TITLE);
+//        int artistIndex = locker.getColumnIndexOrThrow(DbKeys.ARTIST_NAME);
+//        int albumIndex  = locker.getColumnIndexOrThrow(DbKeys.ALBUM_NAME);
+//        
+//        String   where = android.provider.MediaStore.Audio.Media.ARTIST + "=? AND " +
+//                         android.provider.MediaStore.Audio.Media.ALBUM  + "=? AND " +
+//                         android.provider.MediaStore.Audio.Media.TITLE  + "=?";
+//        String[] whereArgs = new String[3];
+//        
+//        MatrixCursor output = new MatrixCursor(columns);
+//        int len = columns.length - 1;
+//        if (locker.moveToFirst()) {
+//            Timer timer = new Timer("checking for playlist tracks");
+//            do {
+//                MatrixCursor.RowBuilder builder = output.newRow();
+//                
+//                whereArgs[0] = locker.getString(artistIndex);
+//                whereArgs[1] = locker.getString(albumIndex);
+//                whereArgs[2] = locker.getString(titleIndex);
+//                Cursor cursor = mCr.query(sTracksUri, projection, where, whereArgs, null);
+//                if (cursor.moveToFirst()) {
+//                    buildRow(builder, cursor, len, 1);
+//                } else {
+//                    buildRow(builder, locker, len, 0);
+//                }
+//                cursor.close();
+//            } while (locker.moveToNext());
+//            timer.push();
+//        }
+//        locker.close();
+//        return output;
     }
     
     public Track getTrack(Id id)
