@@ -11,7 +11,7 @@ class LockerDbHelper extends SQLiteOpenHelper
 {
 
     private static final String DB_NAME = "locker.dat";
-    private static final int DB_VERSION = 8;
+    private static final int DB_VERSION = 9;
     
     private static final String CREATE_TRACK = "CREATE TABLE " + DbTables.TRACK + "(" +
                                                     DbKeys.ID           + " INTEGER PRIMARY KEY," +
@@ -65,7 +65,7 @@ class LockerDbHelper extends SQLiteOpenHelper
 //                                                           ")";
 //     
     private static final String CREATE_CACHE = "CREATE TABLE " + DbTables.CACHE + "(" +
-                                                    DbKeys.ID          + " INTEGER PRIMARY KEY," + 
+                                                    DbKeys.ID          + " VARCHAR PRIMARY KEY," + 
                                                     DbKeys.LAST_UPDATE + " INTEGER,"             +
                                                     DbKeys.SET         + " INTEGER,"             +
                                                     DbKeys.COUNT       + " INTEGER,"             +
