@@ -249,17 +249,24 @@ public class Locker
             throw new LockerException("download failed");
         }
         
-        JSONObject json = new JSONObject(text);
-        int numResults = json.getJSONObject("summary").getInt("totalResults");
+        //We get the extra data here because the sets for generated playlists do not behave
+        //the same way as no
+        JSONObject json  = new JSONObject(text);
+        JSONObject obj   = json.getJSONObject("summary");
+        int numResults   = obj.getInt("totalResults");
+        int set          = obj.getInt("set");
+        int count        = obj.getInt("count");
+        double totalSets = obj.getDouble("totalResultSets");
+        
         Log.w("Mp3Tunes", "Get Tracks call got: " + Integer.toString(numResults) + " results");
         ArrayList<Track> tracks = new ArrayList<Track>();
-        if (numResults == 0) return tracks;
+        if (numResults == 0 || set > totalSets) return tracks;
         
         JSONArray jsonTracks = json.optJSONArray("trackList");
         if (jsonTracks == null) return tracks;
         for (int i = 0; i < jsonTracks.length(); i++) {
-            JSONObject obj = jsonTracks.getJSONObject(i);
-            Track t = ConcreteTrack.trackFromJson(obj);
+            JSONObject track = jsonTracks.getJSONObject(i);
+            Track t = ConcreteTrack.trackFromJson(track);
             if (t != null) 
                 tracks.add(t);
             else

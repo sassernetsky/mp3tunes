@@ -1091,7 +1091,7 @@ public class LockerDb
         {
             Log.w("Mp3Tunes", "Starting RefreshTracks");
             if (LockerId.class.isInstance(mId))
-                return mDb.refreshTask(LockerCache.CACHES.TRACK, this, mId.asString());
+                return mDb.refreshTask(mId.asString(), this, mId.asString());
             return false;
         }
     }
