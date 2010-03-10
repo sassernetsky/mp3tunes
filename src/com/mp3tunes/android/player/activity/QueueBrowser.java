@@ -16,6 +16,8 @@
 
 package com.mp3tunes.android.player.activity;
 
+import java.io.IOException;
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
@@ -27,6 +29,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.CharArrayBuffer;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -55,18 +58,24 @@ import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.content.AlbumGetter;
+import com.mp3tunes.android.player.content.ArtistGetter;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.MergeHelper;
 import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshArtistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
+import com.mp3tunes.android.player.content.LockerDb.RefreshTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
@@ -75,34 +84,21 @@ import com.mp3tunes.android.player.util.Timer;
 public class QueueBrowser extends BaseMp3TunesListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
 {
-    private boolean mEditMode = false;
-    private boolean mAdapterSent = false;
+    //private boolean mEditMode = false;
+    //private boolean mAdapterSent = false;
     private ListView mTrackList;
     private Cursor mTrackCursor;
-    //private TrackListAdapter mAdapter;
     private SimpleCursorAdapter mAdapter;
-    private Id mAlbumId;
-    private Id mArtistId;
-    private String mPlaylist;
-    private String mPlaylistName;
-    private String mGenre;
-    private boolean mPlayNow;
+    private TrackList mList;
     private long mSelectedId;
     private String mTrackName;
-    //private FetchTracksTask mTrackTask;
     private Id    mTrackId;
     private boolean mShowingDialog;
+    
     
     private TrackAdder mTrackAdder;
     
     private static final int GET_TRACK = 0;
-
-    String[] mFrom = new String[] {
-            DbKeys.ID,
-            DbKeys.TITLE,
-            DbKeys.ARTIST_NAME,
-            MediaStore.KEY_LOCAL
-      };
     
     int[] mTo = new int[] {
             R.id.icon,
@@ -130,55 +126,34 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
         Music.ensureSession(this);
+        
         if (icicle != null) {
+            mList = getTrackList(icicle);
             mSelectedId = icicle.getLong("selectedtrack");
-            mAlbumId = IdParcel.idParcelToId(icicle.getParcelable("album"));
-            mArtistId = IdParcel.idParcelToId(icicle.getParcelable("artist"));
-            mPlaylist = icicle.getString("playlist");
-            mPlaylistName = icicle.getString("playlist_name");
-            mGenre = icicle.getString("genre");
-            mEditMode = icicle.getBoolean("editmode", false);
         } else {
-            mAlbumId = IdParcel.idParcelToId(getIntent().getParcelableExtra(("album")));
-            // If we have an album, show everything on the album, not just stuff
-            // by a particular artist.
-            Intent intent = getIntent();
-            mArtistId     = IdParcel.idParcelToId(intent.getParcelableExtra("artist"));
-            mPlaylist     = intent.getStringExtra("playlist");
-            mPlaylistName = intent.getStringExtra("playlist_name");
-            mGenre        = intent.getStringExtra("genre");
-            mPlayNow      = intent.getBooleanExtra("playnow", false);
-            mEditMode     = intent.getAction().equals(Intent.ACTION_EDIT);
+            mList = getTrackList(getIntent());
         }
 
         setContentView(R.layout.media_picker_activity);
         mTrackList = getListView();
         mTrackList.setOnCreateContextMenuListener(this);
-        if (mEditMode) {
-            mTrackList.setCacheColorHint(0);
-        } else {
-            mTrackList.setTextFilterEnabled(true);
-        }
+        mTrackList.setTextFilterEnabled(true);
 
         buildErrorDialog(R.string.track_browser_error);
         buildProgressDialog(R.string.loading_tracks);
 
         mAdapter = (SimpleCursorAdapter) getLastNonConfigurationInstance();
-
-        //if (mAdapter != null) {
-        //    mAdapter.setActivity(this);
-            setListAdapter(mAdapter);
-        //}
+        setListAdapter(mAdapter);
+        
         Music.bindToService(this, this);
     }
-
+    
     public void onServiceConnected(ComponentName name, IBinder service)
     {
 
         if (mAdapter == null) {
             // need to use application context to avoid leaks
-            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, null, mFrom, mTo);
-            mPlayNow = false;
+            mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, null, mList.getFrom(), mTo);
             setListAdapter(mAdapter);
             setTitle(R.string.title_working_songs);
             mAdapter.setViewBinder(new Binder());
@@ -213,13 +188,13 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         finish();
     }
 
-    @Override
-    public Object onRetainNonConfigurationInstance()
-    {
-        SimpleCursorAdapter a = mAdapter;
-        mAdapterSent = true;
-        return a;
-    }
+//    @Override
+//    public Object onRetainNonConfigurationInstance()
+//    {
+//        SimpleCursorAdapter a = mAdapter;
+//        mAdapterSent = true;
+//        return a;
+//    }
 
     @Override
     public void onStop()
@@ -233,24 +208,24 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         killTasks();
         Music.unbindFromService(this);
-        try {
-            if ("nowplaying".equals(mPlaylist)) {
-                unregisterReceiverSafe(mNowPlayingListener);
-            } else {
-                unregisterReceiverSafe(mTrackListListener);
-            }
-        } catch (IllegalArgumentException ex) {
-            // we end up here in case we never registered the listeners
-        }
+//        try {
+//            if ("nowplaying".equals(mPlaylist)) {
+//                unregisterReceiverSafe(mNowPlayingListener);
+//            } else {
+//                unregisterReceiverSafe(mTrackListListener);
+//            }
+//        } catch (IllegalArgumentException ex) {
+//            // we end up here in case we never registered the listeners
+//        }
 
         // if we didn't send the adapter off to another activity, we should
         // close the cursor
-        if (!mAdapterSent) {
+//        if (!mAdapterSent) {
             Cursor c = mAdapter.getCursor();
             if (c != null) {
                 c.close();
             }
-        }
+//        }
         Music.unconnectFromDb(this);
         super.onDestroy();
     }
@@ -291,17 +266,14 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         // need to store the selected item so we don't lose it in case
         // of an orientation switch. Otherwise we could lose it while
         // in the middle of specifying a playlist to add the item to.
-        if (mArtistId != null)
-            outcicle.putParcelable("artist", new IdParcel(mArtistId));
-        if (mAlbumId != null)
-            outcicle.putParcelable("album", new IdParcel(mAlbumId));
-            
-        
+        IdParcel parcel = mList.getParcelableOutput();
+        if (parcel != null) 
+            outcicle.putParcelable(mList.key(), parcel);
+        else {
+            outcicle.putString(mList.key(), mList.mId.asString());
+            outcicle.putString("playlist_name", mList.getName());
+        }
         outcicle.putLong("selectedtrack", mSelectedId);
-        outcicle.putString("playlist", mPlaylist);
-        outcicle.putString("playlist_name", mPlaylistName);
-        outcicle.putString("genre", mGenre);
-        outcicle.putBoolean("editmode", mEditMode);
         super.onSaveInstanceState(outcicle);
     }
 
@@ -318,51 +290,34 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         mTrackCursor = newCursor;
         setTitle();
         super.init(newCursor, nextRefresh);
-
-        // When showing the queue, position the selection on the currently
-        // playing track
-        // Otherwise, position the selection on the first matching artist, if
-        // any
-       /* IntentFilter f = new IntentFilter();
-
-        if ("nowplaying".equals(mPlaylist)) {
-            try {
-                int cur = Music.sService.getQueuePosition();
-                setSelection(cur);
-                registerReceiver(mNowPlayingListener, new IntentFilter(f));
-                mNowPlayingListener.onReceive(this, new Intent(
-                        GuiNotifier.META_CHANGED));
-            } catch (RemoteException ex) {
-            }
-        }*/
     }
 
     private void setTitle()
     {
-        setTitle(R.string.title_tracks);
+        setTitle(mList.getName());
     }
 
-    private BroadcastReceiver mTrackListListener = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent)
-        {
-            getListView().invalidateViews();
-        }
-    };
-
-    private BroadcastReceiver mNowPlayingListener = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent)
-        {
-            if (intent.getAction().equals(GuiNotifier.META_CHANGED)) {
-                getListView().invalidateViews();
-            } else if (intent.getAction().equals(GuiNotifier.QUEUE_CHANGED)) {
-
-            }
-        }
-    };
+//    private BroadcastReceiver mTrackListListener = new BroadcastReceiver() {
+//
+//        @Override
+//        public void onReceive(Context context, Intent intent)
+//        {
+//            getListView().invalidateViews();
+//        }
+//    };
+//
+//    private BroadcastReceiver mNowPlayingListener = new BroadcastReceiver() {
+//
+//        @Override
+//        public void onReceive(Context context, Intent intent)
+//        {
+//            if (intent.getAction().equals(GuiNotifier.META_CHANGED)) {
+//                getListView().invalidateViews();
+//            } else if (intent.getAction().equals(GuiNotifier.QUEUE_CHANGED)) {
+//
+//            }
+//        }
+//    };
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View view,
@@ -451,20 +406,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private Cursor getTrackCursor(String filter)
     {
         Log.w("Mp3Tunes", "Trying to get tracks cursor");
-        Cursor ret = null;
-        if (mAlbumId != null) {
-            mCursorTask = new FetchAlbumTracksTask(Music.getDb(getBaseContext()), mAlbumId);
-            mCursorTask.execute((Void[])null);
-        } else if (mPlaylist != null) {
-            mCursorTask = new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), new LockerId(mPlaylist));
-            mCursorTask.execute((Void[])null);
-        } else if (mArtistId != null) {
-            mCursorTask = new FetchArtistTracksTask(Music.getDb(getBaseContext()), mArtistId);
-            mCursorTask.execute((Void[])null);
-        }
-        //mTrackTask = new FetchTracksTask();
-        //fetch(mTrackTask);
-        return ret;
+        mCursorTask = mList.getTask();
+        mCursorTask.execute((Void[])null);
+        return null;
     }
 
     class Binder implements SimpleCursorAdapter.ViewBinder
@@ -511,31 +455,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
             mTracksTask.cancel(true);
     }
-    
-//    private class FetchTracksTask extends FetchBrowserCursor
-//    {
-//        @Override
-//        public Boolean doInBackground(Void... params)
-//        {
-//            Timer timer = new Timer("Fetching tracks");
-//            try {
-//                LockerDb db = Music.getDb(getBaseContext());
-//                MediaStore store = new MediaStore(db, getContentResolver());
-//                if (mAlbumId != null)
-//                    mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
-//                else if (mPlaylist != null)
-//                    mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
-//                else if (mArtistId != null)
-//                    mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
-//            } catch (Exception e) {
-//                Log.w("Mp3Tunes", Log.getStackTraceString(e));
-//                return false;
-//            } finally {
-//                timer.push();
-//            }
-//            return true;
-//        }
-//    }
     
     private class FetchPlaylistTracksTask extends RefreshPlaylistTracksTask
     {
@@ -605,14 +524,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         try {
             Log.w("Mp3Tunes", "Updating cursor");
-            LockerDb db = Music.getDb(getBaseContext());
-            MediaStore store = new MediaStore(db, getContentResolver());
-            if (mAlbumId != null)
-                mCursor = store.getTrackDataByAlbum(mFrom, mAlbumId);
-            else if (mPlaylist != null)
-                mCursor = store.getTrackDataByPlaylist(mFrom, new LockerId(mPlaylist));
-            else if (mArtistId != null)
-                mCursor = store.getTrackDataByArtist(mFrom, mArtistId);
+            mCursor = mList.getCursor();
         } catch ( Exception e ) {
             e.printStackTrace();
         }
@@ -634,4 +546,237 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             }
         }
     }
+    
+    private TrackList getTrackList(Bundle b)
+    {
+        Id id = IdParcel.idParcelToId(b.getParcelable("album"));
+        if (id != null) return new AlbumList(id);
+            
+        id = IdParcel.idParcelToId(b.getParcelable("artist"));
+        if (id != null) return new ArtistList(id);
+        
+        String playlistId   = b.getString("playlist");
+        String playlistName = b.getString("playlist_name");
+        return new PlaylistList(new LockerId(playlistId), playlistName);
+    }
+    
+    private TrackList getTrackList(Intent i)
+    {
+        Id id = IdParcel.idParcelToId(i.getParcelableExtra("album"));
+        if (id != null) return new AlbumList(id);
+        
+        id = IdParcel.idParcelToId(i.getParcelableExtra("artist"));
+        if (id != null) return new ArtistList(id);
+        
+        String playlistId   = i.getStringExtra("playlist");
+        String playlistName = i.getStringExtra("playlist_name");
+        return new PlaylistList(new LockerId(playlistId), playlistName);
+    }
+    
+    
+    //This is a really bad name.  Basically our TrackBrowser shows lists of tracks based on some filter.
+    //The current filters are artist, album, and playlist.  These classes allow us to treat polymophically
+    abstract class TrackList 
+    {
+        protected Id       mId;
+        protected LockerId mLockerId;
+        protected LocalId  mLocalId;
+        protected String   mName;
+        protected String[] mFrom;
+        
+        public String[] getFrom()
+        {
+            return mFrom;
+        }
+        
+        public String getName()
+        {
+            if (mName == null)
+                makeName();
+            return mName;
+        }
+        public LockerId getLockerId()
+        {
+            if (mLockerId == null)
+                makeLockerId();
+            return mLockerId;
+        }
+        public LocalId  getLocalId()
+        {
+            if (mLocalId == null)
+                makeLocalId();
+            return mLocalId; 
+        }   
+        public IdParcel getParcelableOutput()
+        {
+            return null;
+        }
+        public abstract RefreshTask getTask();
+        public abstract String key();
+        public abstract Cursor getCursor() throws IOException, LockerException;
+        
+        protected void makeLocalId()
+        {
+            try {
+                mLocalId = getMergeHelper().getLocalId(mId);
+            } catch (Exception e) {}
+        }
+
+        protected void makeLockerId()
+        {
+            try {
+                mLockerId = getMergeHelper().getLockerId(mId);
+            } catch (Exception e) {}
+        }
+
+        protected void makeName()
+        {
+            try {
+                mName = getMergeHelper().get(mId).getName();
+            } catch (Exception e) {
+                mName = "Unknown";
+            }
+        }
+        
+        protected LockerDb getDb()
+        {
+            return Music.getDb(getBaseContext());
+        }
+        
+        protected MediaStore getStore()
+        {
+            return new MediaStore(getDb(), getContentResolver());
+        }
+        abstract protected MergeHelper getMergeHelper();
+    }
+    
+    
+    
+    class PlaylistList extends TrackList
+    {
+        PlaylistList(LockerId id, String name)
+        {
+            mLockerId = id;
+            mName = name;
+            mFrom = new String[] {
+                    DbKeys.ID,
+                    DbKeys.TITLE,
+                    DbKeys.ARTIST_NAME,
+                    MediaStore.KEY_LOCAL
+              };
+        }
+        
+        @Override protected void makeLocalId() {}
+        @Override protected void makeLockerId() {}
+        @Override protected void makeName() {}
+
+        @Override
+        public String key()
+        {
+            return "playlist";
+        }
+
+        @Override
+        public RefreshTask getTask()
+        {
+            return new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), mLockerId);
+        }
+
+        @Override
+        public Cursor getCursor() throws SQLiteException, IOException, LockerException
+        {
+            return getStore().getTrackDataByPlaylist(mFrom, mLockerId);
+        }
+
+        @Override
+        protected MergeHelper getMergeHelper()
+        {
+            return null;
+        }
+    }
+    
+    class ArtistList extends TrackList
+    {
+        ArtistList(Id id)
+        {
+            mId = id;
+            mFrom = new String[] {
+                    DbKeys.ID,
+                    DbKeys.TITLE,
+                    DbKeys.ALBUM_NAME,
+                    MediaStore.KEY_LOCAL
+              };
+        }
+        
+        @Override public String key()
+        {
+            return "artist";
+        }
+        
+        public IdParcel getParcelableOutput()
+        {
+            return new IdParcel(mId);
+        }
+
+        @Override
+        public RefreshTask getTask()
+        {
+            return new FetchArtistTracksTask(Music.getDb(getBaseContext()), getLockerId());
+        }
+
+        @Override
+        public Cursor getCursor() throws IOException, LockerException
+        {
+            return getStore().getTrackDataByArtist(mFrom, mId);
+        }
+
+        @Override
+        protected MergeHelper getMergeHelper()
+        {
+            return new ArtistGetter(getDb(), getContentResolver());
+        }
+    }
+    
+    class AlbumList extends TrackList
+    {
+        AlbumList(Id id)
+        {
+            mId = id;
+            mFrom = new String[] {
+                    DbKeys.ID,
+                    DbKeys.TITLE,
+                    DbKeys.ARTIST_NAME,
+                    MediaStore.KEY_LOCAL
+              };
+        }
+
+        @Override public String key()
+        {
+            return "album";
+        }
+        
+        public IdParcel getParcelableOutput()
+        {
+            return new IdParcel(mId);
+        }
+
+        @Override
+        public RefreshTask getTask()
+        {
+            return new FetchAlbumTracksTask(Music.getDb(getBaseContext()), getLockerId());
+        }
+
+        @Override
+        public Cursor getCursor() throws SQLiteException, IOException, LockerException
+        {
+            return getStore().getTrackDataByAlbum(mFrom, mId);
+        }
+
+        @Override
+        protected MergeHelper getMergeHelper()
+        {
+            return new AlbumGetter(getDb(), getContentResolver());
+        }
+    }
+    
 }

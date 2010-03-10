@@ -169,12 +169,12 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
                 String val = cursor.getString(columnIndex);
                 view.setText(val);
             } else if (columnIndex == 2) {
-                boolean unknown = false;
-		int num = cursor.getInt(columnIndex);
-                String text = Music.makeAlbumsLabel(getBaseContext(), num, 0, unknown);
-                if (num <= 0)
-                    text = "";
-                ((TextView)v.findViewById(R.id.line2)).setText(text);
+                //boolean unknown = false;
+                //int num = cursor.getInt(columnIndex);
+                //String text = Music.makeAlbumsLabel(getBaseContext(), num, 0, unknown);
+                //if (num <= 0)
+                //    text = "";
+                ((TextView)v.findViewById(R.id.line2)).setText("");
             } else if (columnIndex == 0) {
                 ImageView view = (ImageView)v.findViewById(R.id.icon);
                 view.setBackgroundDrawable(mDefaultArtistIcon);
