@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.LockerData;
@@ -39,7 +40,8 @@ public class AlbumGetter extends MergeHelper
     @Override
     public LockerData getLocal(String name)
     {
-        Cursor c = mCr.query(MediaStore.sAlbumsUri, sLocal, android.provider.BaseColumns._ID + "=\"" + name + "\"", null, null);
+        String[] args = new String[] {name};
+        Cursor c = mCr.query(MediaStore.sAlbumsUri, sLocal, android.provider.MediaStore.Audio.Media.ALBUM + "=?", args, null);
         return createAlbumFromCursor(c, true);
     }
     
@@ -53,7 +55,7 @@ public class AlbumGetter extends MergeHelper
     @Override
     public LockerData getRemote(String name) throws IOException, LockerException
     {
-        Cursor c = mDb.getAlbumData(sRemote, DbKeys.ALBUM_NAME + "=\"" + name + "\"");
+        Cursor c = mDb.getAlbumData(sRemote, DbKeys.ALBUM_NAME + "=" + DatabaseUtils.sqlEscapeString(name));
         return createAlbumFromCursor(c, false);
     }
 

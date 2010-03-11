@@ -731,6 +731,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Cursor getCursor() throws IOException, LockerException
         {
+            Log.w("Mp3Tunes", "Getting tracks for artist");
             return getStore().getTrackDataByArtist(mFrom, mId);
         }
 
