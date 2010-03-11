@@ -281,7 +281,8 @@ public class MediaStore
         Cursor store  = null;
         if (localId != null) {
             Log.w("Mp3Tunes", "Have Local data");
-            store = mCr.query(storeUri, projection, nameKey + "=\"" + name + "\"", null, 
+            String[] args = new String[] {name};
+            store = mCr.query(storeUri, projection, nameKey + "=?", args, 
                               "lower(" + lockerDbToMediaStoreKey(order) + ")");
         }
         if (lockerId != null) {
