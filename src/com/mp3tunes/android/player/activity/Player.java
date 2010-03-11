@@ -46,6 +46,7 @@ public class Player extends Activity
     private ImageButton mNextButton;
     private ImageButton mStopButton;
     private RemoteImageView mAlbum;
+    private Bitmap   mImage;
     private TextView mCurrentTime;
     private TextView mTotalTime;
     private TextView mArtistName;
@@ -97,7 +98,13 @@ public class Player extends Activity
         
         mAlbumArtWorker  = new Worker("album art worker");
         mAlbumArtHandler = new RemoteImageHandler(mAlbumArtWorker.getLooper(), mHandler);
-        
+        if (icicle != null) {
+            mImage = (Bitmap)icicle.getParcelable("artwork");
+            if (mImage != null) {
+                mAlbum.setArtwork(mImage);
+                mAlbum.invalidate();
+            }
+        }
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(GuiNotifier.META_CHANGED);
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_FINISHED);
@@ -127,6 +134,8 @@ public class Player extends Activity
     @Override
     public void onSaveInstanceState(Bundle outState) {
         outState.putBoolean("configchange", getChangingConfigurations() != 0);
+        if (mImage != null)
+            outState.putParcelable("artwork", mImage);
         super.onSaveInstanceState(outState);
     }
 
@@ -282,6 +291,7 @@ public class Player extends Activity
             try {
                 String action = intent.getAction();
                 if (action.equals(GuiNotifier.META_CHANGED)) {
+                    mImage = null;
                     updateTrackInfo();
                 } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
                     dismissDialog(BUFFERING_DIALOG);
@@ -312,7 +322,7 @@ public class Player extends Activity
             //= Music.getArtworkQuick( Player.this, album_id, mAlbum.getWidth(), mAlbum.getHeight() );
             //mAlbum.setArtwork( bit );
             //mAlbum.invalidate();
-            if ( bit == null )
+            if (mImage == null)
             { 
                 mArtTask = new LoadAlbumArtTask();
                 mArtTask.execute((Void) null);
@@ -404,8 +414,10 @@ public class Player extends Activity
                     queueNextRefresh(next);
                     break;
                 case RemoteImageHandler.REMOTE_IMAGE_DECODED:
-                    mAlbum.setArtwork((Bitmap) msg.obj);
-                    mAlbum.invalidate();
+                        mImage = (Bitmap) msg.obj;
+                        mAlbum.setArtwork(mImage);
+                        mAlbum.invalidate();
+
                     break;
     
                 default:

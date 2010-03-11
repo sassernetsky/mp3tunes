@@ -221,10 +221,10 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         // if we didn't send the adapter off to another activity, we should
         // close the cursor
 //        if (!mAdapterSent) {
-            Cursor c = mAdapter.getCursor();
-            if (c != null) {
-                c.close();
-            }
+//            Cursor c = mAdapter.getCursor();
+//            if (c != null) {
+//                c.close();
+//            }
 //        }
         Music.unconnectFromDb(this);
         super.onDestroy();
@@ -524,7 +524,11 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         try {
             Log.w("Mp3Tunes", "Updating cursor");
-            mCursor = mList.getCursor();
+            Cursor c = mList.getCursor();
+            startManagingCursor(c);
+            stopManagingCursor(mCursor);
+            mCursor = c;
+            
         } catch ( Exception e ) {
             e.printStackTrace();
         }
