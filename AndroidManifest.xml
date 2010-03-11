@@ -22,7 +22,7 @@
 			</intent-filter>
             <meta-data
                 android:name="android.app.default_searchable"
-                android:value=".activity.QueryBrowser"
+                android:value=".activity.QueryBrowser2"
              />
 		</activity>
 		<activity android:name=".activity.Player" android:label="MP3tunes Locker Player" 
@@ -86,7 +86,7 @@
                 <data android:mimeType="vnd.mp3tunes.android.dir/radio"/>
             </intent-filter>
         </activity>
-        <activity android:name=".activity.QueryBrowser"
+        <activity android:name=".activity.QueryBrowser2"
                 android:theme="@android:style/Theme.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.SEARCH" />

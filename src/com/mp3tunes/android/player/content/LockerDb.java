@@ -218,21 +218,10 @@ public class LockerDb
         .append(mId.asString()).append("' ").append("ORDER BY ")
         .append(DbKeys.PLAYLIST_INDEX);
 
+        Cursor c = mDb.rawQuery(query.toString(), null);
+        
         
         return mDb.rawQuery(query.toString(), null);
-//        try {
-//            if (!Playlist.isDynamicPlaylist(mId.asString())) {
-//                long count = albumTrackCount.simpleQueryForLong();
-//            
-//                Cursor c = mDb.rawQuery(query.toString(), null);
-//                if (c.getCount() == count)
-//                    return c;
-//                else
-//                    c.close();
-//            }
-//        } catch (SQLiteDoneException e) {}
-//        refreshTracksforPlaylist(mId.asString());
-//        return mDb.rawQuery(query.toString(), null);
     }
     
     
@@ -340,18 +329,18 @@ public class LockerDb
         return buildAlbum(c);
     }
 
-    public DbSearchResult search(DbSearchQuery query)
+    public DbSearchResult search(DbSearchQuery query, String[] track, String[] artist)
     {
         try {
             // Perform the single http search call
             refreshSearch(query.mQuery);
             DbSearchResult res = new DbSearchResult();
             if (query.mTracks)
-                res.mTracks = querySearch(query.mQuery, Music.Meta.TRACK);
-            if (query.mAlbums)
-                res.mAlbums = querySearch(query.mQuery, Music.Meta.ALBUM);
+                res.mTracks = querySearch(query.mQuery, Music.Meta.TRACK, track);
+            //if (query.mAlbums)
+            //    res.mAlbums = querySearch(query.mQuery, Music.Meta.ALBUM);
             if (query.mArtists)
-                res.mArtists = querySearch(query.mQuery, Music.Meta.ARTIST);
+                res.mArtists = querySearch(query.mQuery, Music.Meta.ARTIST, artist);
 
             System.out.println("Got artists: " + res.mArtists.getCount());
             System.out.println("Got tracks: " + res.mTracks.getCount());
@@ -716,12 +705,14 @@ public class LockerDb
         
         int index = 0 + (progress.mCount * progress.mCurrentSet);
         ContentValues cv = new ContentValues();
-        for (Track t : tracks) { 
-            cv.put(DbKeys.PLAYLIST_ID, playlist_id);
-            cv.put(DbKeys.TRACK_ID, t.getId().asInt());
-            cv.put(DbKeys.PLAYLIST_INDEX, index);
-            mDb.insert(DbTables.PLAYLIST_TRACKS, DbKeys.UNKNOWN_STRING, cv);
-            index++;
+        for (Track t : tracks) {
+            if (!mQueries.trackInPlaylist(playlist_id, t.getId().asInt())) {
+                cv.put(DbKeys.PLAYLIST_ID, playlist_id);
+                cv.put(DbKeys.TRACK_ID, t.getId().asInt());
+                cv.put(DbKeys.PLAYLIST_INDEX, index);
+                mDb.insert(DbTables.PLAYLIST_TRACKS, DbKeys.UNKNOWN_STRING, cv);
+                index++;
+            }
         }
         return tracks.size() > 0;
     }
@@ -781,31 +772,29 @@ public class LockerDb
         System.out.println("insertion complete");
     }
 
-    private Cursor querySearch(String query, Music.Meta type)
+    private Cursor querySearch(String query, Music.Meta type, String[] columns)
     {
         String table;
-        String[] columns;
         String selection;
+        String[] selectionArgs = new String[] {"%" + query + "%"};
         switch (type) {
             case TRACK:
                 table = "track";
-                columns = Music.TRACK;
-                selection = "lower(title) LIKE lower('%" + query + "%')";
+                selection = "lower(title) LIKE lower(?)";
                 break;
             case ARTIST:
                 table = "artist";
                 columns = Music.ARTIST;
-                selection = "lower(artist_name) LIKE lower('%" + query + "%')";
+                selection = "lower(artist_name) LIKE lower(?)";
                 break;
             case ALBUM:
                 table = "album";
-                columns = Music.ALBUM;
-                selection = "lower(album_name) LIKE lower('%" + query + "%')";
+                selection = "lower(album_name) LIKE lower(?)";
                 break;
             default:
                 return null;
         }
-        return mDb.query(table, columns, selection, null, null, null, null,
+        return mDb.query(table, columns, selection, selectionArgs, null, null, null,
                 null);
     }
 
@@ -841,7 +830,7 @@ public class LockerDb
     {
         public Cursor get(String[] columns) throws SQLiteException, IOException, LockerException
         {
-            return getAlbumData(columns, null);
+            return getAlbumData(columns, null);//
         }
     };
     
@@ -922,33 +911,10 @@ public class LockerDb
         {
             Log.w("Mp3Tunes", "Starting PreCache");
             try {
+                
                 cacheData(LockerCache.CACHES.ARTIST);
                 cacheData(LockerCache.CACHES.ALBUM);
                 cacheData(LockerCache.CACHES.PLAYLIST);
-//                String cache = LockerCache.CACHES.ARTIST;
-//                if (mDb.mCache.getCacheState(cache) == LockerCache.CacheState.UNCACHED) {
-//                    mDb.mCache.beginCaching(cache, System.currentTimeMillis());
-//                    LockerCache.Progress p = mDb.mCache.getProgress(cache);
-//                    //mDb.refreshArtists(p);
-//                    mDb.refreshDispatcher(LockerCache.CACHES.ARTIST, p, this, null);
-//                    p.mCurrentSet++;
-//                    
-//                }
-//                mDb.mCache.saveCache(mDb);
-//                if (mDb.mCache.getCacheState(LockerCache.CACHES.ALBUM) == LockerCache.CacheState.UNCACHED) {
-//                    mDb.mCache.beginCaching(LockerCache.CACHES.ALBUM, System.currentTimeMillis());
-//                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.ALBUM);
-//                    mDb.refreshAlbums(p);
-//                    p.mCurrentSet++;
-//                }
-//                mDb.mCache.saveCache(mDb);
-//                if (mDb.mCache.getCacheState(LockerCache.CACHES.PLAYLIST) == LockerCache.CacheState.UNCACHED) {
-//                    mDb.mCache.beginCaching(LockerCache.CACHES.PLAYLIST, System.currentTimeMillis());
-//                    LockerCache.Progress p = mDb.mCache.getProgress(LockerCache.CACHES.PLAYLIST);
-//                    mDb.refreshPlaylists(p);
-//                    p.mCurrentSet++;
-//                }
-//                mDb.mCache.saveCache(mDb);
                 Log.w("Mp3Tunes", "PreCache done");
                 return true;
             } catch (SQLiteException e) {

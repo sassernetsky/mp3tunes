@@ -270,7 +270,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         if (parcel != null) 
             outcicle.putParcelable(mList.key(), parcel);
         else {
-            outcicle.putString(mList.key(), mList.mId.asString());
+            outcicle.putString(mList.key(), mList.mLockerId.asString());
             outcicle.putString("playlist_name", mList.getName());
         }
         outcicle.putLong("selectedtrack", mSelectedId);
