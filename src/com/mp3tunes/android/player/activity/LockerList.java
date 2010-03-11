@@ -251,6 +251,7 @@ public class LockerList extends ListActivity
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
             break;
         case R.string.search:
+            Log.w("Mp3Tunes", "Calling search");
             onSearchRequested();
             return;
         case R.string.radio:
