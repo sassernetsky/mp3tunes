@@ -476,7 +476,7 @@ public class QueryBrowser extends ListActivity implements Music.Defs
             System.out.println("Searching for " + params[0]);
             try {
                 LockerDb db = Music.getDb(getBaseContext());
-                res = db.search(db.new DbSearchQuery(params[0], true, false, true));
+                //res = db.search(db.new DbSearchQuery(params[0], true, false, true));
             } catch ( Exception e ) {
                 e.printStackTrace();
                 return false;
