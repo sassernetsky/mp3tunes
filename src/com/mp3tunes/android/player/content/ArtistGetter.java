@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.Artist;
@@ -34,7 +35,7 @@ public class ArtistGetter extends MergeHelper
 
     @Override
     public LockerData getLocal(LocalId id)
-    {
+    {        
         Cursor c = mCr.query(MediaStore.sArtistsUri, sLocal, android.provider.BaseColumns._ID + "=" + id.asInt(), null, null);
         return createArtistFromCursor(c, true);
     }
@@ -42,7 +43,8 @@ public class ArtistGetter extends MergeHelper
     @Override
     public LockerData getLocal(String name)
     {
-        Cursor c = mCr.query(MediaStore.sArtistsUri, sLocal, android.provider.BaseColumns._ID + "=\"" + name + "\"", null, null);
+        String[] args = new String[] {name};
+        Cursor c = mCr.query(MediaStore.sArtistsUri, sLocal, android.provider.MediaStore.Audio.Media.ARTIST + "=?", args, null);
         return createArtistFromCursor(c, true);
     }
     
@@ -56,7 +58,7 @@ public class ArtistGetter extends MergeHelper
     @Override
     public LockerData getRemote(String name) throws IOException, LockerException
     {
-        Cursor c = mDb.getArtistData(sRemote, DbKeys.ARTIST_NAME + "=\"" + name + "\"");
+        Cursor c = mDb.getArtistData(sRemote, DbKeys.ARTIST_NAME + "=" + DatabaseUtils.sqlEscapeString(name));
         return createArtistFromCursor(c, false);
     }
 
