@@ -42,7 +42,8 @@ public class TrackGetter extends MergeHelper
     @Override
     public LockerData getLocal(String name)
     {
-        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.BaseColumns._ID + "=\"" + name + "\"", null, null);
+        String[] args = new String[] {name};
+        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.MediaStore.Audio.Media.TITLE, args, null);
         return createTrackFromCursor(c, true);
     }
     
