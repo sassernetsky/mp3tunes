@@ -38,6 +38,8 @@ public class Queries
     private SQLiteStatement    mCacheExists;
     private SQLiteStatement    mInsertCache;
     private SQLiteStatement    mUpdateCache;
+    
+    private SQLiteStatement    mTrackInPlaylist;
 
     Queries(LockerDb db)
     {
@@ -67,6 +69,21 @@ public class Queries
     synchronized public boolean cacheExists(String id)
     {
         return runExistsQuery(mDb.mDb, mCacheExists, DbTables.CACHE, id);
+    }
+    
+    synchronized public boolean trackInPlaylist(String playlist, int track)
+    {
+        if (mTrackInPlaylist == null)
+            mTrackInPlaylist = makeTrackInPlaylistQuery(mDb.mDb);
+        
+        mTrackInPlaylist.bindString(1, playlist);
+        mTrackInPlaylist.bindLong(  2, track);
+        try {
+            mTrackInPlaylist.simpleQueryForString();
+            return true;
+        } catch (SQLiteDoneException e) {
+            return false;
+        }
     }
     
     synchronized public boolean updateArtist(Artist a)
@@ -268,6 +285,19 @@ public class Queries
             return false;
         }
     }
+    
+    synchronized static private SQLiteStatement makeTrackInPlaylistQuery(SQLiteDatabase db)
+    {
+        String query = 
+            "SELECT " + DbKeys.PLAYLIST_INDEX + 
+            " FROM "  + DbTables.PLAYLIST_TRACKS + 
+            " WHERE " + 
+                DbKeys.PLAYLIST_ID + "=? AND " + 
+                DbKeys.TRACK_ID    + "=?";
+
+        return db.compileStatement(query);
+    }
+    
     
     synchronized static private SQLiteStatement makeExistsQuery(SQLiteDatabase db, String table)
     {
