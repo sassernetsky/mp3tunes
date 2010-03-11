@@ -973,13 +973,9 @@ public class LockerDb
             mCache.saveCache(this);
             Log.w("Mp3Tunes", "Refresh Succeeded");
             return true;
-        } catch (SQLiteException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (LockerException e) {
-            e.printStackTrace();
-        }
+        } 
         Log.w("Mp3Tunes", "Refresh Failed");
         return false;
     }
@@ -1013,8 +1009,13 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshArtists");
-            return mDb.refreshTask(LockerCache.CACHES.ARTIST, this, null);
+            try {
+                Log.w("Mp3Tunes", "Starting RefreshArtists");
+                return mDb.refreshTask(LockerCache.CACHES.ARTIST, this, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+                }
+            return false;
         }
     }
 
@@ -1028,8 +1029,13 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshAlbums");
-            return mDb.refreshTask(LockerCache.CACHES.ALBUM, this, null);
+            try {
+                Log.w("Mp3Tunes", "Starting RefreshAlbums");
+                return mDb.refreshTask(LockerCache.CACHES.ALBUM, this, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
         }
     }
     
@@ -1043,8 +1049,13 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshAlbums");
-            return mDb.refreshTask(LockerCache.CACHES.PLAYLIST, this, null);
+            try {
+                Log.w("Mp3Tunes", "Starting RefreshAlbums");
+                return mDb.refreshTask(LockerCache.CACHES.PLAYLIST, this, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
         }
     }
     
@@ -1058,8 +1069,13 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshTracks");
-            return mDb.refreshTask(LockerCache.CACHES.TRACK, this, null);
+            try {
+                Log.w("Mp3Tunes", "Starting RefreshTracks");
+                return mDb.refreshTask(LockerCache.CACHES.TRACK, this, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
         }
     }
     
@@ -1076,10 +1092,15 @@ public class LockerDb
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            Log.w("Mp3Tunes", "Starting RefreshTracks for playlist");
-            if (LockerId.class.isInstance(mId))
-                return mDb.refreshTask(mId.asString(), this, mId.asString());
+            try {
+                Log.w("Mp3Tunes", "Starting RefreshTracks for playlist");
+                if (LockerId.class.isInstance(mId))
+                    return mDb.refreshTask(mId.asString(), this, mId.asString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return false;
+            
         }
     }
     
