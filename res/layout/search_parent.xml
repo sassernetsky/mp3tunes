@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:orientation="horizontal"
+  android:background="@drawable/list_entry_fullwidth">
+<LinearLayout android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:orientation="vertical"
+		android:layout_gravity="center_vertical" android:layout_marginLeft="10px"
+		android:paddingLeft="16dip" android:layout_weight="1">	
+			<TextView android:id="@+id/line1"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_width="wrap_content"
+        android:paddingLeft="9dip"
+        android:layout_height="wrap_content"
+        android:layout_alignWithParentIfMissing="true"
+        android:layout_toRightOf="@id/icon"
+        android:layout_toLeftOf="@id/duration"
+        android:ellipsize="marquee"
+        android:singleLine="true" />
+
+    <!-- The height is set to half the height of the parent, which is 64 dip -->
+    <TextView android:id="@+id/line2" android:visibility="visible"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:paddingLeft="9dip"
+        android:scrollHorizontally="true"
+        android:layout_below="@id/line1"
+        android:layout_alignWithParentIfMissing="true"
+        android:layout_toRightOf="@id/icon"
+        android:layout_toLeftOf="@id/duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+	</LinearLayout>
+</LinearLayout>
