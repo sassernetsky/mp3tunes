@@ -209,6 +209,7 @@ public class QueryBrowser2 extends ExpandableListActivity
             if (type == ARTIST) {
                 view.setImageDrawable(mArtistIcon);
                 view.setPadding(0, 0, 1, 0);
+                second.setText("");
             } else if (type == TRACK) {
                 view.setImageDrawable(mTrackIcon);
                 view.setPadding(0, 0, 1, 0);
