@@ -46,7 +46,14 @@ public class BaseMp3TunesListActivity extends ListActivity
     protected Cursor mCursor;
     protected boolean mLoadingCursor;
     
-    
+    @Override
+    public void onStop()
+    {
+        mHandler.removeMessages(REFRESH);
+        mHandler.removeCallbacks(mUpdateList);
+        
+        super.onStop();
+    }
     
     public void init(Cursor cursor)
     {
