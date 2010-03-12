@@ -23,6 +23,7 @@ import java.util.Map;
 
 import com.binaryelysium.mp3tunes.api.Playlist;
 import com.mp3tunes.android.player.MP3tunesApplication;
+import com.mp3tunes.android.player.content.Queries.MakeQueryException;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -132,7 +133,11 @@ public class LockerCache
     {
         for (Map.Entry<String, CacheItem> entry : mMap.entrySet()) {
             CacheItem item = entry.getValue();
-            db.updateCache(entry.getKey(), item.mUpdate, item.mState, item.mProgress);
+            try {
+                db.updateCache(entry.getKey(), item.mUpdate, item.mState, item.mProgress);
+            } catch (MakeQueryException e) {
+                e.printStackTrace();
+            }
         }
     }
   
