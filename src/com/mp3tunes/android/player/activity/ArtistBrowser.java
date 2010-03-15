@@ -58,8 +58,10 @@ import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.LockerDb.RefreshArtistsTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 
 public class ArtistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
@@ -386,7 +388,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     {
         try {
             MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
-            mCursor = ms.getArtistData(mFrom);
+            mCursor = new ReindexingCursorWrapper(ms.getArtistData(mFrom), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
         } catch ( Exception e ) {
             e.printStackTrace();
         }
