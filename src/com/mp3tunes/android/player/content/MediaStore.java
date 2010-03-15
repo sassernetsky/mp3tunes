@@ -183,7 +183,7 @@ public class MediaStore
         } else {
             output = new MatrixCursor(columns);
             CursorJoiner joiner = new CursorJoiner(locker, joinOn, store, lockerDbToMediaStoreColumns(joinOn));
-  
+            
             int len = columns.length - 1;
             for (CursorJoiner.Result joinerResult : joiner) {
                 MatrixCursor.RowBuilder builder = output.newRow();
@@ -276,17 +276,14 @@ public class MediaStore
         String   name     = helper.getName(id);
         
         
-        Log.w("Mp3Tunes", "Name: " + name);
         Cursor locker = null;
         Cursor store  = null;
         if (localId != null) {
-            Log.w("Mp3Tunes", "Have Local data");
             String[] args = new String[] {name};
             store = mCr.query(storeUri, projection, nameKey + "=?", args, 
                               "lower(" + lockerDbToMediaStoreKey(order) + ")");
         }
         if (lockerId != null) {
-            Log.w("Mp3Tunes", "Have Remote data");
             locker = call.get(cols, lockerId);
         }
         return merge(locker, store, columns, joinBy);
