@@ -50,8 +50,10 @@ import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumsTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 
 public class AlbumBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
@@ -386,9 +388,9 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
             Log.w("Mp3Tunes", "Updating cursor");
             MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
             if (mArtistId == null) {
-                mCursor = ms.getAlbumData(mFrom);
+                mCursor = new ReindexingCursorWrapper(ms.getAlbumData(mFrom), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
             } else {
-                mCursor = ms.getAlbumDataByArtist(mFrom, mArtistId);
+                mCursor = new ReindexingCursorWrapper(ms.getAlbumDataByArtist(mFrom, mArtistId), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
             }
         } catch ( Exception e ) {
             e.printStackTrace();

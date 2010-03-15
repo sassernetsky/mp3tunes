@@ -78,7 +78,9 @@ import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
+import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 import com.mp3tunes.android.player.util.Timer;
 
 public class QueueBrowser extends BaseMp3TunesListActivity implements
@@ -732,7 +734,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         public Cursor getCursor() throws IOException, LockerException
         {
             Log.w("Mp3Tunes", "Getting tracks for artist");
-            return getStore().getTrackDataByArtist(mFrom, mId);
+            return new ReindexingCursorWrapper(getStore().getTrackDataByArtist(mFrom, mId), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
         }
 
         @Override
@@ -774,7 +776,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Cursor getCursor() throws SQLiteException, IOException, LockerException
         {
-            return getStore().getTrackDataByAlbum(mFrom, mId);
+            return new ReindexingCursorWrapper(getStore().getTrackDataByAlbum(mFrom, mId), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
         }
 
         @Override
