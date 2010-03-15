@@ -302,7 +302,7 @@ public class MediaPlayerTrack
         synchronized public void onBufferingUpdate(MediaPlayer mp, int percent)
         {
             try {
-                if ((percent % 25) == 0) Logger.log("Buffering: " + percent);
+                if ((percent % 10) == 0) Logger.log(mTrack.getTitle() + ": Buffering: " + percent);
                 checkForEndlessBuffering(percent);
                 mPercent = percent;
                 tryRunBufferedCallback(percent);
@@ -411,6 +411,7 @@ public class MediaPlayerTrack
     
     synchronized private boolean handleUnknownErrors(int extra)
     {
+        if (!mPlayNow) return false; 
         mErroredOut = PlaybackErrorCodes.isFatalError(extra);
         
         //Error 26 is an authentication error it most likely means that the session

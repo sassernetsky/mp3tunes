@@ -5,6 +5,7 @@ import android.content.Context;
 import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 
@@ -84,10 +85,9 @@ public class LazyTrack implements Track
     
     private void createTrack()
     {
-        LockerDb db = new LockerDb(mContext);
+        LockerDb db = Music.getDb(mContext);
         MediaStore store = new MediaStore(db, mContext.getContentResolver());
         mTrack = (ConcreteTrack)store.getTrack(mTrackId);
-        db.close();
     }
 
 }
