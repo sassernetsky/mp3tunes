@@ -223,7 +223,7 @@ public class PlayerHandler
     class TrackCacher
     {
         int mPreCache  = 1;
-        int mPostCache = 1;
+        int mPostCache = 0;
         
         PlaybackList mList;
         

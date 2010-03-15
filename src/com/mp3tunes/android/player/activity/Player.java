@@ -314,14 +314,9 @@ public class Player extends Activity
             if (Music.sService== null)
                 return;
             Track track = Music.sService.getTrack();
-            int album_id = track.getAlbumId();
             mArtistName.setText(track.getArtistName());
             mTrackName.setText(track.getTitle());
 
-            Bitmap bit = null;
-            //= Music.getArtworkQuick( Player.this, album_id, mAlbum.getWidth(), mAlbum.getHeight() );
-            //mAlbum.setArtwork( bit );
-            //mAlbum.invalidate();
             if (mImage == null)
             { 
                 mArtTask = new LoadAlbumArtTask();
@@ -370,28 +365,20 @@ public class Player extends Activity
                 long pos  = Music.sService.getPosition();
                 int buffpercent = Music.sService.getBufferPercent();
                 long remaining = 1000 - (pos % 1000);
-                boolean showBuffering;
                 
                 if (pos > 0 && mDuration > 0 && pos <= mDuration) {
                     mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
                     mTotalTime.setText(Music.makeTimeString(this, mDuration / 1000));    
                     mProgress.setProgress((int)(1000 * pos / mDuration));
                     mProgress.setSecondaryProgress(buffpercent * 10);
-                    showBuffering = false;
+                    dismissDialog(BUFFERING_DIALOG);
                 } else {
                     mCurrentTime.setText("--:--");
                     mTotalTime.setText("--:--");
                     mProgress.setProgress(0);
-                    if(pos < 1) showBuffering = true;
-                    else showBuffering = false;
+                    if(pos < 1 && !mShowingOptions) showDialog(BUFFERING_DIALOG);
+                    else dismissDialog(BUFFERING_DIALOG);
                 }
-                
-                if (showBuffering && !mShowingOptions)
-                    showDialog(BUFFERING_DIALOG);
-                else
-                    dismissDialog(BUFFERING_DIALOG);
-                
-                
                 // return the number of milliseconds until the next full second, so
                 // the counter can be updated at just the right time
                 return remaining;
