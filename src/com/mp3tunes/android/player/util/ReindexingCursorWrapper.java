@@ -192,20 +192,32 @@ public class ReindexingCursorWrapper extends CursorWrapper
     {
         mPos++;
         if (mPos > mIndex.length) return false;
+        try {
         return super.moveToPosition(mIndex[mPos]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
     }
 
     public boolean moveToPosition(int position)
     {
         mPos = position;
-        return super.moveToPosition(mIndex[mPos]);
+        try {
+            return super.moveToPosition(mIndex[mPos]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }    
     }
 
     public boolean moveToPrevious()
     {
         mPos--;
         if (mPos < 0) return false;
-        return super.moveToPosition(mIndex[mPos]);
+        try {
+            return super.moveToPosition(mIndex[mPos]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }    
     }
 
     public void registerContentObserver(ContentObserver observer)
