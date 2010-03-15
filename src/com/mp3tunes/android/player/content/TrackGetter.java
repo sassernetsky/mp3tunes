@@ -35,7 +35,8 @@ public class TrackGetter extends MergeHelper
     @Override
     public LockerData getLocal(LocalId id)
     {
-        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.BaseColumns._ID + "=" + id.asInt(), null, null);
+        String[] args = new String[] {id.asString()};
+        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.BaseColumns._ID + "=?", args, null);
         return createTrackFromCursor(c, true);
     }
 
@@ -43,7 +44,7 @@ public class TrackGetter extends MergeHelper
     public LockerData getLocal(String name)
     {
         String[] args = new String[] {name};
-        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.MediaStore.Audio.Media.TITLE, args, null);
+        Cursor c = mCr.query(MediaStore.sTracksUri, sLocal, android.provider.MediaStore.Audio.Media.TITLE + "=?", args, null);
         return createTrackFromCursor(c, true);
     }
     
