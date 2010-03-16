@@ -189,12 +189,15 @@ public class MediaStore
                 MatrixCursor.RowBuilder builder = output.newRow();
                 switch (joinerResult) {
                     case LEFT:
+                        //Log.w("Mp3Tunes", "Locker: \"" + locker.getString(1) + "\"");
                         buildRow(builder, locker, len, 0);
                         break;
                     case RIGHT:
+                        //Log.w("Mp3Tunes", "store: \"" + store.getString(1) + "\"");
                         buildRow(builder, store, len, 1);
                         break;
                     case BOTH: 
+                        //Log.w("Mp3Tunes", "Both: \"" + store.getString(1) + "\"");
                         buildRow(builder, store, len, 1);
                         break;
                 }
