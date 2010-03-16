@@ -133,20 +133,20 @@ public class LockerDb
     public Cursor getArtistData(String[] from, String where)throws IOException, LockerException
     {
         return mDb.query(DbTables.ARTIST, from, where, null, null, null,
-                         "lower(" + DbKeys.ARTIST_NAME + ")");
+                         DbKeys.ARTIST_NAME);
     }
     
     public Cursor getAlbumData(String[] from, String where) throws SQLiteException, IOException, LockerException
     {
         return mDb.query(DbTables.ALBUM, from, where, null, null, null,
-                         "lower(" + DbKeys.ALBUM_NAME + ")");
+                         DbKeys.ALBUM_NAME);
     }
     
     public Cursor getAlbumDataByArtist(String[] from, LockerId id) throws SQLiteException, IOException, LockerException, MakeQueryException
     {
             refreshAlbumsForArtist(id.asInt());
             return mDb.query(DbTables.ALBUM, from, DbKeys.ARTIST_ID + "=" + id.asString(), null, null, null,
-                    "lower(" + DbKeys.ALBUM_NAME + ")");
+                    DbKeys.ALBUM_NAME);
     }
     
     public Cursor getTrackDataByAlbum(String[] from, LockerId id) throws SQLiteException, IOException, LockerException
@@ -169,7 +169,7 @@ public class LockerDb
 //        } catch (SQLiteDoneException e) {}
 //        refreshTracksforAlbum(idNum);
         return mDb.query(DbTables.TRACK, from, DbKeys.ALBUM_ID + "=" + id.asString(), 
-                null, null, null, "lower(" + DbKeys.TITLE + ")");
+                null, null, null, DbKeys.TITLE);
     }
     
     public Cursor getTrackDataByArtist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
@@ -191,7 +191,7 @@ public class LockerDb
 //        } catch (SQLiteDoneException e) {}
 //        refreshTracksforArtist(idNum);
         return mDb.query(DbTables.TRACK, from, DbKeys.ARTIST_ID + "=" + mId.asString(), 
-                null, null, null, "lower(" + DbKeys.TITLE + ")");
+                null, null, null, DbKeys.TITLE);
     }
     
     public Cursor getTrackDataByPlaylist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
