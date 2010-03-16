@@ -265,7 +265,7 @@ public class MediaStore
 
         Cursor locker = call.get(cols);
         Cursor store = mCr.query(storeUri, projection, null, null, 
-                              "lower(" + lockerDbToMediaStoreKey(order) + ")");
+                              lockerDbToMediaStoreKey(order));
         return merge(locker, store, columns, joinBy);
     }
     
@@ -284,7 +284,7 @@ public class MediaStore
         if (localId != null) {
             String[] args = new String[] {name};
             store = mCr.query(storeUri, projection, nameKey + "=?", args, 
-                              "lower(" + lockerDbToMediaStoreKey(order) + ")");
+                              lockerDbToMediaStoreKey(order));
         }
         if (lockerId != null) {
             locker = call.get(cols, lockerId);
