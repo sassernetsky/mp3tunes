@@ -66,6 +66,7 @@ public class LazyTrack implements Track
 
     public Id getId()
     {   
+        if (mTrack != null) return mTrack.getId();
         return mTrackId;
     }
 

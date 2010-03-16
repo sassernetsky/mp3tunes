@@ -17,7 +17,9 @@ public class TrackGetter extends MergeHelper
     private static String[] sLocal = new String[] {
         android.provider.BaseColumns._ID,
         android.provider.MediaStore.Audio.Media.TITLE,
-        android.provider.MediaStore.Audio.Media.DATA
+        android.provider.MediaStore.Audio.Media.DATA,
+        android.provider.MediaStore.Audio.Media.ARTIST,
+        android.provider.MediaStore.Audio.Media.ALBUM
     };
     
     private static String[] sRemote = new String[] {
@@ -67,7 +69,7 @@ public class TrackGetter extends MergeHelper
     private Track createTrackFromCursor(Cursor c, boolean local)
     {
         if (c.moveToFirst()) {
-            Track a = new ConcreteTrack(createId(c.getInt(0), local), c.getString(1), c.getString(2));
+            Track a = new ConcreteTrack(createId(c.getInt(0), local), c.getString(2), c.getString(1), 0, c.getString(3), 0, c.getString(3));
             c.close();
             return a;
         }
