@@ -174,6 +174,9 @@ public class MediaPlayerTrack
     synchronized private boolean prepare(boolean async)
     {
         Logger.log("preparing track: " + mTrack.getTitle());
+        Logger.log("Artist:          " + mTrack.getArtistName());
+        Logger.log("Album:           " + mTrack.getArtistName());
+        
         try {
             String url = mTrack.getPlayUrl(Bitrate.getBitrate(mService, mContext));
             if (LockerId.class.isInstance(mTrack.getId())) {
