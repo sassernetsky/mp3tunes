@@ -22,12 +22,13 @@ import android.media.MediaPlayer.OnPreparedListener;
 
 public class MediaPlayerTrack
 {
+    private final Track       mTrack;
+    
     private MediaPlayer mMp;
-    private Track       mTrack;
     private boolean     mIsInitialized;
     private boolean     mErroredOut;
     private boolean     mBuffered;
-    private boolean     mPlayNow;
+    private boolean     mPreCaching;
     private boolean     mPreparing;
     private int         mPercent;
     private Service     mService;
@@ -57,7 +58,7 @@ public class MediaPlayerTrack
         mContext       = context;
         mErrorCode     = 0;
         mErrorValue    = 0;
-        mPlayNow       = false;
+        mPreCaching    = true;
         
         mOnBufferingUpdateListener = new MyOnBufferingUpdateListener();
         mOnCompletionListener      = new MyOnCompletionListener(this);
@@ -66,14 +67,14 @@ public class MediaPlayerTrack
         mOnInfoListener            = new MyOnInfoListener();
     }
     
-    synchronized public void setPlayNow(boolean b)
-    {
-        mPlayNow = b;
-    }
-    
-    synchronized public Track getTrack()
+    public Track getTrack()
     {
         return mTrack;
+    }
+    
+    synchronized public void setPreCaching(boolean b)
+    {
+        mPreCaching = b;
     }
    
     synchronized public boolean play()
@@ -81,7 +82,7 @@ public class MediaPlayerTrack
         if (!mIsInitialized) {
             
             if (mPreparing) {
-                mPlayNow = true;
+                mPreCaching = false;
                 return true;
           //state preparing
             } else {
@@ -121,14 +122,7 @@ public class MediaPlayerTrack
     
     synchronized public boolean stop()
     {
-        if (mPreparing) {
-          //state stopped
-            mIsInitialized = false;
-            mPreparing     = false;
-            mMp.stop();
-            return true;
-        }
-        if (mIsInitialized) {
+        if (mIsInitialized || mPreparing) {
             //state stopped
             mIsInitialized = false;
             mPreparing     = false;
@@ -188,22 +182,6 @@ public class MediaPlayerTrack
             } else {
                 mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
             }
-//            if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
-//                url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
-//                mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
-//            } else {
-//                try {
-//                    RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
-//                        .addFileKey(mTrack.getFileKey())
-//                        .addParam("fileformat", "mp3")
-//                        .addParam("bitrate", Integer.toString(Bitrate.getBitrate(mService, mContext)))
-//                        .create();
-//                    url = method.getCall();
-//                } catch (InvalidSessionException e) {
-//                    e.printStackTrace();
-//                    return false;
-//                }
-//            }
         
             //State Idle
             mMp = new MediaPlayer();
@@ -260,41 +238,37 @@ public class MediaPlayerTrack
             mMediaPlayerTrack = track;
         }
         
-        synchronized public void onCompletion(MediaPlayer mp)
+        public void onCompletion(MediaPlayer mp)
         {
             //If we are still in the initialized state then that means that we
             //completed our play back without an error
             Logger.log("MediaPlayer completed track");
-            if (mTrackFinishedHandler == null) {
-                Logger.log("MediaPlayer in onCompletionHandler without a finished handler.  What do we do?");
-                return;
-            }
-            if (mIsInitialized) {
-                mTrackFinishedHandler.trackSucceeded(mMediaPlayerTrack);
-            } else {
-                mTrackFinishedHandler.trackFailed(mMediaPlayerTrack);
+            synchronized (mMediaPlayerTrack) {
+                if (mTrackFinishedHandler == null) {
+                    Logger.log("MediaPlayer in onCompletionHandler without a finished handler.  What do we do?");
+                    return;
+                }
+                if (mIsInitialized) {
+                    mTrackFinishedHandler.trackSucceeded(mMediaPlayerTrack);
+                } else {
+                    mTrackFinishedHandler.trackFailed(mMediaPlayerTrack);
+                }
             }
         }
     };
-    
-    synchronized private void onPrepared()
-    {
-        Logger.log("Prepared track: " + mTrack.getTitle());
-        mIsInitialized = true;
-        if (mPlayNow)
-            start();
-    }
-    
+   
     private class MyOnPreparedListener implements MediaPlayer.OnPreparedListener
     {
 
-        synchronized public void onPrepared(MediaPlayer mp)
+        public void onPrepared(MediaPlayer mp)
         {
-            Logger.log("MediaPlayer prepared async");
-            //state prepared
-            MediaPlayerTrack.this.onPrepared();
-        }
-        
+            Logger.log("Prepared track: " + mTrack.getTitle());
+            synchronized (MediaPlayerTrack.this) {
+                mIsInitialized = true;
+                if (!mPreCaching)
+                    start();
+            }
+        }   
     };
     
     private class MyOnBufferingUpdateListener implements MediaPlayer.OnBufferingUpdateListener
@@ -302,16 +276,18 @@ public class MediaPlayerTrack
         long mOldPosition   = 0;
         int  mCount         = 0;
         boolean mBuffering = true;
-        synchronized public void onBufferingUpdate(MediaPlayer mp, int percent)
+        public void onBufferingUpdate(MediaPlayer mp, int percent)
         {
-            try {
-                if ((percent % 10) == 0) Logger.log(mTrack.getTitle() + ": Buffering: " + percent);
-                checkForEndlessBuffering(percent);
-                mPercent = percent;
-                tryRunBufferedCallback(percent);
-            } catch (Exception e) {
-                //No error class this should be fatal
-                Logger.log(e);
+            synchronized (MediaPlayerTrack.this) {
+                try {
+                    if ((percent % 10) == 0) Logger.log(mTrack.getTitle() + ": Buffering: " + percent);
+                    checkForEndlessBuffering(percent);
+                    mPercent = percent;
+                    tryRunBufferedCallback(percent);
+                } catch (Exception e) {
+                    //No error class this should be fatal
+                    Logger.log(e);
+                }
             }
         }
         
@@ -392,35 +368,11 @@ public class MediaPlayerTrack
         }
     };
     
-    synchronized private boolean onError(MediaPlayer mp, int what, int extra)
-    {
-        Logger.log("MediaPlayer got error name: " + mTrack.getTitle());
-        //State error
-        if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
-            if (handleUnknownErrors(extra)) return true;
-        }
-        
-        mIsInitialized = false;
-        mPreparing     = false;
-        mErroredOut    = true;
-        mErrorCode     = what;
-        mErrorValue    = extra;
-        
-        //state idle
-        mMp.reset();
-        //returning false will call OnCompletionHandler
-        return false;
-    }
-    
-    synchronized private boolean handleUnknownErrors(int extra)
-    {
-        if (!mPlayNow) return false; 
-        mErroredOut = PlaybackErrorCodes.isFatalError(extra);
-        
-        //Error 26 is an authentication error it most likely means that the session
-        //for the user has expired.  Here we will want to try to refresh the session
-        //and try the song again.
-        if (extra == -26 && !mIsInitialized) {
+    private class MyOnErrorListener implements MediaPlayer.OnErrorListener
+    {  
+        private boolean refreshAndTryAgain()
+        {
+            Logger.log("Trying to refresh and play again");
             RefreshSessionTask task = new RefreshSessionTask(mContext);
             if (task.doInForground()) {
                 if (prepare(false)) {
@@ -428,30 +380,51 @@ public class MediaPlayerTrack
                         return true;
                 }
             }
-        } else if (extra == -11){ 
-            mErroredOut = false;
             return false;
-        } else if (extra == -1) {
-            Locker l = new Locker();
-            if (!l.testSession()) {
-                Logger.log("Session likely invalid trying to refresh and play again");
-                RefreshSessionTask task = new RefreshSessionTask(mContext);
-                if (task.doInForground()) {
-                    if (prepare(false)) {
-                        if (play())
-                            return true;
-                    }
+        }
+        
+        private boolean handleUnknownErrors(int extra)
+        {
+            if (mPreCaching) return false; 
+            mErroredOut = PlaybackErrorCodes.isFatalError(extra);
+            
+            //Error 26 is an authentication error it most likely means that the session
+            //for the user has expired.  Here we will want to try to refresh the session
+            //and try the song again.
+            if (extra == -26 && !mIsInitialized) {
+                return refreshAndTryAgain();
+            } else if (extra == -11){ 
+                mErroredOut = false;
+                return false;
+            } else if (extra == -1) {
+                Locker l = new Locker();
+                if (!l.testSession()) {
+                    return refreshAndTryAgain();
                 }
             }
+            return false;
         }
-        return false;
-    }
-    
-    private class MyOnErrorListener implements MediaPlayer.OnErrorListener
-    {  
+        
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
-            return MediaPlayerTrack.this.onError(mp, what, extra);
+            Logger.log("MediaPlayer got error name: " + mTrack.getTitle());
+            //State error
+            synchronized (MediaPlayerTrack.this) {
+                if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
+                    if (handleUnknownErrors(extra)) return true;
+                }
+            
+                mIsInitialized = false;
+                mPreparing     = false;
+                mErroredOut    = true;
+                mErrorCode     = what;
+                mErrorValue    = extra;
+            
+                //state idle
+                mMp.reset();
+                //returning false will call OnCompletionHandler
+                return false;
+            }
         }
     };
     
@@ -540,7 +513,7 @@ public class MediaPlayerTrack
         return mErrorCode;
     }
 
-    public void seekTo(int i)
+    synchronized public void seekTo(int i)
     {
         if (mIsInitialized)
             mMp.seekTo(i);

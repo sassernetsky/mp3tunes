@@ -6,44 +6,64 @@ public class PlaybackList
 {
     Vector<MediaPlayerTrack> mList;
     int                      mCurrentPosition;
+    private TrackCacher      mCacher;
     
     public PlaybackList(Vector<MediaPlayerTrack> list)
     {
         mList = list;
         mCurrentPosition = -1;
+        mCacher       = new TrackCacher(this);
     }
     
-    public MediaPlayerTrack getNext() throws PlaybackListEmptyException, PlaybackListFinishedException
+    synchronized public MediaPlayerTrack getNext() throws PlaybackListEmptyException, PlaybackListFinishedException
     {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > mCurrentPosition + 1) {
             mCurrentPosition++;
-            return mList.get(mCurrentPosition);
+            MediaPlayerTrack t = mList.get(mCurrentPosition);
+            mCacher.cleanPostCache();
+            t.setBufferedCallback(mCacher.getPrecacherCallback(mCurrentPosition));
+            mCacher.tryPreCache();
+            return t;
         }
         throw new PlaybackListFinishedException();
     }
     
-    public MediaPlayerTrack getPrevious() throws PlaybackListEmptyException
+    synchronized public MediaPlayerTrack getPrevious() throws PlaybackListEmptyException
     {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mCurrentPosition > 0) {
             mCurrentPosition--;
-            return mList.get(mCurrentPosition);
+            MediaPlayerTrack t = mList.get(mCurrentPosition);
+            mCacher.cleanPreCache();
+            t.setBufferedCallback(mCacher.getPrecacherCallback(mCurrentPosition));
+            return t;
         }
         return mList.get(0);
     }
     
-    public MediaPlayerTrack getAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
+    synchronized public MediaPlayerTrack getAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
     {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > position) {
             mCurrentPosition = position;
-            return mList.get(mCurrentPosition);
+            
+            //Here we clean the cache because we just jumped position
+            //we do not clear though if we are playing the track
+            //TODO: We should not clear if the user is selecting a track
+            //that is already in the prefetcher
+            if (position != mCurrentPosition) {
+                mCacher.cleanPostCache();
+                mCacher.cleanPreCache();
+            }
+            MediaPlayerTrack t = mList.get(mCurrentPosition);
+            t.setBufferedCallback(mCacher.getPrecacherCallback(mCurrentPosition));
+            return t;
         }
         throw new PlaybackListOutOfBounds();
     }
     
-    public MediaPlayerTrack peekAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
+    synchronized public MediaPlayerTrack peekAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
     {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > position) {
@@ -52,7 +72,7 @@ public class PlaybackList
         throw new PlaybackListOutOfBounds();
     }
     
-    public int getCurrentPosition()
+    synchronized public int getCurrentPosition()
     {
         return mCurrentPosition;
     }
@@ -72,7 +92,7 @@ public class PlaybackList
         private static final long serialVersionUID = 3760111211345101285L;
     }
 
-    public void clear()
+    synchronized public void clear()
     {
         for(MediaPlayerTrack track : mList) {
             try {
@@ -81,13 +101,4 @@ public class PlaybackList
         }
         mList.clear();
     }
-    
-//    private void getTracksForList(int[] trackIds, Context c)
-//    {
-//        LockerDb db = new LockerDb(c);
-//        for (int id : trackIds) {
-//            Track t = db.getTrack(id);
-//            
-//        }
-//    }
 }
