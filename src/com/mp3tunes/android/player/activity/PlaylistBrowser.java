@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.database.MergeCursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -56,6 +58,9 @@ import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 public class PlaylistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
+    public static final String DOWNLOADED_TRACKS_ID   = "-1";
+    public static final String DOWNLOADED_TRACKS_NAME = "Downloaded Tracks";
+    
     private LockerId            mCurrentPlaylistId;
     private String              mCurrentPlaylistName;
     private SimpleCursorAdapter mAdapter;
@@ -354,7 +359,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                 view.setText(val);
             } else if (columnIndex == 2) {
                 String text = "";
-                if(!mIsRadio && !cursor.getString(1).equals("Inbox")) {
+                if(!mIsRadio && !cursor.getString(1).equals("Inbox") && !cursor.getString(0).equals(DOWNLOADED_TRACKS_ID)) {
                     int numsongs  = cursor.getInt(columnIndex);
                     text = Music.makeAlbumsLabel(getBaseContext(), numsongs, numsongs, true);
                 }
@@ -412,8 +417,17 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         try {
             if (PlaylistBrowser.this.mIsRadio)
                 mCursor = Music.getDb(getBaseContext()).getRadioData(mFrom);
-            else 
-                mCursor = Music.getDb(getBaseContext()).getPlaylistData(mFrom);
+            else {
+                //Hack to create a downloaded tracks playlist Until we can merge local and remote playlists
+                Cursor c = Music.getDb(getBaseContext()).getPlaylistData(mFrom);
+                MatrixCursor cursor = new MatrixCursor(mFrom);
+                MatrixCursor.RowBuilder builder = cursor.newRow();
+                builder.add(DOWNLOADED_TRACKS_ID);
+                builder.add("Downloaded Tracks");
+                builder.add("0");
+                builder.add("0");
+                mCursor = new MergeCursor(new Cursor[] {cursor, c});
+            }
         } catch ( Exception e ) {
             e.printStackTrace();
         }

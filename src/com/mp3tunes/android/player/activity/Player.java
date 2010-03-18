@@ -1,5 +1,7 @@
 package com.mp3tunes.android.player.activity;
 
+import java.io.IOException;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -25,13 +27,18 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
+import com.binaryelysium.mp3tunes.api.LockerException;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteImageHandler;
 import com.mp3tunes.android.player.RemoteImageView;
+import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.Worker;
 
@@ -63,7 +70,8 @@ public class Player extends Activity
     private IntentFilter mIntentFilter;
     private AsyncTask<Void, Void, Boolean> mArtTask;
     
-    private TrackAdder mTrackAdder;
+    private TrackAdder  mTrackAdder;
+    private TrackPutter mTrackPutter;
     
     @Override
     public void onCreate( Bundle icicle )
@@ -175,6 +183,16 @@ public class Player extends Activity
         try {
             dismissDialog(BUFFERING_DIALOG);
         } catch (IllegalArgumentException e) {}
+        try {
+            Track t = Music.sService.getTrack();
+            TrackGetter getter = new TrackGetter(Music.getDb(this), getContentResolver());
+            menu.findItem(R.id.menu_opt_load_track).setVisible(getter.getLocalId(t.getId()) == null);
+            menu.findItem(R.id.menu_opt_put_track).setVisible(getter.getLockerId(t.getId()) == null);
+        } catch (Exception e) {
+            menu.findItem(R.id.menu_opt_load_track).setVisible(false);
+            menu.findItem(R.id.menu_opt_put_track).setVisible(false);
+        }
+        
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -208,6 +226,12 @@ public class Player extends Activity
                     
                 mTrackAdder = new TrackAdder(t);
                 mTrackAdder.execute();
+                return true;
+            }
+            case R.id.menu_opt_put_track: {
+                Track t = Music.sService.getTrack();
+                mTrackPutter = new TrackPutter(t);
+                mTrackPutter.execute();
                 return true;
             }
                 
@@ -493,6 +517,23 @@ public class Player extends Activity
     {
 
         public TrackAdder(Track track)
+        {
+            super(track, getBaseContext());
+        }
+        
+        @Override
+        protected void onPostExecute(Boolean result)
+        {
+            if (!result) {
+                Log.w("Mp3Tunes", "Failed to add track");
+            }
+        }
+    }
+    
+    private class TrackPutter extends AddTrackToLocker
+    {
+
+        public TrackPutter(Track track)
         {
             super(track, getBaseContext());
         }
