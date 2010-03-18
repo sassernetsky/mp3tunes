@@ -128,11 +128,15 @@ public class BaseMp3TunesListActivity extends ListActivity
     private void queueNextRefresh(long delay) 
     {
         if (mLoadingCursor) {
-            
-            Message msg = mHandler.obtainMessage(REFRESH);
-            mHandler.removeMessages(REFRESH);
-            mHandler.sendMessageDelayed(msg, delay);
+            forceQueueNextRefresh(delay);
         }
+    }
+    
+    protected void forceQueueNextRefresh(long delay)
+    {
+        Message msg = mHandler.obtainMessage(REFRESH);
+        mHandler.removeMessages(REFRESH);
+        mHandler.sendMessageDelayed(msg, delay);
     }
 
     private final Handler mHandler = new Handler() {

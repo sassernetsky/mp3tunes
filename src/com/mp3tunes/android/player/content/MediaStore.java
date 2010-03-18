@@ -1,7 +1,9 @@
 package com.mp3tunes.android.player.content;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
@@ -37,6 +39,12 @@ public class MediaStore
     public static final Uri sTracksUri   = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
     
     public static final String KEY_LOCAL = "local";
+    
+    public static final class STORAGE {
+        public static final int LOCKER = 0;
+        public static final int LOCAL  = 1;
+        public static final int BOTH   = 2;
+    }
     
     public Cursor getArtistData(String[] columns)throws IOException, LockerException
     {
@@ -137,6 +145,28 @@ public class MediaStore
 //        return output;
     }
     
+    public Cursor getLocalTracksForPlaylist(String[] columns)
+    {
+        String[] cols       = lockerDbToMediaStoreColumns(rmLocalCol(columns));
+        String[] projection = new String[cols.length + 1];
+        System.arraycopy(cols, 0, projection, 0, cols.length);
+        projection[projection.length - 1] = android.provider.MediaStore.MediaColumns.DATE_ADDED;
+        Cursor c = mCr.query(sTracksUri, projection, null, null, android.provider.MediaStore.MediaColumns.DATE_ADDED);
+        
+        MatrixCursor output = new MatrixCursor(columns);
+        int len = cols.length;
+        if (c.moveToLast()) {
+            do {
+                MatrixCursor.RowBuilder builder = output.newRow();
+                for (int i = 0; i < len; i++) {
+                    builder.add(c.getString(i));
+                }
+                builder.add(1);
+            } while (c.moveToPrevious());
+        }
+        return output;
+    }
+    
     public Track getTrack(Id id)
     {
         try {
@@ -190,15 +220,15 @@ public class MediaStore
                 switch (joinerResult) {
                     case LEFT:
                         //Log.w("Mp3Tunes", "Locker: \"" + locker.getString(1) + "\"");
-                        buildRow(builder, locker, len, 0);
+                        buildRow(builder, locker, len, STORAGE.LOCKER);
                         break;
                     case RIGHT:
                         //Log.w("Mp3Tunes", "store: \"" + store.getString(1) + "\"");
-                        buildRow(builder, store, len, 1);
+                        buildRow(builder, store, len, STORAGE.LOCAL);
                         break;
                     case BOTH: 
                         //Log.w("Mp3Tunes", "Both: \"" + store.getString(1) + "\"");
-                        buildRow(builder, store, len, 1);
+                        buildRow(builder, store, len, STORAGE.BOTH);
                         break;
                 }
             }
