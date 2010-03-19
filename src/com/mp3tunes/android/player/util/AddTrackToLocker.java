@@ -38,7 +38,11 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
     @Override
     protected Boolean doInBackground(Void... params)
     {
-        if (!LocalId.class.isInstance(mTrack.getId())) return true;
+        if (!LocalId.class.isInstance(mTrack.getId())) {
+            sendStartedNotification(mTrack, false);
+            return true;
+        }
+        sendStartedNotification(mTrack, true);
         String path = mTrack.getPlayUrl(0);
         Log.w("Mp3Tunes", "Trying to upload: " + path + " to locker");
         
@@ -48,7 +52,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
                 .create();
             if (HttpClientCaller.getInstance().put(method, path)) {
                 Music.getDb(mContext).refreshSearch(mTrack.getTitle());
-                sendNotification(mTrack, true);
+                sendFinishedNotification(mTrack, true);
                 return true;
             }
         } catch (IOException e) {
@@ -62,11 +66,11 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         } catch (MakeQueryException e) {
             e.printStackTrace();
         }
-        sendNotification(mTrack, false);
+        sendFinishedNotification(mTrack, false);
         return false;
     }
     
-    private void sendNotification(Track t, boolean status)
+    private void sendFinishedNotification(Track t, boolean status)
     {
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
@@ -87,5 +91,28 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         
         nm.notify(NOTIFY_ID, notification);
         nm.cancel(NOTIFY_ID);
+    }
+    
+    private void sendStartedNotification(Track t, boolean status)
+    {
+        String ns = Context.NOTIFICATION_SERVICE;
+        NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
+        
+        int icon = R.drawable.logo_statusbar;
+        long when = System.currentTimeMillis();
+        CharSequence tickerText;
+        
+        if (status)
+            tickerText = "Adding " + t.getTitle() + " to locker";
+        else 
+            tickerText = t.getTitle() + " is already in your locker";
+        
+        Notification notification = new Notification(icon, tickerText, when);
+        Intent        intent        = new Intent(mContext, Player.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
+        notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
+        
+        nm.notify(NOTIFY_ID, notification);
+        if (!status) nm.cancel(NOTIFY_ID);
     }
 }

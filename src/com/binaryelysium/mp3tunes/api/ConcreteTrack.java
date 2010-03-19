@@ -171,4 +171,18 @@ public class ConcreteTrack implements Track
             return null;
         }
     }
+
+    private boolean compare(String first, String second)
+    {
+        if (first != null && second != null)
+            return first.equals(second);
+        return first == null && second == null;
+    }
+    
+    public boolean sameMainMetaData(Track t)
+    {
+        if (t == null) return false;
+        
+        return (compare(t.getTitle(), mTitle) && compare(t.getAlbumTitle(), mAlbumTitle) && compare(t.getArtistName(), mArtistName));
+    }
 }
