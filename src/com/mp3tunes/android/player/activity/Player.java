@@ -1,5 +1,7 @@
 package com.mp3tunes.android.player.activity;
 
+import java.io.IOException;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -25,13 +27,19 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
+import com.binaryelysium.mp3tunes.api.LockerException;
+import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
+import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.R;
-import com.mp3tunes.android.player.RemoteImageHandler;
+import com.mp3tunes.android.player.RemoteAlbumArtHandler;
 import com.mp3tunes.android.player.RemoteImageView;
+import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.Worker;
 
@@ -59,11 +67,14 @@ public class Player extends Activity
     private boolean mShowingOptions;
     
     private Worker mAlbumArtWorker;
-    private RemoteImageHandler mAlbumArtHandler;
+    private RemoteAlbumArtHandler mAlbumArtHandler;
     private IntentFilter mIntentFilter;
     private AsyncTask<Void, Void, Boolean> mArtTask;
     
-    private TrackAdder mTrackAdder;
+    private TrackAdder  mTrackAdder;
+    private TrackPutter mTrackPutter;
+    
+    private Track       mTrack;
     
     @Override
     public void onCreate( Bundle icicle )
@@ -97,13 +108,15 @@ public class Player extends Activity
         mPlayButton.requestFocus();
         
         mAlbumArtWorker  = new Worker("album art worker");
-        mAlbumArtHandler = new RemoteImageHandler(mAlbumArtWorker.getLooper(), mHandler);
         if (icicle != null) {
+            mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), (Track)icicle.getParcelable("track"));
             mImage = (Bitmap)icicle.getParcelable("artwork");
             if (mImage != null) {
                 mAlbum.setArtwork(mImage);
                 mAlbum.invalidate();
             }
+        } else {
+            mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), null);
         }
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(GuiNotifier.META_CHANGED);
@@ -136,6 +149,9 @@ public class Player extends Activity
         outState.putBoolean("configchange", getChangingConfigurations() != 0);
         if (mImage != null)
             outState.putParcelable("artwork", mImage);
+        if (mTrack != null)
+            outState.putParcelable("track", new ParcelableTrack(mTrack));
+        
         super.onSaveInstanceState(outState);
     }
 
@@ -175,6 +191,16 @@ public class Player extends Activity
         try {
             dismissDialog(BUFFERING_DIALOG);
         } catch (IllegalArgumentException e) {}
+        try {
+            mTrack = Music.sService.getTrack();
+            TrackGetter getter = new TrackGetter(Music.getDb(this), getContentResolver());
+            menu.findItem(R.id.menu_opt_load_track).setVisible(getter.getLocalId(mTrack.getId()) == null);
+            menu.findItem(R.id.menu_opt_put_track).setVisible(getter.getLockerId(mTrack.getId()) == null);
+        } catch (Exception e) {
+            menu.findItem(R.id.menu_opt_load_track).setVisible(false);
+            menu.findItem(R.id.menu_opt_put_track).setVisible(false);
+        }
+        
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -200,14 +226,20 @@ public class Player extends Activity
                 return true;
             case R.id.menu_opt_load_track: {
                 // add track to local storage
-                Track t = Music.sService.getTrack();
-                if (AddTrackToMediaStore.isInStore(t, this)) {
+                mTrack = Music.sService.getTrack();
+                if (AddTrackToMediaStore.isInStore(mTrack, this)) {
                     Log.w("Mp3Tunes", "Track already in store");
                     return true;
                 }
                     
-                mTrackAdder = new TrackAdder(t);
+                mTrackAdder = new TrackAdder(mTrack);
                 mTrackAdder.execute();
+                return true;
+            }
+            case R.id.menu_opt_put_track: {
+                mTrack = Music.sService.getTrack();
+                mTrackPutter = new TrackPutter(mTrack);
+                mTrackPutter.execute();
                 return true;
             }
                 
@@ -313,15 +345,15 @@ public class Player extends Activity
         try {
             if (Music.sService== null)
                 return;
-            Track track = Music.sService.getTrack();
-            mArtistName.setText(track.getArtistName());
-            mTrackName.setText(track.getTitle());
+            mTrack = Music.sService.getTrack();
+            mArtistName.setText(mTrack.getArtistName());
+            mTrackName.setText(mTrack.getTitle());
 
-            if (mImage == null)
-            { 
+            //if (mImage == null)
+            //{ 
                 mArtTask = new LoadAlbumArtTask();
                 mArtTask.execute((Void) null);
-            }
+            //}
             setPauseButtonImage();
         } catch (java.util.concurrent.RejectedExecutionException e) {
             e.printStackTrace();
@@ -400,7 +432,8 @@ public class Player extends Activity
                     long next = refreshNow();
                     queueNextRefresh(next);
                     break;
-                case RemoteImageHandler.REMOTE_IMAGE_DECODED:
+                case RemoteAlbumArtHandler.REMOTE_IMAGE_DECODED:
+                    Log.w("Mp3Tunes", "Got decoded artwork");
                         mImage = (Bitmap) msg.obj;
                         mAlbum.setArtwork(mImage);
                         mAlbum.invalidate();
@@ -434,7 +467,8 @@ public class Player extends Activity
         {
             try {
                 if (Music.sService!= null) {
-                    setArtUrl(Music.sService.getTrack());
+                    mTrack = Music.sService.getTrack();
+                    setArtUrl(mTrack);
                     return true;
                 }
             } catch (NullPointerException e) {
@@ -451,8 +485,8 @@ public class Player extends Activity
             if (result) {
                 System.out.println("Art url: " + artUrl);
                 if (artUrl != GuiNotifier.UNKNOWN) {
-                    mAlbumArtHandler.removeMessages(RemoteImageHandler.GET_REMOTE_IMAGE);
-                    mAlbumArtHandler.obtainMessage(RemoteImageHandler.GET_REMOTE_IMAGE, artUrl).sendToTarget();
+                    mAlbumArtHandler.removeMessages(RemoteAlbumArtHandler.GET_REMOTE_IMAGE);
+                    mAlbumArtHandler.obtainMessage(RemoteAlbumArtHandler.GET_REMOTE_IMAGE, mTrack).sendToTarget();
                 }
             } else {
                 System.out.println("Art url: unknown"); 
@@ -493,6 +527,23 @@ public class Player extends Activity
     {
 
         public TrackAdder(Track track)
+        {
+            super(track, getBaseContext());
+        }
+        
+        @Override
+        protected void onPostExecute(Boolean result)
+        {
+            if (!result) {
+                Log.w("Mp3Tunes", "Failed to add track");
+            }
+        }
+    }
+    
+    private class TrackPutter extends AddTrackToLocker
+    {
+
+        public TrackPutter(Track track)
         {
             super(track, getBaseContext());
         }

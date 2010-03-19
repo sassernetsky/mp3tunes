@@ -59,6 +59,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         String fileKey = mTrack.getFileKey();
         if (fileKey == null) return false;
         
+        sendStartedNotification(mTrack, true);
         Log.w("Mp3Tunes", "File key: " + fileKey);
         
         Locker l = new Locker();
@@ -78,16 +79,16 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             mConnection.scanFile(mFilePath, null);
             while (mScanning) {}
             Log.w("Mp3Tunes", "Scanning Done");
-            sendNotification(mTrack, mResult);
+            sendFinishedNotification(mTrack, mResult);
             return mResult;
         } catch (Exception e) {
             e.printStackTrace();
         }
-        sendNotification(mTrack, false);
+        sendFinishedNotification(mTrack, false);
         return false;
     }
 
-    private void sendNotification(Track t, boolean status)
+    private void sendFinishedNotification(Track t, boolean status)
     {
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
@@ -97,9 +98,9 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         CharSequence tickerText;
         
         if (status)
-            tickerText = t.getTitle() + " added to local storage";
+            tickerText = t.getTitle() + " added to phone";
         else
-            tickerText = "Failed to add " + t.getTitle() + " to local storage";
+            tickerText = "Failed to add " + t.getTitle() + " to phone";
         
         Notification notification = new Notification(icon, tickerText, when);
         Intent        intent        = new Intent(mContext, Player.class);
@@ -108,6 +109,29 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         
         nm.notify(NOTIFY_ID, notification);
         nm.cancel(NOTIFY_ID);
+    }
+    
+    private void sendStartedNotification(Track t, boolean status)
+    {
+        String ns = Context.NOTIFICATION_SERVICE;
+        NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
+        
+        int icon = R.drawable.logo_statusbar;
+        long when = System.currentTimeMillis();
+        CharSequence tickerText;
+        
+        if (status)
+            tickerText = "Adding " + t.getTitle() + " to phone";
+        else 
+            tickerText = t.getTitle() + " is already on your phone";
+        
+        Notification notification = new Notification(icon, tickerText, when);
+        Intent        intent        = new Intent(mContext, Player.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
+        notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
+        
+        nm.notify(NOTIFY_ID, notification);
+        if (!status) nm.cancel(NOTIFY_ID);
     }
     
     static public String getTrackUrl(Track track, Context context)

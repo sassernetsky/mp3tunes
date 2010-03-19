@@ -69,7 +69,7 @@ public class TrackGetter extends MergeHelper
     private Track createTrackFromCursor(Cursor c, boolean local)
     {
         if (c.moveToFirst()) {
-            Track a = new ConcreteTrack(createId(c.getInt(0), local), c.getString(2), c.getString(1), 0, c.getString(3), 0, c.getString(3));
+            Track a = new ConcreteTrack(createId(c.getInt(0), local), c.getString(2), c.getString(1), 0, c.getString(3), 0, c.getString(4));
             c.close();
             return a;
         }

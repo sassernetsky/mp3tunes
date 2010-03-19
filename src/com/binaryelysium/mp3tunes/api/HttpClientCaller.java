@@ -1,5 +1,6 @@
 package com.binaryelysium.mp3tunes.api;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.SocketException;
@@ -13,6 +14,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -51,7 +54,34 @@ public class HttpClientCaller
         return instance;
     }
     
-    
+    public boolean put(RemoteMethod method, String file) throws IOException
+    {
+        HttpClient client = null;
+        try {
+            client = new DefaultHttpClient();
+            String url = method.getCall();
+            Log.w("Mp3tunes", "Calling: " + url);
+            
+            HttpPut put = new HttpPut(url);
+            FileEntity entity = new FileEntity(new File(file), "binary/octet-stream");
+            put.setEntity(entity);
+            
+            HttpResponse response = client.execute(put);
+            if (response.containsHeader("X-MP3tunes-ErrorNo")) {
+                return false;
+            }
+            return true;
+        } catch (UnknownHostException e) {
+            Log.e("Mp3Tunes", "UnknownHostException: what do we do?");
+            throw e;
+        } catch (SocketException e) {
+            Log.e("Mp3Tunes", "SocketException: what do we do?");
+            throw e;
+        } finally {
+            if (client != null)
+                client.getConnectionManager().shutdown();
+        }
+    }
     
     public String callNoFixSession(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 
     {
