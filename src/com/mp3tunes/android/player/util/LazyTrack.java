@@ -91,4 +91,11 @@ public class LazyTrack implements Track
         mTrack = (ConcreteTrack)store.getTrack(mTrackId);
     }
 
+    public boolean sameMainMetaData(Track t)
+    {
+        if (mTrack == null)  createTrack();
+
+        return mTrack.sameMainMetaData(t);
+    }
+
 }

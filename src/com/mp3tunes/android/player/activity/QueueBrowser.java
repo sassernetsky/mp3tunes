@@ -72,11 +72,13 @@ import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.MergeHelper;
+import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshArtistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
@@ -98,9 +100,11 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private boolean mShowingDialog;
     
     
-    private TrackAdder mTrackAdder;
+    private TrackAdder  mTrackAdder;
+    private TrackPutter mTrackPutter;
     
     private static final int GET_TRACK = 0;
+    private static final int PUT_TRACK = 1;
     
     int[] mTo = new int[] {
             R.id.icon,
@@ -287,7 +291,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             Log.w("Mp3Tunes", "cursor count: "
                     + Integer.toString(newCursor.getCount()));
         }
-        mAdapter.changeCursor(newCursor); // also sets mTrackCursor
+        mAdapter.changeCursor(newCursor);
 
         mTrackCursor = newCursor;
         setTitle();
@@ -327,11 +331,20 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
 
-        menu.add(0, GET_TRACK, 0, R.string.menu_add_track_locally);
-
         mTrackCursor.moveToPosition(mi.position);
         mTrackName = mTrackCursor.getString(FROM_MAPPING.NAME);
         mTrackId   = cursorToId(mTrackCursor);
+        
+        switch (mTrackCursor.getInt(FROM_MAPPING.LOCAL)) {
+            case MediaStore.STORAGE.LOCKER:
+                menu.add(0, GET_TRACK, 0, R.string.menu_add_track_locally);
+                break;
+            case MediaStore.STORAGE.LOCAL:
+                menu.add(0, PUT_TRACK, 0, R.string.menu_add_track_remotely);
+                break;
+            case MediaStore.STORAGE.BOTH:
+        }
+        
         
         menu.setHeaderTitle(mTrackName);
     }
@@ -350,6 +363,19 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                     Log.w("Mp3Tunes", "Track already in store");
                 }
                 return true;
+            }
+            case PUT_TRACK: {
+                TrackGetter getter = new TrackGetter(Music.getDb(getBaseContext()), getContentResolver());
+                Track t;
+                try {
+                    t = (Track)getter.get(mTrackId);
+                    mTrackPutter = new TrackPutter(t);
+                    mTrackPutter.execute();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (LockerException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return super.onContextItemSelected(item);
@@ -377,6 +403,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     public boolean onPrepareOptionsMenu(Menu menu)
     {
         menu.findItem(R.id.menu_opt_player).setVisible(Music.isMusicPlaying());
+        menu.findItem(R.id.menu_opt_shuffleall).setVisible(false);
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -409,7 +436,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         Log.w("Mp3Tunes", "Trying to get tracks cursor");
         mCursorTask = mList.getTask();
-        mCursorTask.execute((Void[])null);
+        if (mCursorTask != null)
+            mCursorTask.execute((Void[])null);
         return null;
     }
 
@@ -530,7 +558,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             startManagingCursor(c);
             stopManagingCursor(mCursor);
             mCursor = c;
-            
         } catch ( Exception e ) {
             e.printStackTrace();
         }
@@ -549,6 +576,26 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         {
             if (!result) {
                 Log.w("Mp3Tunes", "Failed to add track");
+            }
+        }
+    }
+    
+    private class TrackPutter extends AddTrackToLocker
+    {
+
+        public TrackPutter(Track track)
+        {
+            super(track, getBaseContext());
+        }
+        
+        @Override
+        protected void onPostExecute(Boolean result)
+        {
+            if (!result) {
+                Log.w("Mp3Tunes", "Failed to add track");
+            } else {
+                Log.w("Mp3Tunes", "Queue Browser forcing refresh");
+                QueueBrowser.this.forceQueueNextRefresh(100); 
             }
         }
     }
@@ -685,12 +732,21 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public RefreshTask getTask()
         {
+            if (mLockerId.asString().equals(PlaylistBrowser.DOWNLOADED_TRACKS_ID)) {
+                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask.execute((Void[])null);
+                return null;
+            }
             return new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), mLockerId);
         }
 
         @Override
         public Cursor getCursor() throws SQLiteException, IOException, LockerException
         {
+            if (mLockerId.asString().equals(PlaylistBrowser.DOWNLOADED_TRACKS_ID)){
+                mLoadingCursor = false;
+                return getStore().getLocalTracksForPlaylist(mFrom);          
+            }
             return getStore().getTrackDataByPlaylist(mFrom, mLockerId);
         }
 
