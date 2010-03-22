@@ -1,5 +1,9 @@
 package com.mp3tunes.android.player.util;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
 import android.content.ContentResolver;
 import android.database.CharArrayBuffer;
 import android.database.ContentObserver;
@@ -15,9 +19,64 @@ public class ReindexingCursorWrapper extends CursorWrapper
     int[]  mIndex;
     int    mPos;
     
-    interface CursorIndexer
+    static abstract public interface CursorIndexer
     {
-        public int [] get(Cursor c, int column);
+        public class Pair
+        {
+            Pair(int key, String value)
+            {
+                this.key   = key;
+                this.value = value;
+            }
+            
+            public int    key;
+            public String value;
+            
+            static public List<Pair> getListOfPairs(Cursor c, int column)
+            {
+                Pair[] pairs = new Pair[c.getCount()];
+                
+                int index = 0;
+                if (c.moveToFirst()) {
+                    do {
+                        String val = c.getString(column);
+                        
+                        pairs[index] = new Pair(index, val);
+                        index++;
+                    } while(c.moveToNext());
+                }
+                return Arrays.asList(pairs);
+            }
+            
+            static public int[] createIndicies(List<Pair> list)
+            {
+                int[] indexes = new int[list.size()];
+                int index = 0;
+                for (Pair p :  list) {
+                    if (p != null) {
+                        indexes[index] = p.key;
+                        index++;
+                    }
+                }
+                
+                return indexes;
+            }
+        }
+        
+        public class PairComparator implements Comparator<Pair>
+        {
+
+            public int compare(Pair first, Pair second)
+            {
+                if (first == null && second == null) return 0;
+                if (first == null) return -1;
+                if (second == null) return -1;
+                return first.value.compareToIgnoreCase(second.value);
+            }
+            
+        }
+        
+        abstract public int [] get(Cursor c, int column);
     }
     
     public ReindexingCursorWrapper(Cursor cursor, CursorIndexer indexer, int orderByColumn)

@@ -16,6 +16,11 @@
 
 package com.mp3tunes.android.player.activity;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -45,6 +50,7 @@ import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import com.binaryelysium.mp3tunes.api.LockerId;
+import com.binaryelysium.mp3tunes.api.Playlist;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
@@ -54,12 +60,14 @@ import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistsTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.FetchAndPlayTracks;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper.CursorIndexer;
 
 public class PlaylistBrowser extends BaseMp3TunesListActivity
     implements View.OnCreateContextMenuListener, Music.Defs
 {
     public static final String DOWNLOADED_TRACKS_ID   = "-1";
-    public static final String DOWNLOADED_TRACKS_NAME = "Downloaded Tracks";
+    public static final String DOWNLOADED_TRACKS_NAME = "Local music";
     
     private LockerId            mCurrentPlaylistId;
     private String              mCurrentPlaylistName;
@@ -423,13 +431,41 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                 MatrixCursor cursor = new MatrixCursor(mFrom);
                 MatrixCursor.RowBuilder builder = cursor.newRow();
                 builder.add(DOWNLOADED_TRACKS_ID);
-                builder.add("Downloaded Tracks");
+                builder.add(DOWNLOADED_TRACKS_NAME);
                 builder.add("0");
                 builder.add("0");
-                mCursor = new MergeCursor(new Cursor[] {cursor, c});
+                mCursor = new ReindexingCursorWrapper(new MergeCursor(new Cursor[] {cursor, c}), new PlaylistIndexer(), FROM_MAPPING.NAME);
             }
         } catch ( Exception e ) {
             e.printStackTrace();
+        }
+    }
+    
+    class PlaylistIndexer implements CursorIndexer
+    {   
+        
+        public int[] get(Cursor c, int column)
+        {
+            List <Pair> list = Pair.getListOfPairs(c, column);       
+            list = alphabetizeGenerated(list);
+            return Pair.createIndicies(list);
+        }
+        
+        List<Pair> alphabetizeGenerated(List<Pair> list)
+        {
+            List<Pair> generated    = new LinkedList<Pair>();
+            List<Pair> nonGenerated = new LinkedList<Pair>();
+            for (Pair p : list) {
+                if (Playlist.isDynamicPlaylistByName(p.value))
+                    generated.add(p);
+                else if (p.value.equals(DOWNLOADED_TRACKS_NAME))
+                    generated.add(p);
+                else
+                    nonGenerated.add(p);
+            }
+            Collections.sort(generated, new PairComparator());
+            generated.addAll(nonGenerated);
+            return generated;
         }
     }
 }
