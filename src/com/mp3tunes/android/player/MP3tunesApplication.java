@@ -28,8 +28,10 @@ import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.binaryelysium.mp3tunes.api.LockerContext.ContextRetriever;
 import com.mp3tunes.android.player.activity.Login;
 
+import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 
 
@@ -80,18 +82,19 @@ public class MP3tunesApplication extends Application
      * @param title
      * @param description
      */
-    public void presentError(Context ctx, String title, String description) {
-        //AlertDialog.Builder d = new AlertDialog.Builder(ctx);
-        //d.setTitle(title);
-        //d.setMessage(description);
-        //d.setIcon(android.R.drawable.ic_dialog_alert);
-        //d.setNeutralButton("OK",
-        //        new DialogInterface.OnClickListener() {
-        //            public void onClick(DialogInterface dialog, int whichButton)
-        //            {
-        //            }
-        //        });
-        //d.show();
+    public void presentError(Context ctx, String title, String description) 
+    {
+        AlertDialog.Builder d = new AlertDialog.Builder(ctx);
+        d.setTitle(title);
+        d.setMessage(description);
+        d.setIcon(android.R.drawable.ic_dialog_alert);
+        d.setNeutralButton("OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton)
+                    {
+                    }
+                });
+        d.show();
     }    
     
     public void setLocker(Locker l)
