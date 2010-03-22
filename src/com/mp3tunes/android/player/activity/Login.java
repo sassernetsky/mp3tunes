@@ -220,43 +220,32 @@ public class Login extends Activity
         @Override
         protected void onPostExecute( String result )
         {
-            try
-            {
+            try {
                 dismissDialog( PROGRESS );    
-            } catch (IllegalArgumentException e) 
-            {
-                // do nothing
-            }
+            } catch (IllegalArgumentException e) {}
             
-            if( result.equals( "" )  )
-            {
+            if(result.equals("")) {
                 MP3tunesApplication.getInstance().setLocker(locker);
-                SharedPreferences settings = getSharedPreferences( PREFS, 0 );
+                SharedPreferences settings = getSharedPreferences(PREFS, 0);
                 SharedPreferences.Editor editor = settings.edit();
-                editor.putString( "mp3tunes_user", user );
-                editor.putString( "mp3tunes_pass", pass );
+                editor.putString("mp3tunes_user", user);
+                editor.putString("mp3tunes_pass", pass);
                 editor.putBoolean("auto_login", true);
                 editor.commit();
                 
-                Intent intent = new Intent( Login.this, LockerList.class );
-                startActivity( intent );
+                Intent intent = new Intent(Login.this, LockerList.class);
+                startActivity(intent);
                 finish();
-            }
-            else if ( result.contains( "auth failure" ) )
-            {
-                MP3tunesApplication.getInstance().presentError( Login.this,
-                        getResources().getString( R.string.ERROR_AUTH_TITLE ),
-                        getResources().getString( R.string.ERROR_AUTH ) );
-                ( ( EditText ) findViewById( R.id.password ) ).setText( "" );
-            }
-            else if ( result.contains( "connection issue" ) )
-            {
-                MP3tunesApplication.getInstance().presentError( Login.this,
-                        getResources().getString( R.string.ERROR_SERVER_UNAVAILABLE_TITLE ),
-                        getResources().getString( R.string.ERROR_SERVER_UNAVAILABLE ) );
-            }
-            else if (result.contains("Logic Error"))
-            {
+            } else if (result.contains("auth failure")) {
+                MP3tunesApplication.getInstance().presentError(Login.this,
+                        getResources().getString(R.string.ERROR_AUTH_TITLE),
+                        getResources().getString(R.string.ERROR_AUTH ));
+                ((EditText)findViewById(R.id.password)).setText("");
+            } else if (result.contains("connection issue")) {
+                MP3tunesApplication.getInstance().presentError(Login.this,
+                        getResources().getString(R.string.ERROR_SERVER_UNAVAILABLE_TITLE),
+                        getResources().getString(R.string.ERROR_SERVER_UNAVAILABLE ));
+            } else if (result.contains("Logic Error")) {
                 MP3tunesApplication.getInstance().presentError( Login.this, "Bad Error", "This is likely a logic error");
             }
         }
