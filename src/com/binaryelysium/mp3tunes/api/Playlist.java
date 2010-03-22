@@ -125,4 +125,12 @@ public class Playlist implements LockerData
                 playlistId.startsWith("BYO_"));
     }
 
+    public static boolean isDynamicPlaylistByName(String playlistName)
+    {
+        return (playlistName.equals("Random tracks")   ||
+                playlistName.equals("Newest tracks")   ||
+                playlistName.equals("Recently played") ||
+                playlistName.equals("Inbox")            ||
+                playlistName.startsWith("byo.fm"));
+    }
 }
