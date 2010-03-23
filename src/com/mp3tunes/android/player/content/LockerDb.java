@@ -824,8 +824,8 @@ public class LockerDb
             if (mDb.mCache.getCacheState(cache) == LockerCache.CacheState.UNCACHED) {
                 mDb.mCache.beginCaching(cache, System.currentTimeMillis());
                 LockerCache.Progress p = mDb.mCache.getProgress(cache);
-                mDb.refreshDispatcher(cache, p, this, null);
-                p.mCurrentSet++;
+                if (mDb.refreshDispatcher(cache, p, this, null))
+                    p.mCurrentSet++;
             }
         }
         
