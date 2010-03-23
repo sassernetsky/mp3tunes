@@ -17,6 +17,8 @@ public class PlaybackList
     
     synchronized public MediaPlayerTrack getNext() throws PlaybackListEmptyException, PlaybackListFinishedException
     {
+        Logger.log("PlaybackList.getNext entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > mCurrentPosition + 1) {
             mCurrentPosition++;
@@ -27,10 +29,16 @@ public class PlaybackList
             return t;
         }
         throw new PlaybackListFinishedException();
+        } finally {
+            Logger.log("PlaybackListgetNext. left from: " + Long.toString(Thread.currentThread().getId()));
+        }
+        
     }
     
     synchronized public MediaPlayerTrack getPrevious() throws PlaybackListEmptyException
     {
+        Logger.log("PlaybackList.getPrevious entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mCurrentPosition > 0) {
             mCurrentPosition--;
@@ -40,10 +48,15 @@ public class PlaybackList
             return t;
         }
         return mList.get(0);
+        } finally {
+            Logger.log("PlaybackList.getPrevious left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
     
     synchronized public MediaPlayerTrack getAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
     {
+        Logger.log("PlaybackList.getAt entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > position) {
             mCurrentPosition = position;
@@ -61,20 +74,33 @@ public class PlaybackList
             return t;
         }
         throw new PlaybackListOutOfBounds();
+        } finally {
+            Logger.log("PlaybackList.getAt left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
     
     synchronized public MediaPlayerTrack peekAt(int position) throws PlaybackListEmptyException, PlaybackListOutOfBounds
     {
+        Logger.log("PlaybackList.peekAt entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         if (mList.size() < 1) throw new PlaybackListEmptyException();
         if (mList.size() > position) {
             return mList.get(position);
         }
         throw new PlaybackListOutOfBounds();
+        } finally {
+            Logger.log("PlaybackList.peekAt left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
     
     synchronized public int getCurrentPosition()
     {
+        Logger.log("PlaybackList.getCurrentPosition entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         return mCurrentPosition;
+        } finally {
+            Logger.log("PlaybackList.getCurrentPosition left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
     
     public class PlaybackListEmptyException extends Exception
@@ -94,11 +120,16 @@ public class PlaybackList
 
     synchronized public void clear()
     {
+        Logger.log("PlaybackList.clear entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
         for(MediaPlayerTrack track : mList) {
             try {
                 track.stop();
             } catch (NullPointerException e) {}
         }
         mList.clear();
+        } finally {
+            Logger.log("PlaybackList.clear left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
 }

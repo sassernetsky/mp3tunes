@@ -20,17 +20,17 @@ import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
 
+//It is a logic error to request the mState lock while holding the mPreCaching lock
+
 public class MediaPlayerTrack
 {
     private final Track       mTrack;
     
     private MediaPlayer mMp;
-    private boolean     mIsInitialized;
-    private boolean     mErroredOut;
+    private Integer     mState;
     private boolean     mBuffered;
-    private boolean     mPreCaching;
-    private boolean     mPreparing;
-    private int         mPercent;
+    private Boolean     mPreCaching;
+    private Integer     mPercent;
     private Service     mService;
     private Context     mContext;
     
@@ -45,26 +45,43 @@ public class MediaPlayerTrack
     private TrackFinishedHandler      mTrackFinishedHandler;
     private BufferedCallback          mBufferedCallback;
     
+    private class STATE {
+        static final int CREATED     = -1;
+        static final int PREPARING   = 0;
+        static final int INITIALIZED = 1;
+        static final int ERRORED     = 2;
+        static final int DONE        = 3;
+    }
+    
     public MediaPlayerTrack(Track track, Service service, Context context)
     {
-        mMp            = null;
-        mTrack         = track;
-        mIsInitialized = false;
-        mErroredOut    = false;
-        mBuffered      = false;
-        mPreparing     = false;
-        mPercent       = 0;
-        mService       = service;
-        mContext       = context;
-        mErrorCode     = 0;
-        mErrorValue    = 0;
-        mPreCaching    = true;
+        mTrack      = track;
+        mService    = service;
+        mContext    = context;
+        mState      = STATE.CREATED;
+        mPreCaching = true;
+        init();
+    }
+    
+    synchronized private void init()
+    {
+        synchronized (mState) {
+            synchronized (mPreCaching) {
+                mState         = STATE.CREATED;
+                mMp            = null;
+                mBuffered      = false;
+                mPercent       = 0;
+                mErrorCode     = 0;
+                mErrorValue    = 0;
+                mPreCaching    = true;
         
-        mOnBufferingUpdateListener = new MyOnBufferingUpdateListener();
-        mOnCompletionListener      = new MyOnCompletionListener(this);
-        mOnErrorListener           = new MyOnErrorListener();
-        mOnPreparedListener        = new MyOnPreparedListener();
-        mOnInfoListener            = new MyOnInfoListener();
+                mOnBufferingUpdateListener = new MyOnBufferingUpdateListener();
+                mOnCompletionListener      = new MyOnCompletionListener(this);
+                mOnErrorListener           = new MyOnErrorListener();
+                mOnPreparedListener        = new MyOnPreparedListener();
+                mOnInfoListener            = new MyOnInfoListener();
+            }
+        }
     }
     
     public Track getTrack()
@@ -72,100 +89,118 @@ public class MediaPlayerTrack
         return mTrack;
     }
     
-    synchronized public void setPreCaching(boolean b)
+    public void setPreCaching(boolean b)
     {
-        mPreCaching = b;
+        synchronized (mPreCaching) {
+            mPreCaching = b;
+        }
     }
    
-    synchronized public boolean play()
+    public boolean play()
     {
-        if (!mIsInitialized) {
-            
-            if (mPreparing) {
-                mPreCaching = false;
-                return true;
-          //state preparing
-            } else {
-                if (!prepare(true))
-                  //state error
-                    return false;
-            }
-        } else {
-            start();
-        }
-        return true;
-    }
-    
-    synchronized public boolean pause()
-    {
-        if (mIsInitialized) {
-            if (mMp.isPlaying()) {
-                //state paused
-                mMp.pause();
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    synchronized public boolean unpause()
-    {
-        if (mIsInitialized) {
-            if (!mMp.isPlaying()) {
-                //state paused
+        synchronized (mState) {
+            if (mState == STATE.PREPARING) {
+                
+                //If we are already preparing when we call play then that means
+                //we started a precache of this track and then called play on it
+                //before the onPrepared handler was called.  In this case we want 
+                //to set precaching to false so that the onPrepared handler will start
+                //playing the track when in gets called
+                synchronized (mPreCaching) {
+                    mPreCaching = false;
+                    return true;
+                }
+            } else if (mState == STATE.INITIALIZED) {
+                
+                //This state is when the track has been precached and is ready for
+                //immediate playback.
                 mMp.start();
                 return true;
+            } else {
+                
+                //This is when the track has not been precached play will be called when this 
+                //track is prepared
+                if (!prepare(true)) {
+                    mState = STATE.ERRORED;
+                    return false;
+                }
+                return true;
             }
         }
-        return false;
     }
     
-    synchronized public boolean stop()
+    public boolean pause()
     {
-        if (mIsInitialized || mPreparing) {
-            //state stopped
-            mIsInitialized = false;
-            mPreparing     = false;
-            mMp.stop();
-            return true;
+        //It does not make sense to call pause unless the player is playing
+        synchronized (mState) {
+            synchronized (mPreCaching) {
+                if (mState == STATE.INITIALIZED && !mPreCaching && mMp.isPlaying()) {
+                    mMp.pause();
+                    return true;
+                }
+                return false;
+            }
         }
-        return true;
     }
     
-    synchronized public boolean isPlaying() 
+    public boolean unpause()
     {
-        if (mIsInitialized) 
-            return mMp.isPlaying();
-        return false;
+        //It does not make sense to call unpause unless the player is playing initialized
+        //and not precaching.  Calling unpause while precaching could lead to playing more
+        //than one track at a time.
+        synchronized (mState) {
+            synchronized (mPreCaching) {
+                if (mState == STATE.INITIALIZED && !mPreCaching && !mMp.isPlaying()) {
+                    mMp.start();
+                    return true;
+                }
+                return false;
+            }
+        }
     }
     
-    synchronized public boolean isBuffered()
+    public boolean stop()
+    {
+        synchronized (mState) {
+            //Mainly we need to make sure that we do not call stop while the Media player
+            //is preparing
+            if (mState == STATE.INITIALIZED || mState == STATE.DONE) {
+                mState = STATE.DONE;
+                mMp.stop();
+                return true;
+            }
+            return false;
+        }
+    }
+    
+    public boolean isPlaying() 
+    {
+        synchronized (mState) {
+        if (mState == STATE.INITIALIZED) 
+                return mMp.isPlaying();
+            return false;
+        }
+    }
+    
+    public boolean isBuffered()
     {
         return mBuffered;
     }
     
-    synchronized public int getBufferPercent()
+    public int getBufferPercent()
     {
         return mPercent;
     }
     
-    synchronized public boolean requestPreload()
-    {   
-        return prepare(true);
-    }
-    
-    synchronized private boolean start()
+    public boolean requestPreload()
     {
-        Logger.log("trying to start track: " + mTrack.getTitle());
-        if (mIsInitialized) {
-            Logger.log("starting track: " + mTrack.getTitle());
-            mMp.start();
-            return true;
+        synchronized (mState) {
+            return prepare(true);
         }
-        return false;
     }
     
-    synchronized private boolean prepare(boolean async)
+    //This function must only be called by functions that hold both the mState lock and the mPreCaching locks
+    private boolean prepare(boolean async)
     {
         Logger.log("preparing track: " + mTrack.getTitle());
         Logger.log("Artist:          " + mTrack.getArtistName());
@@ -196,14 +231,14 @@ public class MediaPlayerTrack
         
             if (async) {
                 //State preparing
-                mPreparing = true;
+                mState = STATE.PREPARING;
                 mMp.setOnPreparedListener(mOnPreparedListener);
                 mMp.prepareAsync();
             } else {
                 //State prepared
                 mMp.prepare();
                 Logger.log("MediaPlayer prepared");
-                mIsInitialized = true;
+                mState = STATE.INITIALIZED;
             }
            
             //make sure volume is up
@@ -211,17 +246,15 @@ public class MediaPlayerTrack
             
             return true;
         } catch (IllegalStateException e) {
-            mErroredOut = true;
             e.printStackTrace();
         } catch (IOException e) {
-            mErroredOut = true;
             e.printStackTrace();
         }
-        mIsInitialized = false;
+        mState = STATE.ERRORED;
         return false;
     }
     
-    synchronized private void setListeners()
+    private void setListeners()
     {
         mMp.setOnCompletionListener(mOnCompletionListener);
         mMp.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
@@ -243,12 +276,13 @@ public class MediaPlayerTrack
             //If we are still in the initialized state then that means that we
             //completed our play back without an error
             Logger.log("MediaPlayer completed track");
-            synchronized (mMediaPlayerTrack) {
+            synchronized (mState) {
                 if (mTrackFinishedHandler == null) {
                     Logger.log("MediaPlayer in onCompletionHandler without a finished handler.  What do we do?");
                     return;
                 }
-                if (mIsInitialized) {
+                
+                if (mState == STATE.INITIALIZED) {
                     mTrackFinishedHandler.trackSucceeded(mMediaPlayerTrack);
                 } else {
                     mTrackFinishedHandler.trackFailed(mMediaPlayerTrack);
@@ -259,17 +293,21 @@ public class MediaPlayerTrack
    
     private class MyOnPreparedListener implements MediaPlayer.OnPreparedListener
     {
-
         public void onPrepared(MediaPlayer mp)
         {
-            Logger.log("Prepared track: " + mTrack.getTitle());
-            synchronized (MediaPlayerTrack.this) {
-                mIsInitialized = true;
-                if (!mPreCaching)
-                    start();
-            }
-        }   
-    };
+            //If this track is precaching the we do not start it we just
+            //move it to the initialized state.
+            synchronized (mState) {
+                synchronized (mPreCaching) {
+                        mState = STATE.INITIALIZED;
+                        if (!mPreCaching) {
+                            mMp.start();
+                        }
+                }
+
+            }   
+        }
+    }
     
     private class MyOnBufferingUpdateListener implements MediaPlayer.OnBufferingUpdateListener
     {
@@ -278,7 +316,7 @@ public class MediaPlayerTrack
         boolean mBuffering = true;
         public void onBufferingUpdate(MediaPlayer mp, int percent)
         {
-            synchronized (MediaPlayerTrack.this) {
+            synchronized (mPercent) {
                 try {
                     if ((percent % 10) == 0) Logger.log(mTrack.getTitle() + ": Buffering: " + percent);
                     checkForEndlessBuffering(percent);
@@ -329,8 +367,7 @@ public class MediaPlayerTrack
                 if (mCount > 15 && !mMp.isPlaying()) {
                     Logger.log("Looks like we lost our network connection and the MediaPlayer does not realize it");
                     MediaPlayerTrack.this.stop();
-                    mErroredOut = true;
-                    mIsInitialized = false;
+                    mState = STATE.ERRORED;
                     MediaPlayerTrack.this.mOnCompletionListener.onCompletion(mMp);
                 }
             } else {
@@ -386,15 +423,16 @@ public class MediaPlayerTrack
         private boolean handleUnknownErrors(int extra)
         {
             if (mPreCaching) return false; 
-            mErroredOut = PlaybackErrorCodes.isFatalError(extra);
+            if (PlaybackErrorCodes.isFatalError(extra)) 
+                mState = STATE.ERRORED;
             
             //Error 26 is an authentication error it most likely means that the session
             //for the user has expired.  Here we will want to try to refresh the session
             //and try the song again.
-            if (extra == -26 && !mIsInitialized) {
+            if (extra == -26 && mState == STATE.PREPARING) {
                 return refreshAndTryAgain();
             } else if (extra == -11){ 
-                mErroredOut = false;
+                mState = STATE.ERRORED;
                 return false;
             } else if (extra == -1) {
                 Locker l = new Locker();
@@ -409,16 +447,14 @@ public class MediaPlayerTrack
         {
             Logger.log("MediaPlayer got error name: " + mTrack.getTitle());
             //State error
-            synchronized (MediaPlayerTrack.this) {
+            synchronized (mState) {
                 if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
                     if (handleUnknownErrors(extra)) return true;
                 }
             
-                mIsInitialized = false;
-                mPreparing     = false;
-                mErroredOut    = true;
-                mErrorCode     = what;
-                mErrorValue    = extra;
+                mState      = STATE.ERRORED;
+                mErrorCode  = what;
+                mErrorValue = extra;
             
                 //state idle
                 mMp.reset();
@@ -449,58 +485,86 @@ public class MediaPlayerTrack
         void run();
     }
 
-    synchronized public long getDuration()
+    public long getDuration()
     {
-        if (mIsInitialized) {
-            return mMp.getDuration();
+        synchronized (mState) {
+            try {
+                if (mState == STATE.INITIALIZED) {
+                    return mMp.getDuration();
+                } else if (mState == STATE.PREPARING || mState == STATE.CREATED) {
+                    return 0;
+                }
+                return -1;
+            } catch (Exception e) {
+                return -1;
+            }
         }
-        return 0;
     }
 
-    synchronized public long getPosition()
+    public long getPosition()
     {
-        if (mIsInitialized)
-            return mMp.getCurrentPosition();
-        return 0;
+        synchronized (mState) {
+            try {
+                if (mState == STATE.INITIALIZED) {
+                    return mMp.getCurrentPosition();
+                } else if (mState == STATE.PREPARING || mState == STATE.CREATED) {
+                    return 0;
+                } else {
+                    return -1;
+                }
+            } catch (Exception e) {
+                return -1;
+            }
+        }
     }
 
-    synchronized public boolean isPaused()
+    public boolean isPaused()
     {
-        return mIsInitialized && !isPlaying();
+        synchronized (mState) {
+            return mState == STATE.INITIALIZED && !isPlaying();
+        }
     }
     
-    synchronized public void setTrackFinishedHandler(TrackFinishedHandler handler)
+    public void setTrackFinishedHandler(TrackFinishedHandler handler)
     {
-        mTrackFinishedHandler = handler;
+        synchronized (mState) {
+            mTrackFinishedHandler = handler;
+        }
     }
     
-    synchronized public void setBufferedCallback(BufferedCallback callback)
+    public void setBufferedCallback(BufferedCallback callback)
     {
-        mBufferedCallback = callback;
+        synchronized (mState) {
+            mBufferedCallback = callback;
+        }
     }
         
-    synchronized public boolean clean()
+    public boolean clean()
     {
-        boolean ret = false;
-        if (mMp != null) {
-            Logger.log("MediaPlayer marked for GC");
-            mMp = null;
-            ret = true;
+        synchronized (mState) {
+            boolean ret = mState != STATE.CREATED;
+            init();
+            return ret;
         }
-        mIsInitialized = false;
-        mPercent       = 0;
-        return ret;
     }
 
     public void setVolume(float leftVolume, float rightVolume)
     {
-        if (mIsInitialized)
-            mMp.setVolume(leftVolume, rightVolume);
+        synchronized (mState) {
+            if (mState == STATE.INITIALIZED) {
+                mMp.setVolume(leftVolume, rightVolume);
+            }
+        }
     }
     
     public boolean erroredOut()
     {
-        return mErroredOut;
+        synchronized (mState) {
+            if (mState == STATE.ERRORED)
+                return true;
+            else
+                return false;
+        }
     }
 
     public int getErrorValue()
@@ -513,10 +577,12 @@ public class MediaPlayerTrack
         return mErrorCode;
     }
 
-    synchronized public void seekTo(int i)
+    public void seekTo(int i)
     {
-        if (mIsInitialized)
-            mMp.seekTo(i);
+        synchronized (mState) {
+            if (mState == STATE.INITIALIZED)
+                mMp.seekTo(i);
+        }
         
     }
     
