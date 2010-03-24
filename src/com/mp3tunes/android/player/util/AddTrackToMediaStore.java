@@ -109,7 +109,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
         
-        int icon = R.drawable.logo_statusbar;
+        int icon = R.drawable.down2;
         long when = System.currentTimeMillis();
         CharSequence tickerText;
         
@@ -132,7 +132,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
         
-        int icon = R.drawable.logo_statusbar;
+        int icon = R.drawable.down2;
         long when = System.currentTimeMillis();
         CharSequence tickerText;
         

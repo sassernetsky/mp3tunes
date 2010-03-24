@@ -36,8 +36,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         
         public void run(long progress, long total)
         {
-            int p = (int)((progress * 100) / total);
-            if (mProgress == p) return;
+            int p = (int)progress;
             mProgress = p;
             sendStartedNotification(mTrack, true, p, 100);
         }
@@ -90,7 +89,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
         
-        int icon = R.drawable.logo_statusbar;
+        int icon = R.drawable.up2;
         long when = System.currentTimeMillis();
         CharSequence tickerText;
         
@@ -113,7 +112,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
         
-        int icon = R.drawable.logo_statusbar;
+        int icon = R.drawable.up2;
         long when = System.currentTimeMillis();
         CharSequence tickerText;
         
@@ -132,7 +131,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
         notification.contentIntent = contentIntent;
         notification.flags |= Notification.FLAG_ONGOING_EVENT;
-        notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
+        //notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
         
         nm.notify(NOTIFY_ID, notification);
         if (!status) nm.cancel(NOTIFY_ID);
