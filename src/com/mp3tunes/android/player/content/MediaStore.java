@@ -151,7 +151,9 @@ public class MediaStore
         String[] projection = new String[cols.length + 1];
         System.arraycopy(cols, 0, projection, 0, cols.length);
         projection[projection.length - 1] = android.provider.MediaStore.MediaColumns.DATE_ADDED;
-        Cursor c = mCr.query(sTracksUri, projection, null, null, android.provider.MediaStore.MediaColumns.DATE_ADDED);
+        String where = android.provider.MediaStore.Audio.AudioColumns.IS_MUSIC + "!=0";
+        
+        Cursor c = mCr.query(sTracksUri, projection, where, null, android.provider.MediaStore.MediaColumns.DATE_ADDED);
         
         MatrixCursor output = new MatrixCursor(columns);
         int len = cols.length;
