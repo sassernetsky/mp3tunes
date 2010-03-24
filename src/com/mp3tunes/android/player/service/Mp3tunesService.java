@@ -42,8 +42,11 @@ public class Mp3tunesService extends Service
     @Override
     public void onDestroy()
     {
+        Logger.log("destroying music service");
         mPlayerHandler.destroy();
+        mPlayerHandler = null;
         mPlayStateLocker.release();
+        mPlayStateLocker = null;
     }
 
     @Override
@@ -65,6 +68,7 @@ public class Mp3tunesService extends Service
         //if (mPlayerHandler.getTrack().isPlaying())
         //    return true;
 
+        Logger.log("Unbinding music service");
         mDeferredStopHandler.deferredStopSelf();
         return true;
     }

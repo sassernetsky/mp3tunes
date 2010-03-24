@@ -125,6 +125,7 @@ public class PlaybackList
         for(MediaPlayerTrack track : mList) {
             try {
                 track.stop();
+                track.init();
             } catch (NullPointerException e) {}
         }
         mList.clear();
