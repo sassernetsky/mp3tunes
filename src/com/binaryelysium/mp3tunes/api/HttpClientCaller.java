@@ -1,6 +1,8 @@
 package com.binaryelysium.mp3tunes.api;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -17,6 +19,7 @@ import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.FileEntity;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -61,6 +64,117 @@ public class HttpClientCaller
         return instance;
     }
     
+    class MyEntity extends InputStreamEntity
+    {
+
+        public MyEntity(InputStream strm, long length)
+        {
+            super(strm, length);
+        }
+        
+        public InputStream getContent() throws IOException
+        {
+            Log.w("Mp3Tunes", "Enering: getContent");
+            try {
+                return super.getContent();
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: getContent");
+            }
+        }
+        
+        public long getContentLength()
+        {
+            Log.w("Mp3Tunes", "Enering: getContentLength");
+            try {
+                return super.getContentLength();
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: getContentLength");
+            }
+        }
+        
+        public boolean isRepeatable() 
+        {
+            Log.w("Mp3Tunes", "Enering: isRepeatable");
+            try {
+                return super.isRepeatable();
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: isRepeatable");
+            }
+        }
+        
+        public boolean isStreaming()
+        {
+            Log.w("Mp3Tunes", "Enering: isStreaming");
+            try {
+                return super.isStreaming();
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: isStreaming");
+            }
+        }
+        
+        public void writeTo(OutputStream outstream) throws IOException
+        {
+            Log.w("Mp3Tunes", "Enering: writeTo");
+            try {
+                super.writeTo(outstream);
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: writeTo");
+            }
+        }
+    }
+    
+    class MyFileInputStream extends FileInputStream
+    {
+        long mFileSize;
+        long mCurrent;
+        int  mProgress; 
+        Progress mProgressCallback;
+        public MyFileInputStream(File file, Progress progress) throws FileNotFoundException
+        {
+            super(file);
+            mFileSize = file.length();
+            if (mFileSize == 0) throw new FileNotFoundException();
+            mCurrent  = 0;
+            mProgressCallback = progress;
+        }
+        
+        public int  read(byte[] buffer, int offset, int count) throws IOException
+        {
+            mCurrent += count - offset;
+            int progress = (int)((mCurrent * 100) / mFileSize);
+            if (progress > mProgress) {
+                Log.w("Mp3Tunes", "Upload progress: " + Integer.toString(progress));
+                mProgress = progress;
+                mProgressCallback.run(mProgress, 100);
+            }
+            try {
+                return super.read(buffer, offset, count);
+            } finally {
+                //Log.w("Mp3Tunes", "Leaving: read(byte[] buffer, int offset, int count)");
+            }
+        }
+
+        public int  read(byte[] buffer) throws IOException
+        {
+            Log.w("Mp3Tunes", "Enering: read(byte[] buffer)");
+            try {
+                return super.read(buffer);
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: read(byte[] buffer)");
+            }
+        }
+        
+        public int  read() throws IOException
+        {
+            Log.w("Mp3Tunes", "Enering: read()");
+            try {
+                return super.read();
+            } finally {
+                Log.w("Mp3Tunes", "Leaving: read()");
+            }
+        }
+    }
+    
     public boolean put(RemoteMethod method, String file, Progress progress) throws IOException
     {
         HttpClient client = null;
@@ -69,11 +183,15 @@ public class HttpClientCaller
             String url = method.getCall();
             Log.w("Mp3tunes", "Calling: " + url);
             
-            HttpPut put = new HttpPut(url);
-            FileEntity entity = new FileEntity(new File(file), "binary/octet-stream");
+            HttpPut           put    = new HttpPut(url);
+            File              f      = new File(file);
+            FileInputStream   strm   = new MyFileInputStream(f, progress);
+            InputStreamEntity entity = new MyEntity(strm, f.length());
             put.setEntity(entity);
             
+            Log.w("Mp3Tunes", "Starting put");
             HttpResponse response = client.execute(put);
+            Log.w("Mp3Tunes", "Put done");
             if (response.containsHeader("X-MP3tunes-ErrorNo")) {
                 return false;
             }
