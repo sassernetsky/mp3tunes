@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
@@ -28,6 +29,7 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.RemoteViews;
 
 public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
 {
@@ -42,6 +44,20 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
     
     private static final int NOTIFY_ID = 10911252; // mp3 + 1 in ascii
 
+    class Progress implements HttpClientCaller.Progress
+    {
+        int mProgress = 0;
+        
+        public void run(long progress, long total)
+        {
+            int p = (int)((progress * 100) / total);
+            if (mProgress == p) return;
+            mProgress = p;
+            sendStartedNotification(mTrack, true, p, 100);
+        }
+        
+    }
+    
     public AddTrackToMediaStore(Track track, Context context)
     {
         mTrack   = track;
@@ -59,7 +75,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         String fileKey = mTrack.getFileKey();
         if (fileKey == null) return false;
         
-        sendStartedNotification(mTrack, true);
+        sendStartedNotification(mTrack, true, 0, 0);
         Log.w("Mp3Tunes", "File key: " + fileKey);
         
         Locker l = new Locker();
@@ -68,7 +84,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             mConnection.connect();
             
             Log.w("Mp3Tunes", "File key: " + fileKey);
-            if (!l.getTrack(fileKey, mStreamCallback)) {
+            if (!l.getTrack(fileKey, mStreamCallback, new Progress())) {
                 Log.w("Mp3Tunes", "Failed to download file");
             }
             
@@ -111,7 +127,7 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
         nm.cancel(NOTIFY_ID);
     }
     
-    private void sendStartedNotification(Track t, boolean status)
+    private void sendStartedNotification(Track t, boolean status, int progress, int total)
     {
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
@@ -126,10 +142,16 @@ public class AddTrackToMediaStore extends AsyncTask<Void, Void, Boolean>
             tickerText = t.getTitle() + " is already on your phone";
         
         Notification notification = new Notification(icon, tickerText, when);
+        RemoteViews contentView   = new RemoteViews(mContext.getPackageName(), R.layout.progress_notification_view);
+        contentView.setImageViewResource(R.id.notification_image, R.drawable.logo_statusbar);
+        contentView.setTextViewText(R.id.notification_text, "Downloading " + mTrack.getTitle());
+        contentView.setProgressBar(R.id.notification_progress_bar, total, progress, (total == 0 && progress == 0));
+        notification.contentView = contentView;
         Intent        intent        = new Intent(mContext, Player.class);
         PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
-        notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
-        
+        //notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
+        notification.contentIntent = contentIntent;
+        notification.flags |= Notification.FLAG_ONGOING_EVENT;
         nm.notify(NOTIFY_ID, notification);
         if (!status) nm.cancel(NOTIFY_ID);
     }

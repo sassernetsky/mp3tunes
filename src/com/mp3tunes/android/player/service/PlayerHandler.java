@@ -124,9 +124,7 @@ public class PlayerHandler
         mGuiNotifier.stop(getTrack());
         
         if (mPlaybackList!= null) mPlaybackList.clear();
-        if (mTrack != null)
-            return mTrack.stop();
-        return false;
+        return true;
         } finally {
             Logger.log("stop left from: " + Long.toString(Thread.currentThread().getId()));
         }
@@ -166,8 +164,10 @@ public class PlayerHandler
     synchronized public void destroy()
     {
         Logger.log("destroy entered from: " + Long.toString(Thread.currentThread().getId()));
-        // TODO Auto-generated method stub
-        
+        stopIfPlaying();
+        mPlaybackList.clear();
+        mPlaybackList = null;
+        mGuiNotifier.stop(null);
     }
 
     synchronized public int getQueuePosition()
@@ -242,6 +242,7 @@ public class PlayerHandler
             mTrack.setPreCaching(true);
             if (mTrack.isPlaying()) 
                 mTrack.stop();
+            mTrack = null;
         }
         Logger.log("stopIfPlaying left from: " + Long.toString(Thread.currentThread().getId()));
     }

@@ -63,7 +63,7 @@ public class MediaPlayerTrack
         init();
     }
     
-    synchronized private void init()
+    synchronized void init()
     {
         synchronized (mState) {
             synchronized (mPreCaching) {
