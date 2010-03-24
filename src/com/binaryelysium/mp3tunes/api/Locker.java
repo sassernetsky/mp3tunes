@@ -439,14 +439,14 @@ public class Locker
         }
     }
 
-    public boolean getTrack(String key, CreateStreamCallback callback) throws InvalidSessionException, LockerException, LoginException
+    public boolean getTrack(String key, CreateStreamCallback callback, HttpClientCaller.Progress progressCallback) throws InvalidSessionException, LockerException, LoginException
     {
         RemoteMethod method = 
             new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_GET)
                                     .addFileKey(key)
                                     .create();
         try {
-            return HttpClientCaller.getInstance().callStream(method, callback);
+            return HttpClientCaller.getInstance().callStream(method, callback, progressCallback);
         } catch (IOException e) {
             throw new LockerException("download failed");
         }

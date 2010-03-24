@@ -2,6 +2,7 @@ package com.binaryelysium.mp3tunes.api;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -26,6 +27,11 @@ import android.util.Log;
 
 public class HttpClientCaller
 {
+    public interface Progress
+    {
+        void run(long progress, long total);
+    }
+
     @SuppressWarnings("serial")
     public class CallerException extends RuntimeException {
 
@@ -207,14 +213,14 @@ public class HttpClientCaller
         public OutputStream createStream();
     }
     
-    public boolean callStream(RemoteMethod method, CreateStreamCallback fileCreator) throws IOException
+    public boolean callStream(RemoteMethod method, CreateStreamCallback fileCreator, Progress progress) throws IOException
     {
         try {
             HttpClient client = new DefaultHttpClient();
             String url = method.getCall();
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
-            ResponseHandler<Boolean> responseHandler = new OutputStreamResponseHandler(fileCreator);
+            ResponseHandler<Boolean> responseHandler = new OutputStreamResponseHandler(fileCreator, progress);
             boolean response = client.execute(get, responseHandler);
             client.getConnectionManager().shutdown();
             return response;
@@ -234,9 +240,11 @@ public class HttpClientCaller
     private class OutputStreamResponseHandler implements ResponseHandler<Boolean>  
     {
         CreateStreamCallback mCallback;
-        OutputStreamResponseHandler(CreateStreamCallback callback)
+        Progress             mProgress;
+        OutputStreamResponseHandler(CreateStreamCallback callback, Progress progress)
         {
             mCallback = callback;
+            mProgress = progress;
         }
         
         public Boolean handleResponse(HttpResponse response) throws ClientProtocolException, IOException 
@@ -251,7 +259,19 @@ public class HttpClientCaller
             
             HttpEntity entity = response.getEntity();
             if (entity != null) {
-                entity.writeTo(stream);
+                Long length = entity.getContentLength();
+                InputStream input = entity.getContent();
+                byte[] buffer = new byte[4096];
+                int size  = 0;
+                int total = 0;
+                while (true) {
+                    size = input.read(buffer);
+                    if (size == -1) break;
+                    stream.write(buffer);
+                    total += size;
+                    mProgress.run(total, length);
+                    //entity.writeTo(stream);
+                }
                 return true;
             } else {
                 return false;
