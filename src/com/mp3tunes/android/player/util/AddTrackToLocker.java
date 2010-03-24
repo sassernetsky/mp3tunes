@@ -21,6 +21,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteException;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.widget.RemoteViews;
 
 public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
 {
@@ -29,6 +30,20 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
     
     private static final int NOTIFY_ID = 10911252; // mp3 + 1 in ascii
 
+    class Progress implements HttpClientCaller.Progress
+    {
+        int mProgress = 0;
+        
+        public void run(long progress, long total)
+        {
+            int p = (int)((progress * 100) / total);
+            if (mProgress == p) return;
+            mProgress = p;
+            sendStartedNotification(mTrack, true, p, 100);
+        }
+        
+    }
+    
     public AddTrackToLocker(Track track, Context context)
     {
         mTrack   = track;
@@ -39,10 +54,10 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
     protected Boolean doInBackground(Void... params)
     {
         if (!LocalId.class.isInstance(mTrack.getId())) {
-            sendStartedNotification(mTrack, false);
+            sendStartedNotification(mTrack, false, 0, 0);
             return true;
         }
-        sendStartedNotification(mTrack, true);
+        sendStartedNotification(mTrack, true, 0, 0);
         String path = mTrack.getPlayUrl(0);
         Log.w("Mp3Tunes", "Trying to upload: " + path + " to locker");
         
@@ -50,7 +65,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
             RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PUT)
                 .addFileKey("")
                 .create();
-            if (HttpClientCaller.getInstance().put(method, path)) {
+            if (HttpClientCaller.getInstance().put(method, path, new Progress())) {
                 Music.getDb(mContext).refreshSearch(mTrack.getTitle());
                 sendFinishedNotification(mTrack, true);
                 return true;
@@ -93,7 +108,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         nm.cancel(NOTIFY_ID);
     }
     
-    private void sendStartedNotification(Track t, boolean status)
+    private void sendStartedNotification(Track t, boolean status, int progress, int total)
     {
         String ns = Context.NOTIFICATION_SERVICE;
         NotificationManager nm = (NotificationManager)mContext.getSystemService(ns);
@@ -108,8 +123,15 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
             tickerText = t.getTitle() + " is already in your locker";
         
         Notification notification = new Notification(icon, tickerText, when);
+        RemoteViews contentView   = new RemoteViews(mContext.getPackageName(), R.layout.progress_notification_view);
+        contentView.setImageViewResource(R.id.notification_image, R.drawable.logo_statusbar);
+        contentView.setTextViewText(R.id.notification_text, "Uploading " + mTrack.getTitle());
+        contentView.setProgressBar(R.id.notification_progress_bar, total, progress, (total == 0 && progress == 0));
+        notification.contentView = contentView;
         Intent        intent        = new Intent(mContext, Player.class);
         PendingIntent contentIntent = PendingIntent.getActivity(mContext, 0, intent, 0);
+        notification.contentIntent = contentIntent;
+        notification.flags |= Notification.FLAG_ONGOING_EVENT;
         notification.setLatestEventInfo(mContext, "Mp3Tunes", tickerText, contentIntent);
         
         nm.notify(NOTIFY_ID, notification);

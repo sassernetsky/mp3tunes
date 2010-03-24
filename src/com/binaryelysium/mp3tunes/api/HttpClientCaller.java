@@ -23,6 +23,7 @@ import org.apache.http.util.EntityUtils;
 
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 
+
 import android.util.Log;
 
 public class HttpClientCaller
@@ -60,7 +61,7 @@ public class HttpClientCaller
         return instance;
     }
     
-    public boolean put(RemoteMethod method, String file) throws IOException
+    public boolean put(RemoteMethod method, String file, Progress progress) throws IOException
     {
         HttpClient client = null;
         try {
@@ -267,10 +268,9 @@ public class HttpClientCaller
                 while (true) {
                     size = input.read(buffer);
                     if (size == -1) break;
-                    stream.write(buffer);
+                    stream.write(buffer, 0, size);
                     total += size;
                     mProgress.run(total, length);
-                    //entity.writeTo(stream);
                 }
                 return true;
             } else {
