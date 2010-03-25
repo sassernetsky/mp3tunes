@@ -336,6 +336,7 @@ public class Player extends Activity
                 }
             } catch (IllegalArgumentException e) {
                 Log.e("Mp3Tunes", Log.getStackTraceString(e));
+                finish();
             }
         }
     };
