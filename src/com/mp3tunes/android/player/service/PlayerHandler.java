@@ -1,5 +1,7 @@
 package com.mp3tunes.android.player.service;
 
+import java.util.Vector;
+
 import android.app.Service;
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -163,11 +165,15 @@ public class PlayerHandler
     }
     synchronized public void destroy()
     {
-        Logger.log("destroy entered from: " + Long.toString(Thread.currentThread().getId()));
-        stopIfPlaying();
-        mPlaybackList.clear();
-        mPlaybackList = null;
-        mGuiNotifier.stop(null);
+        try {
+            Logger.log("destroy entered from: " + Long.toString(Thread.currentThread().getId()));
+            stopIfPlaying();
+            mPlaybackList.clear();
+            mPlaybackList = null;
+            mGuiNotifier.stop(null);
+        } catch (Exception e) {
+            Logger.log(e);
+        }
     }
 
     synchronized public int getQueuePosition()
@@ -253,6 +259,11 @@ public class PlayerHandler
         if (mTrack.isPaused()) unpause();
         else pause();
         Logger.log("tooglePlayback left from: " + Long.toString(Thread.currentThread().getId()));
+    }
+
+    public Vector<Track> getTracks()
+    {
+        return  mPlaybackList.getTracks();
     }
     
 }

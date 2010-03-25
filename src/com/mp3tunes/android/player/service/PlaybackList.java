@@ -2,6 +2,8 @@ package com.mp3tunes.android.player.service;
 
 import java.util.Vector;
 
+import com.binaryelysium.mp3tunes.api.Track;
+
 public class PlaybackList
 {
     Vector<MediaPlayerTrack> mList;
@@ -132,5 +134,14 @@ public class PlaybackList
         } finally {
             Logger.log("PlaybackList.clear left from: " + Long.toString(Thread.currentThread().getId()));
         }
+    }
+
+    synchronized public Vector<Track> getTracks()
+    {
+        Vector<Track> tracks = new Vector<Track>();
+        for (MediaPlayerTrack track : mList) {
+            tracks.add(track.getTrack());
+        }
+        return tracks;
     }
 }

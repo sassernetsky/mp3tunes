@@ -131,4 +131,6 @@
 
 
 <string name="menu_add_track_remotely">Upload</string>
+<string name="menu_current_playlist">Playlist</string>
+<string name="menu_show_playlist">Show tracks</string>
 </resources>
