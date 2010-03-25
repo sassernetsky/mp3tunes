@@ -227,6 +227,11 @@ public class Mp3tunesService extends Service
         {
             mPlayerHandler.tooglePlayback();
         }
+
+        public IdParcel[] getTrackIds() throws RemoteException
+        {
+            return getParcelsForTracks(mPlayerHandler.getTracks());
+        }
         
     };
     
@@ -239,5 +244,14 @@ public class Mp3tunesService extends Service
             tracks.add(track);
         }
         return tracks;
+    }
+    
+    private IdParcel[] getParcelsForTracks(Vector<Track> tracks)
+    {
+        IdParcel[] parcels = new IdParcel[tracks.size()];
+        for (int i = 0; i < tracks.size(); i++) {
+            parcels[i] = new IdParcel(tracks.elementAt(i).getId());
+        }
+        return parcels;
     }
 }

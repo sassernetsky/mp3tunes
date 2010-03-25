@@ -31,6 +31,8 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 
 public class QueryBrowser2 extends ExpandableListActivity 
 {
@@ -38,9 +40,9 @@ public class QueryBrowser2 extends ExpandableListActivity
     private final static int NO_RESULTS = 8;
     
     ArtistAlbumListAdapter mAdapter;
-    MatrixCursor mParentCursor;
-    MatrixCursor mArtistsCursor;
-    MatrixCursor mTracksCursor;
+    Cursor mParentCursor;
+    Cursor mArtistsCursor;
+    Cursor mTracksCursor;
     SearchTask   mSearchTask;
     String       mFilterString;
     
@@ -89,8 +91,8 @@ public class QueryBrowser2 extends ExpandableListActivity
         mNoResults = builder1.create();
         
         mParentCursor  = new MatrixCursor(mGroupFrom);
-        createParentRow(0, getBaseContext().getString(R.string.artists), mParentCursor, 0);
-        createParentRow(1, getBaseContext().getString(R.string.tracks),  mParentCursor, 0);
+        //createParentRow(0, getBaseContext().getString(R.string.artists), mParentCursor, 0);
+        //createParentRow(1, getBaseContext().getString(R.string.tracks),  mParentCursor, 0);
         
         mArtistsCursor = new MatrixCursor(mChildFrom);
         mTracksCursor  = new MatrixCursor(mChildFrom);
@@ -136,10 +138,12 @@ public class QueryBrowser2 extends ExpandableListActivity
             String type = mParentCursor.getString(1);
             if (type.equals("Artists")) {
                 if (mArtistsCursor.moveToPosition(childPosition)) {
-                    int artist = mArtistsCursor.getInt(0);
+                    int    artist = mArtistsCursor.getInt(0);
+                    String name   = mArtistsCursor.getString(1);
                     Intent intent = new Intent(Intent.ACTION_PICK);
-                    intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/album");
+                    intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
                     intent.putExtra("artist", new IdParcel(new LockerId(artist)));
+                    intent.putExtra("name", name);
                     startActivity(intent);
                 }
             } else if (type.equals("Tracks")) {
@@ -297,12 +301,13 @@ public class QueryBrowser2 extends ExpandableListActivity
                 return;
             }
             
-            mParentCursor  = new MatrixCursor(mGroupFrom);
-            createParentRow(0, getBaseContext().getString(R.string.artists), mParentCursor, res.mArtists.getCount());
-            createParentRow(1, getBaseContext().getString(R.string.tracks),  mParentCursor, res.mTracks.getCount());
+            MatrixCursor parentCursor  = new MatrixCursor(mGroupFrom);
+            createParentRow(0, getBaseContext().getString(R.string.artists), parentCursor, res.mArtists.getCount());
+            createParentRow(1, getBaseContext().getString(R.string.tracks),  parentCursor, res.mTracks.getCount());
+            mParentCursor =  parentCursor;
             
-            mArtistsCursor = addColumnToCursor(res.mArtists, ARTIST);
-            mTracksCursor  = addColumnToCursor(res.mTracks,  TRACK);
+            mArtistsCursor = new ReindexingCursorWrapper(addColumnToCursor(res.mArtists, ARTIST), new AlphabeticalTheRemovedIndexer(), 1);
+            mTracksCursor  = new ReindexingCursorWrapper(addColumnToCursor(res.mTracks,  TRACK),  new AlphabeticalTheRemovedIndexer(), 1);
             mAdapter.changeCursor(mParentCursor);
             
             if (res.mArtists != null)
