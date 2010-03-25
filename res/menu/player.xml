@@ -12,4 +12,5 @@
 </item>
 <item android:id="@+id/menu_opt_load_track" android:title="@string/menu_add_track_locally" android:icon="@drawable/download1"></item>
 <item android:id="@+id/menu_opt_put_track" android:title="@string/menu_add_track_remotely" android:icon="@drawable/upload1"></item>
+<item android:id="@+id/menu_current_playlist" android:title="@string/menu_current_playlist" android:icon="@drawable/playlist_dark"></item>
 </menu>

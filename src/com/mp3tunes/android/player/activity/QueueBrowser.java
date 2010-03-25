@@ -18,17 +18,12 @@ package com.mp3tunes.android.player.activity;
 
 import java.io.IOException;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.database.CharArrayBuffer;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -40,19 +35,14 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.ContextMenu;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.widget.AlphabetIndexer;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.SectionIndexer;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -64,7 +54,6 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.MusicAlphabetIndexer;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.AlbumGetter;
 import com.mp3tunes.android.player.content.ArtistGetter;
@@ -77,13 +66,11 @@ import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshArtistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshTask;
-import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
 import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
-import com.mp3tunes.android.player.util.Timer;
 
 public class QueueBrowser extends BaseMp3TunesListActivity implements
         View.OnCreateContextMenuListener, Music.Defs, ServiceConnection
@@ -105,6 +92,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     
     private static final int GET_TRACK = 0;
     private static final int PUT_TRACK = 1;
+    
+    public static final String NOW_PLAYING = "Now Playing";
     
     int[] mTo = new int[] {
             R.id.icon,
@@ -276,6 +265,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         if (parcel != null) 
             outcicle.putParcelable(mList.key(), parcel);
         else {
+            
             outcicle.putString(mList.key(), mList.mLockerId.asString());
             outcicle.putString("playlist_name", mList.getName());
         }
@@ -610,6 +600,14 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         
         String playlistId   = b.getString("playlist");
         String playlistName = b.getString("playlist_name");
+        if (playlistName.equals("Now Playing")) {
+            try {
+                return new NowPlaying("Now Playing", Music.sService.getTrackIds());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
         return new PlaylistList(new LockerId(playlistId), playlistName);
     }
     
@@ -623,6 +621,14 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         
         String playlistId   = i.getStringExtra("playlist");
         String playlistName = i.getStringExtra("playlist_name");
+        if (playlistName.equals("Now Playing")) {
+            try {
+                return new NowPlaying("Now Playing", Music.sService.getTrackIds());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
         return new PlaylistList(new LockerId(playlistId), playlistName);
     }
     
@@ -664,8 +670,15 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         {
             return null;
         }
+        
+        //This returns a task that will refresh the database with
+        //data from the user's locker if it is needed
         public abstract RefreshTask getTask();
+        
+        //This key is used to save the instance state
         public abstract String key();
+        
+        //This function returns the cursor that the ListActivity uses
         public abstract Cursor getCursor() throws IOException, LockerException;
         
         protected void makeLocalId()
@@ -750,6 +763,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             return getStore().getTrackDataByPlaylist(mFrom, mLockerId);
         }
 
+        //We do not currently merge playlists.  The simple query is very expensive we need
+        //to put more thought into it
         @Override
         protected MergeHelper getMergeHelper()
         {
@@ -842,4 +857,64 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         }
     }
     
+    class NowPlaying extends TrackList
+    {
+        private IdParcel[] mIds;
+        
+        public NowPlaying(String name, IdParcel[] ids) 
+        {
+            mLockerId = new LockerId(QueueBrowser.NOW_PLAYING);
+            mIds      = ids;
+            mName     = name;
+            mFrom     = new String[] {
+                DbKeys.ID,
+                DbKeys.TITLE,
+                DbKeys.ARTIST_NAME,
+                MediaStore.KEY_LOCAL
+          };
+        }
+        
+        @Override
+        public Cursor getCursor() throws IOException, LockerException
+        {
+            MatrixCursor cursor = new MatrixCursor(mFrom);
+            TrackGetter getter = new TrackGetter(getDb(), getContentResolver());
+            for (IdParcel idParcel : mIds) {
+                Id id = idParcel.getId();
+                Track track = (Track)getter.get(id);
+                MatrixCursor.RowBuilder builder = cursor.newRow();
+                builder.add(id.asString());
+                builder.add(track.getTitle());
+                builder.add(track.getArtistName());
+                if (LockerId.class.isInstance(id)) {
+                    builder.add(MediaStore.STORAGE.LOCKER);
+                } else {
+                    builder.add(MediaStore.STORAGE.LOCAL);
+                }
+            }
+            return cursor;
+        }
+
+        //No merging should be needed in this case.
+        @Override
+        public MergeHelper getMergeHelper()
+        {
+            return null;
+        }
+
+        //We should already have a refreshed database so there should be no need
+        //to refresh anything
+        @Override
+        public RefreshTask getTask()
+        {
+            return null;
+        }
+
+        @Override
+        public String key()
+        {
+            return "playlist";
+        }
+        
+    }
 }
