@@ -49,8 +49,10 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
+import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Playlist;
+import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
@@ -263,6 +265,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         AdapterContextMenuInfo mi = (AdapterContextMenuInfo) menuInfoIn;
 
         menu.add(0, PLAY_SELECTION, 0, R.string.menu_play_selection);
+        menu.add(0, SHOW_PLAYLIST,  0, R.string.menu_show_playlist);
 
         mCursor.moveToPosition(mi.position);
         mCurrentPlaylistName = mCursor.getString(FROM_MAPPING.NAME);
@@ -284,6 +287,13 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                 mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
                 return true;
             }
+            case SHOW_PLAYLIST: {
+                Intent intent = new Intent(Intent.ACTION_EDIT);
+                intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
+                intent.putExtra("playlist", mCurrentPlaylistId.asString());
+                intent.putExtra("playlist_name", mCurrentPlaylistName);
+                startActivity(intent);
+            }
         }
         return super.onContextItemSelected(item);
     }
@@ -291,7 +301,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id)
     {
-        
+        //mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
         Cursor c = (Cursor) getListAdapter().getItem( position );
         String playlist = c.getString(FROM_MAPPING.ID);
         String playlist_name = c.getString(FROM_MAPPING.NAME);
@@ -381,6 +391,17 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
             
             return true;
         }
+    }
+    
+    @Override
+    public Id cursorToId(Cursor c)
+    {
+        if (!mCurrentPlaylistId.asString().equals(DOWNLOADED_TRACKS_ID)) {
+            String id = c.getString(c.getColumnIndexOrThrow(DbKeys.ID));
+            return  new LockerId(id);
+        }
+        int id = c.getInt(c.getColumnIndexOrThrow(DbKeys.ID));
+        return  new LocalId(id);
     }
     
     private void killTasks()

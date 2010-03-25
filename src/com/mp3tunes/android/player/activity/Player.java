@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -109,11 +110,15 @@ public class Player extends Activity
         
         mAlbumArtWorker  = new Worker("album art worker");
         if (icicle != null) {
-            mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), (Track)icicle.getParcelable("track"));
-            mImage = (Bitmap)icicle.getParcelable("artwork");
-            if (mImage != null) {
-                mAlbum.setArtwork(mImage);
-                mAlbum.invalidate();
+            try {
+                mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), (Track)icicle.getParcelable("track"));
+                mImage = (Bitmap)icicle.getParcelable("artwork");
+                if (mImage != null) {
+                    mAlbum.setArtwork(mImage);
+                    mAlbum.invalidate();
+                }
+            } catch (Exception e) {
+                mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), null);
             }
         } else {
             mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), null);
@@ -242,8 +247,16 @@ public class Player extends Activity
                 mTrackPutter.execute();
                 return true;
             }
-                
+            case R.id.menu_current_playlist: {
+                intent = new Intent(Intent.ACTION_PICK);
+                intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
+                intent.putExtra("playlist_name", QueueBrowser.NOW_PLAYING);
+                intent.setFlags( Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP );
+                startActivity(intent);
+                return true;
+            }   
         }
+        
         } catch (RemoteException e) {
             e.printStackTrace();
         } finally {
@@ -350,11 +363,9 @@ public class Player extends Activity
             mArtistName.setText(mTrack.getArtistName());
             mTrackName.setText(mTrack.getTitle());
 
-            //if (mImage == null)
-            //{ 
-                mArtTask = new LoadAlbumArtTask();
-                mArtTask.execute((Void) null);
-            //}
+            mArtTask = new LoadAlbumArtTask();
+            mArtTask.execute((Void) null);
+                
             setPauseButtonImage();
         } catch (java.util.concurrent.RejectedExecutionException e) {
             e.printStackTrace();

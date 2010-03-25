@@ -83,4 +83,6 @@ interface ITunesService {
 	
 	void createPlaybackList(in IdParcel[] track_ids);
 	void togglePlayback();
+	
+	IdParcel[] getTrackIds();
 } 
