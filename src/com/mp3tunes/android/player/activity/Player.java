@@ -1,6 +1,8 @@
 package com.mp3tunes.android.player.activity;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -8,6 +10,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -27,25 +32,32 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.RemoteAlbumArtHandler;
 import com.mp3tunes.android.player.RemoteImageView;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.TrackGetter;
+import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
+import com.mp3tunes.android.player.util.LifetimeLoggingActivity;
 import com.mp3tunes.android.player.util.Worker;
 
 
-public class Player extends Activity
+public class Player extends LifetimeLoggingActivity
 {
     private static final int REFRESH = 0;
     private static final int BUFFERING_DIALOG = 0;  
@@ -60,6 +72,7 @@ public class Player extends Activity
     private TextView mTotalTime;
     private TextView mArtistName;
     private TextView mTrackName;
+    private TextView mNextTrackData;
     private ProgressBar mProgress;
     private ProgressDialog mBufferingDialog;
     
@@ -72,28 +85,31 @@ public class Player extends Activity
     private IntentFilter mIntentFilter;
     private AsyncTask<Void, Void, Boolean> mArtTask;
     
+    private FetchPlaylistTracksTask mPlaylistTask;
+    
     private TrackAdder  mTrackAdder;
     private TrackPutter mTrackPutter;
     
     private Track       mTrack;
     
     @Override
-    public void onCreate( Bundle icicle )
+    public void onCreate(Bundle icicle)
     {
         super.onCreate(icicle);
         
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.audio_player);
         Music.ensureSession(this);
-        
+        Music.bindToService(this);
         mShowingOptions = false;
         
-        mCurrentTime = (TextView)findViewById(R.id.currenttime);
-        mTotalTime   = (TextView)findViewById(R.id.totaltime);
-        mAlbum       = (RemoteImageView)findViewById(R.id.album);
-        mArtistName  = (TextView)findViewById(R.id.track_artist);
-        mTrackName   = (TextView)findViewById(R.id.track_title);
-        mProgress    = (ProgressBar)findViewById(android.R.id.progress);
+        mCurrentTime   = (TextView)findViewById(R.id.currenttime);
+        mTotalTime     = (TextView)findViewById(R.id.totaltime);
+        mAlbum         = (RemoteImageView)findViewById(R.id.album);
+        mArtistName    = (TextView)findViewById(R.id.track_artist);
+        mTrackName     = (TextView)findViewById(R.id.track_title);
+        mNextTrackData = (TextView)findViewById(R.id.next_track);
+        mProgress      = (ProgressBar)findViewById(android.R.id.progress);
         mProgress.setMax(1000);
         
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
@@ -121,6 +137,17 @@ public class Player extends Activity
                 mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), null);
             }
         } else {
+            Intent intent = getIntent();
+            IdParcel idParcel = intent.getParcelableExtra("playlist");
+            if (idParcel != null) {
+                tryToStopPlayingTrack();
+                //intent.removeExtra("playlist");
+                Id id = idParcel.getId();
+                Log.w("Mp3Tunes", "playing playlist: " + id.asString());
+                //If all the tracks we are asking for are local then we do not need to run the refresh task
+                mPlaylistTask = new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), id);
+                mPlaylistTask.execute((Void[])null);                    
+            }
             mAlbumArtHandler = new RemoteAlbumArtHandler(mAlbumArtWorker.getLooper(), mHandler, getBaseContext(), null);
         }
         mIntentFilter = new IntentFilter();
@@ -129,13 +156,35 @@ public class Player extends Activity
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_STATE_CHANGED);
         mIntentFilter.addAction(GuiNotifier.PLAYBACK_ERROR);
         mIntentFilter.addAction(GuiNotifier.DATABASE_ERROR);
-        
-        Music.bindToService(this);
+
+    }
+    
+    @Override
+    public void onNewIntent(Intent intent)
+    {
+        super.onNewIntent(intent);
+        Log.w("Mp3Tunes", "onNewIntent");
+        IdParcel idParcel = intent.getParcelableExtra("playlist");
+        if (idParcel != null) {
+            tryToStopPlayingTrack();
+            Id id = idParcel.getId();
+            Log.w("Mp3Tunes", "playing playlist: " + id.asString());
+            //If all the tracks we are asking for are local then we do not need to run the refresh task
+            mPlaylistTask = new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), id);
+            mPlaylistTask.execute((Void[])null);                    
+        }
+    }
+    
+    @Override
+    public void onRestart()
+    {
+        super.onRestart();
     }
     
     @Override
     public void onStart() {
         super.onStart();
+        
         paused = false;
         long next = refreshNow();
         queueNextRefresh(next);
@@ -163,6 +212,7 @@ public class Player extends Activity
     @Override
     protected void onPause() {
         unregisterReceiver(mStatusListener);
+        killTasks();
         super.onPause();
     }
     
@@ -179,6 +229,7 @@ public class Player extends Activity
     public void onDestroy() {
         Music.unbindFromService( this );
         mAlbumArtWorker.quit();
+        killTasks();
         super.onDestroy();
     }
     
@@ -268,6 +319,16 @@ public class Player extends Activity
     public void onOptionsMenuClosed(Menu menu)
     {
         mShowingOptions = false;
+    }
+    
+    private void tryToStopPlayingTrack()
+    {
+        try {
+            Log.w("Mp3Tunes", "Stopping old playback");
+            Music.sService.stop();
+        } catch (Exception e) {
+            Log.w("Mp3Tunes", "Unable to stop old playback this may not be an error");
+        }
     }
     
     private View.OnClickListener mPrevListener = new View.OnClickListener() {
@@ -363,6 +424,13 @@ public class Player extends Activity
             mArtistName.setText(mTrack.getArtistName());
             mTrackName.setText(mTrack.getTitle());
 
+            try {
+                Track next = Music.sService.nextTrack();
+                mNextTrackData.setText("Next: \"" + next.getTitle() + "\" by " + next.getArtistName());
+            } catch (RemoteException e) {
+                mNextTrackData.setText("");
+            }
+                
             mArtTask = new LoadAlbumArtTask();
             mArtTask.execute((Void) null);
                 
@@ -569,4 +637,180 @@ public class Player extends Activity
         }
     }
     
+    void killTasks()
+    {
+        if( mPlaylistTask != null && mPlaylistTask.getStatus() == AsyncTask.Status.RUNNING) {
+            mPlaylistTask.cancel(true);
+        }
+    }
+    
+    private class FetchPlaylistTracksTask extends RefreshPlaylistTracksTask
+    {
+        Cursor   mCursor;
+        int      mTracks;
+        Boolean  mRefreshing;
+        Boolean  mRefreshedSome;
+        String[] mData = new String[] {DbKeys.ID, MediaStore.KEY_LOCAL};
+        
+        private void queueNextRefresh(long delay) 
+        {
+            synchronized (mRefreshing) {
+                if (mRefreshing) {
+                    Message msg = mHandler.obtainMessage(REFRESH);
+                    mHandler.removeMessages(REFRESH);
+                    mHandler.sendMessageDelayed(msg, delay);
+                }
+            }
+        }
+
+        private final Handler mHandler = new Handler() 
+        {
+            public void handleMessage(Message msg) 
+            {
+                if (msg.what == REFRESH) {
+                    Thread t = new Thread() 
+                    {
+                        public void run() 
+                        {
+                            updateCursor();
+                        }
+                    };
+                    t.start();
+                }
+            }
+        };
+        
+        private IdParcel createIdParcel(int id, Id playlist)
+        {
+            if (LockerId.class.isInstance(mId))
+                return new IdParcel(new LockerId(id));
+            return new IdParcel(new LocalId(id));
+        }
+        
+        
+        private void setCursor() throws SQLiteException, IOException, LockerException
+        {
+            if (LockerId.class.isInstance(mId))
+                mCursor = new MediaStore(mDb, getBaseContext().getContentResolver()).getTrackDataByPlaylist(mData, mId);
+            else
+                mCursor = new MediaStore(mDb, getBaseContext().getContentResolver()).getLocalTracksForPlaylist(mData);
+        }
+        
+        
+        private IdParcel[]  createIdParcels()
+        {
+            ArrayList<IdParcel> ids = new ArrayList<IdParcel>(); 
+            if (mCursor.moveToPosition(mTracks)) {
+                do {
+                    int id = mCursor.getInt(0);
+                    ids.add(createIdParcel(id, mId));
+                } while (mCursor.moveToNext());
+            }
+            //IdParcel[] array = new IdParcel[ids.size()];
+            //for (int i = 0; i < ids.size(); i++) {
+            //    IdParcel id = ids.get(i);
+            //    array[i] = id;
+            //}
+            return ids.toArray(new IdParcel[1]);
+        }
+        
+        private void createNewPlaybackList(IdParcel[] array) throws RemoteException
+        {
+            if (array != null && array.length > 0) {
+                Music.sService.createPlaybackList(array);
+                Music.sService.start();
+            } else {
+                queueNextRefresh(100);
+            }
+        }
+        
+        private void addToCurrentPlaybackList(IdParcel[] array) throws RemoteException
+        {
+            if (array != null && array.length > 0) {
+                Music.sService.addToPlaybackList(array);
+            } else {
+                queueNextRefresh(100);
+            }
+        }
+        
+        void updateCursor()
+        {
+            try {
+                //It is possible that the playback service has not been started yet 
+                if (Music.sService == null) {
+                    queueNextRefresh(100);
+                    return;
+                }
+                
+                //If we get here before we have any data then we do not want to wait a full hal
+                synchronized (mRefreshing) {
+                    if (!mRefreshedSome) {
+                        queueNextRefresh(100);
+                        return;
+                    }
+                }
+                
+                synchronized (mCursor) {
+                    setCursor();
+                    
+                    //Make sure that we have new tracks to add
+                    if (mCursor.getCount() > mTracks) {
+                        IdParcel[] array = createIdParcels();
+                        
+                        //check to see if we need to create a new playback list this time
+                        if (mTracks == 0) {
+                            createNewPlaybackList(array);
+                        } else {
+                            addToCurrentPlaybackList(array);
+                        }
+                        mTracks = mCursor.getCount();
+                    }
+                }
+                queueNextRefresh(500);
+            } catch (SQLiteException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (LockerException e) {
+                e.printStackTrace();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        public FetchPlaylistTracksTask(LockerDb db, Id id)
+        {
+            super(db, id);
+            mCursor        = new MatrixCursor(mData);
+            mTracks        = 0;
+            mRefreshing    = true;
+            mRefreshedSome = false;
+        }
+        
+        @Override
+        protected  void onPreExecute()
+        {
+            queueNextRefresh(100);
+        }
+        
+        @Override 
+        protected void onProgressUpdate(Void... voids)
+        {
+            synchronized (mRefreshing) {
+                mRefreshedSome = true;
+            }
+        }
+        
+        @Override
+        protected  void onPostExecute(Boolean result)
+        {
+            synchronized (mRefreshing) {
+                mRefreshing    = false;
+                mRefreshedSome = true;
+            }
+            if (!result) {
+                    Log.w("Mp3Tunes", "Got Error Fetching Playlist Tracks");
+            }
+        }
+    };
 }

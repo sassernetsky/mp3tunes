@@ -26,4 +26,9 @@ public class LocalId implements Id
         return new LocalId(mId);
     }
 
+    @Override
+    public String toString()
+    {
+        return "LocalId: " + asString();
+    }
 }

@@ -234,7 +234,9 @@ public class PlayerHandler
                     Logger.log("Error: Finished a song successfully while on a call");
                     mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
                 }
-                if (!playNext()) mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
+                if (!playNext()) {
+                    //mGuiNotifier.sendPlaybackError(track.getTrack(), mTrack.getErrorCode(), mTrack.getErrorValue());
+                }
             }
             Logger.log("trackSucceeded left from: " + Long.toString(Thread.currentThread().getId()));
         }
@@ -264,6 +266,32 @@ public class PlayerHandler
     public Vector<Track> getTracks()
     {
         return  mPlaybackList.getTracks();
+    }
+
+    public Track getNextTrack()
+    {
+        Logger.log("getTrack entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
+            if (mPlaybackList != null) {
+                MediaPlayerTrack track = mPlaybackList.peekAt(mPlaybackList.getCurrentPosition() + 1);
+                if (track != null) return track.getTrack();
+            }
+        } catch (PlaybackListEmptyException e) {
+        } catch (PlaybackListOutOfBounds e) {
+        } finally {
+            Logger.log("getTrack left from: " + Long.toString(Thread.currentThread().getId()));
+        }
+        return null;
+    }
+
+    public void addToPlaybackList(Vector<MediaPlayerTrack> tracksForList)
+    {
+        Logger.log("addToPlaybackList entered from: " + Long.toString(Thread.currentThread().getId()));
+        try {
+        mPlaybackList.add(tracksForList);
+        } finally {
+            Logger.log("addToPlaybackList left from: " + Long.toString(Thread.currentThread().getId()));
+        }
     }
     
 }

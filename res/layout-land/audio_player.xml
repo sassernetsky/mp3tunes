@@ -20,7 +20,22 @@
     android:layout_height="fill_parent"
     android:orientation="vertical"
     android:background="@color/mp3tunesblue">
-
+	
+	<LinearLayout
+            android:id="@+id/next_track_layout"
+            android:orientation="vertical"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent">
+            
+            <TextView
+                    android:id="@+id/next_track"
+                    style="@style/up_next_info"
+                    android:layout_height="wrap_content"
+                    android:layout_width="fill_parent"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:maxWidth="300dip"/>
+        </LinearLayout>
 
     <!-- Playback view -->
     <RelativeLayout
@@ -35,20 +50,17 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentLeft="true"
             android:layout_margin="5px"
-            android:layout_height="212px"
-            android:layout_width="212px" />
-
+            android:layout_height="200px"
+            android:layout_width="200px" />
         <TableLayout
             android:id="@+id/track_metadata"
             android:layout_height="wrap_content"
             android:layout_width="fill_parent"
             android:layout_toRightOf="@id/album"
             android:layout_centerVertical="true">
-
             <TableRow
                 android:layout_height="wrap_content"
                 android:layout_width="fill_parent">
-
                 <TextView
                     android:id="@+id/track_artist"
                     style="@style/playback_info"
@@ -58,12 +70,10 @@
                     android:textSize="8pt"
                     android:maxWidth="300dip" />
             </TableRow>
-
             <TableRow
                 android:layout_height="wrap_content"
                 android:layout_width="fill_parent"
                 android:layout_marginBottom="10px">
-
                 <TextView
                     android:id="@+id/track_title"
                     style="@style/playback_info"
@@ -73,18 +83,15 @@
                     android:textSize="8pt"
                     android:maxWidth="300dip" />
             </TableRow>
-
             <TableRow
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4px">
-
                 <LinearLayout
                     android:layout_width="fill_parent"
                     android:layout_alignParentBottom="true"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="18px">
-
                     <TextView
                         android:id="@+id/currenttime"
                         style="@style/playback_time"
@@ -94,7 +101,6 @@
                         android:gravity="right"
                         android:textStyle="bold"
                         android:text="--:--" />
-
                     <ProgressBar
                         android:id="@android:id/progress"
                         android:layout_height="15dip"
@@ -106,7 +112,6 @@
                         android:progressDrawable="@+drawable/seekbar"
                         android:layout_width="200dip"
                         android:layout_gravity="center_vertical" />
-
                     <TextView
                         android:id="@+id/totaltime"
                         style="@style/playback_time"
@@ -116,11 +121,9 @@
                         android:textStyle="bold"
                         android:gravity="right"
                         android:text="--:--" />
-
                 </LinearLayout>
             </TableRow>
         </TableLayout>
-
         <LinearLayout
             android:id="@+id/playback_controls"
             android:orientation="horizontal"
@@ -132,8 +135,6 @@
             android:gravity="center"
             android:layout_alignParentBottom="true"
             android:layout_below="@+id/album">
-<!--            android:background="@drawable/tab_bar_rest"-->
-
             <ImageButton
                 android:id="@+id/rew"
                 style="@+style/TunesButton.Rew" />
@@ -146,9 +147,6 @@
             <ImageButton
                 android:id="@+id/fwd"
                 style="@+style/TunesButton.Fwd" />
-
-            
-
         </LinearLayout>
     </RelativeLayout>
 

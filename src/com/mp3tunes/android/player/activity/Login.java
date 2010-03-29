@@ -28,6 +28,7 @@ import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.util.LifetimeLoggingActivity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -52,7 +53,7 @@ import android.widget.TextView;
 /**
  * This activity handles authentication.
  */
-public class Login extends Activity
+public class Login extends LifetimeLoggingActivity
 {
 
     public static final String PREFS = "LoginPrefs";

@@ -52,6 +52,7 @@ interface ITunesService {
 	*/
 	
 	ParcelableTrack getTrack();
+	ParcelableTrack nextTrack();
 	
 	/* Returns the duration of the current track */
 	long   getDuration();
@@ -82,6 +83,7 @@ interface ITunesService {
 	*/
 	
 	void createPlaybackList(in IdParcel[] track_ids);
+	void addToPlaybackList(in IdParcel[] track_ids);
 	void togglePlayback();
 	
 	IdParcel[] getTrackIds();

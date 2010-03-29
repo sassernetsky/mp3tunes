@@ -3,12 +3,15 @@ package com.mp3tunes.android.player.content;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.database.CursorJoiner;
 import android.database.MatrixCursor;
+import android.database.MergeCursor;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import android.util.Log;
@@ -18,10 +21,14 @@ import com.binaryelysium.mp3tunes.api.Artist;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
+import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.LocalId;
+import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.content.LockerDb.GetAlbumsByArtist;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 import com.mp3tunes.android.player.util.Timer;
+import com.mp3tunes.android.player.util.ReindexingCursorWrapper.CursorIndexer;
 
 public class MediaStore
 {
@@ -87,10 +94,11 @@ public class MediaStore
                 mLockerDb.new GetTracksByArtist());
     }
     
-    public Cursor getTrackDataByPlaylist(String[] columns, LockerId lockerId) throws SQLiteException, IOException, LockerException
+    public Cursor getTrackDataByPlaylist(String[] columns, Id id) throws SQLiteException, IOException, LockerException
     {
-        //String[] joinBy = new String[] {DbKeys.TITLE};
         String[] cols = rmLocalCol(columns);
+        if (LockerId.class.isInstance(id)) {
+        //String[] joinBy = new String[] {DbKeys.TITLE};
         //String[] projection = lockerDbToMediaStoreColumns(cols);
         
         //no matter what columns the caller requests we need the Artist, Album, and Title to be returned
@@ -99,17 +107,17 @@ public class MediaStore
         //cols = ensureColInColumns(cols, DbKeys.ALBUM_NAME); 
         //cols = ensureColInColumns(cols, DbKeys.ARTIST_NAME);
         
-        Cursor locker = mLockerDb.getTrackDataByPlaylist(cols, lockerId);
-        MatrixCursor output = new MatrixCursor(columns);
-        int len = columns.length - 1;
-        if (locker.moveToFirst()) {
-            do {
-                MatrixCursor.RowBuilder builder = output.newRow();
-                buildRow(builder, locker, len, 0);
-            } while (locker.moveToNext());
-        }
-        locker.close();
-        return output;
+            Cursor locker = mLockerDb.getTrackDataByPlaylist(cols, (LockerId)id);
+            MatrixCursor output = new MatrixCursor(columns);
+            int len = columns.length - 1;
+            if (locker.moveToFirst()) {
+                do {
+                    MatrixCursor.RowBuilder builder = output.newRow();
+                    buildRow(builder, locker, len, 0);
+                } while (locker.moveToNext());
+            }
+            locker.close();
+            return output;
         
         //This is too slow we need to make it faster to reach production
 //        int titleIndex  = locker.getColumnIndexOrThrow(DbKeys.TITLE);
@@ -143,6 +151,10 @@ public class MediaStore
 //        }
 //        locker.close();
 //        return output;
+        } else {
+            //At this point we only have one local playlist which is the list of all local tracks
+            return null;
+        }
     }
     
     public Cursor getLocalTracksForPlaylist(String[] columns)

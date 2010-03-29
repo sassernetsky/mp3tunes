@@ -5,6 +5,7 @@ import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 
 import android.database.Cursor;
 import android.os.AsyncTask;
@@ -44,6 +45,7 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
     {
         try {
             LockerDb db = Music.getDb(mActivity);
+            MediaStore store = new MediaStore(db, mActivity.getContentResolver());
             String[] data = new String[] {DbKeys.ID};
             switch (mIdType) {
                 case FOR.ARTIST:
@@ -53,7 +55,7 @@ public class FetchAndPlayTracks extends AsyncTask<Void, Void, Boolean>
                     mCursor = db.getTrackDataByAlbum(data, (LockerId)mId); 
                     break;
                 case FOR.PLAYLIST:
-                    mCursor = db.getTrackDataByPlaylist(data, (LockerId)mId);
+                    mCursor = store.getTrackDataByPlaylist(data, mId);
                     break;
             };
         } catch ( Exception e ) {

@@ -52,6 +52,7 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.Playlist;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
@@ -71,7 +72,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     public static final String DOWNLOADED_TRACKS_ID   = "-1";
     public static final String DOWNLOADED_TRACKS_NAME = "Local music";
     
-    private LockerId            mCurrentPlaylistId;
+    private Id                  mCurrentPlaylistId;
     private String              mCurrentPlaylistName;
     private SimpleCursorAdapter mAdapter;
     private boolean             mAdapterSent;
@@ -269,7 +270,11 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
 
         mCursor.moveToPosition(mi.position);
         mCurrentPlaylistName = mCursor.getString(FROM_MAPPING.NAME);
-        mCurrentPlaylistId = new LockerId(mCursor.getString(FROM_MAPPING.ID));
+        String id = mCursor.getString(FROM_MAPPING.ID);
+        if (id.equals(DOWNLOADED_TRACKS_ID))
+            mCurrentPlaylistId = new LocalId(Integer.parseInt(id));
+        else
+            mCurrentPlaylistId = new LockerId(id);
         
         if (mIsRadio) {
             mCurrentPlaylistName = mCurrentPlaylistName
@@ -284,7 +289,11 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected playlist
-                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
+                //mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.PLAYLIST, mCurrentPlaylistId, this).execute();
+                Intent intent = new Intent("com.mp3tunes.android.player.PLAYER");
+                //intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                intent.putExtra("playlist", new IdParcel(mCurrentPlaylistId));
+                startActivity(intent);
                 return true;
             }
             case SHOW_PLAYLIST: {

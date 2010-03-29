@@ -28,6 +28,8 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.LockerDb.PreCacheTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.util.LifetimeLoggingListActivity;
+
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ListActivity;
@@ -59,7 +61,7 @@ import android.widget.TextView;
  * @author ramblurr
  * 
  */
-public class LockerList extends ListActivity
+public class LockerList extends LifetimeLoggingListActivity
 {
     
     //Static finals

@@ -34,4 +34,9 @@ public class LockerId implements Id
         return new LockerId(mStringId);
     }
 
+    @Override
+    public String toString()
+    {
+        return "LockerId: " + asString();
+    }
 }
