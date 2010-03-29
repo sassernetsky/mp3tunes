@@ -2,6 +2,7 @@ package com.mp3tunes.android.player.service;
 
 import java.util.Vector;
 
+import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
@@ -232,6 +233,21 @@ public class Mp3tunesService extends Service
         {
             return getParcelsForTracks(mPlayerHandler.getTracks());
         }
+
+        public ParcelableTrack nextTrack() throws RemoteException
+        {
+            try {
+                return new ParcelableTrack(mPlayerHandler.getNextTrack());
+            } catch (Exception e) {
+                throw new RemoteException();
+            }
+        }
+
+        public void addToPlaybackList(IdParcel[] trackIds)
+                throws RemoteException
+        {
+            mPlayerHandler.addToPlaybackList(getTracksForList(trackIds));
+        }
         
     };
     
@@ -254,4 +270,5 @@ public class Mp3tunesService extends Service
         }
         return parcels;
     }
+    
 }

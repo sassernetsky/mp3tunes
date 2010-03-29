@@ -144,4 +144,9 @@ public class PlaybackList
         }
         return tracks;
     }
+
+    synchronized public void add(Vector<MediaPlayerTrack> tracksForList)
+    {
+        mList.addAll(tracksForList);
+    }
 }

@@ -21,6 +21,21 @@
     android:orientation="vertical"
     android:background="@color/mp3tunesblue">
 
+	<LinearLayout
+            android:id="@+id/next_track_layout"
+            android:orientation="vertical"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent">
+            <TextView
+                    android:id="@+id/next_track"
+                    style="@style/up_next_info"
+                    android:layout_height="wrap_content"
+                    android:layout_width="fill_parent"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:maxWidth="300dip" 
+                    android:layout_marginBottom="10dip"/>
+    </LinearLayout>
 
     <!-- Playback view -->
     <RelativeLayout
@@ -33,18 +48,16 @@
             android:background="@drawable/no_artwork_portrait"
             android:gravity="center"
             android:layout_alignParentTop="true"
-            android:layout_marginTop="10dip"
             android:layout_centerHorizontal="true"
-            android:layout_height="300px"
-            android:layout_width="300px" />
-
+            android:layout_height="250px"
+            android:layout_width="250px" />
         <TableLayout
             android:id="@+id/track_metadata"
             android:layout_height="wrap_content"
             android:layout_width="fill_parent"
             android:layout_centerHorizontal="true"
-            android:layout_below="@id/album"
-            android:layout_marginBottom="6px"
+            android:layout_below="@+id/album"
+            android:layout_marginBottom="3px"
             android:gravity="center">
 
             <TableRow
@@ -52,7 +65,6 @@
                 android:layout_width="fill_parent"
                 android:layout_gravity="center"
                 android:gravity="center">
-
                 <TextView
                     android:id="@+id/track_artist"
                     style="@style/playback_info"
@@ -60,34 +72,29 @@
                     android:layout_width="fill_parent"
                     android:layout_gravity="center"
                     android:gravity="center"
-                    android:maxWidth="300dip" />
-            </TableRow>
-
+                    android:maxWidth="300dip"/>
+			</TableRow>
             <TableRow
                 android:layout_height="wrap_content"
                 android:layout_width="fill_parent"
                 android:gravity="center">
-
-                <TextView
+                    <TextView
                     android:id="@+id/track_title"
                     style="@style/playback_info"
                     android:layout_height="wrap_content"
                     android:layout_width="fill_parent"
                     android:layout_gravity="center"
                     android:gravity="center"
-                    android:maxWidth="300dip" />
-            </TableRow>
-
+                    android:maxWidth="300dip"/>
+			</TableRow>
             <TableRow
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:layout_marginTop="4px">
-
+                android:layout_marginTop="2px">
                 <LinearLayout
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content">
-
                     <TextView
                         android:id="@+id/currenttime"
                         style="@style/playback_time"
@@ -96,7 +103,6 @@
                         android:layout_width="48dip"
                         android:gravity="right"
                         android:text="--:--" />
-
                     <ProgressBar
                         android:id="@android:id/progress"
                         android:layout_height="15dip"
@@ -108,7 +114,6 @@
                         android:progressDrawable="@+drawable/seekbar"
                         android:layout_width="200dip"
                         android:layout_gravity="center_vertical" />
-
                     <TextView
                         android:id="@+id/totaltime"
                         style="@style/playback_time"
@@ -117,28 +122,22 @@
                         android:layout_width="48dip"
                         android:gravity="left"
                         android:text="--:--" />
-
                 </LinearLayout>
             </TableRow>
         </TableLayout>
-
         <LinearLayout
             android:id="@+id/playback_controls"
             android:orientation="horizontal"
             android:layout_gravity="bottom"
             android:layout_height="wrap_content"
-            
-            android:paddingTop="5dip"
-            android:paddingBottom="5dip"
+            android:paddingTop="3dip"
+            android:paddingBottom="3dip"
             android:gravity="center"
             android:layout_alignParentBottom="true"
-            
             android:layout_below="@id/track_metadata" android:layout_width="fill_parent">
-<!--            android:background="@drawable/tab_bar_rest"-->
-<!--android:layout_width="fill_parent"-->
             <ImageButton
-                android:id="@+id/rew"
-                style="@+style/TunesButton.Rew" />
+                android:id="@+id/rew" 
+                style="@+style/TunesButton.Rew"/>
             <ImageButton
                 android:id="@+id/stop"
                 style="@+style/TunesButton.Stop" />
@@ -148,10 +147,6 @@
             <ImageButton
                 android:id="@+id/fwd"
                 style="@+style/TunesButton.Fwd" />
-
-            
-
         </LinearLayout>
     </RelativeLayout>
-
 </LinearLayout>

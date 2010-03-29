@@ -43,7 +43,7 @@ public class IdParcel implements Parcelable
 
     public void writeToParcel(Parcel out, int flags)
     {
-        out.writeInt(mId.asInt());
+        out.writeString(mId.asString());
         if (LocalId.class.isInstance(mId))
             out.writeInt(LOCAL_ID);
         else if(LockerId.class.isInstance(mId))
@@ -64,11 +64,11 @@ public class IdParcel implements Parcelable
 
     private static Id parcelToId(Parcel in)
     {
-        int id   = in.readInt();
-        int type = in.readInt();
+        String id   = in.readString();
+        int    type = in.readInt();
 
         if (type == LOCAL_ID)
-            return new LocalId(id);
+            return new LocalId(Integer.parseInt(id));
         else if (type == LOCKER_ID) 
             return new LockerId(id);
         return null;

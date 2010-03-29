@@ -73,6 +73,9 @@ public class Music
         TRACK, ARTIST, ALBUM, PLAYLIST, CURRENT_PLAYLIST, RADIO;
     }
     
+    public static final String DOWNLOADED_TRACKS_ID   = "-1";
+    public static final String DOWNLOADED_TRACKS_NAME = "Local music";
+    
     public static String[] ID = {DbKeys.ID};
     
     public static String[] TOKEN = {DbKeys.TYPE, 
@@ -493,20 +496,6 @@ public class Music
     
     private final static int [] sEmptyList = new int[0];
     
-//    public static IdParcel [] getSongListForCursor(Cursor cursor) {
-//        if (cursor == null) {
-//            return sEmptyList;
-//        }
-//        int len = cursor.getCount();
-//        int [] list = new int[len];
-//        cursor.moveToFirst();
-//        int colidx = Music.TRACK_MAPPING.ID;
-//        for (int i = 0; i < len; i++) {
-//            list[i] = new IdParcel(cursor.getInt(colidx));
-//            cursor.moveToNext();
-//        }
-//        return list;
-//    }
     private static IdParcel[] idArrayToIdParcelArray(Id[] ids)
     {
         IdParcel[] output = new IdParcel[ids.length];

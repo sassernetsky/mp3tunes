@@ -1,6 +1,7 @@
 package com.mp3tunes.android.player.util;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Id;
@@ -89,6 +90,11 @@ public class LazyTrack implements Track
         LockerDb db = Music.getDb(mContext);
         MediaStore store = new MediaStore(db, mContext.getContentResolver());
         mTrack = (ConcreteTrack)store.getTrack(mTrackId);
+        if (mTrack == null) {
+            Log.w("Mp3Tunes", "Lazy Track got a null track from store, this should not be allowed to happen");
+            Log.w("Mp3Tunes", "Track id: " + mTrackId.toString());
+            throw new NullPointerException();
+        }
     }
 
     public boolean sameMainMetaData(Track t)

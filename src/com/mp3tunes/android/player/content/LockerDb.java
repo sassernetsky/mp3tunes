@@ -877,6 +877,7 @@ public class LockerDb
             List<Track> tracks = getTracksForPlaylist(p, id);
             if (task.isCancelled()) return false;
             if (p.mCurrentSet == 0) deleteOldPlaylistTracks(id);
+            if (task.isCancelled()) return false;
             return insertTracksForPlaylist(tracks, id, p);
         }
     }
@@ -893,6 +894,7 @@ public class LockerDb
                 LockerCache.Progress p = mCache.getProgress(cacheId);
                 while (refreshDispatcher(cacheId, p, task, id)) {
                     p.mCurrentSet++;
+                    task.publish();
                 }
                 mCache.finishCaching(cacheId);
             }
@@ -914,6 +916,12 @@ public class LockerDb
         {
             mDb = db;
         }
+        
+        public void publish()
+        {
+            publishProgress();
+        }
+        
         @Override
         protected void onCancelled()
         {
@@ -1007,7 +1015,7 @@ public class LockerDb
     
     static public class RefreshPlaylistTracksTask extends RefreshTask
     {
-        Id mId;
+        protected Id mId;
         
         public RefreshPlaylistTracksTask(LockerDb db, Id id)
         {
@@ -1022,6 +1030,8 @@ public class LockerDb
                 Log.w("Mp3Tunes", "Starting RefreshTracks for playlist");
                 if (LockerId.class.isInstance(mId))
                     return mDb.refreshTask(mId.asString(), this, mId.asString());
+                else 
+                    return true;
             } catch (Exception e) {
                 e.printStackTrace();
             }

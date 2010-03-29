@@ -30,7 +30,7 @@ import android.widget.ImageView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
-public class BaseMp3TunesListActivity extends ListActivity
+public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
 {
     protected final int PROGRESS_DIALOG = 0;
     protected final int ERROR_DIALOG    = 1;
