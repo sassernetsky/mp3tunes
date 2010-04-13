@@ -449,6 +449,7 @@ public class Queries
         try {
             return db.compileStatement(query);
         } catch (Exception e) {
+            Log.w("MP3tunes", Log.getStackTraceString(e));
             throw new MakeQueryException();
         }
     }
