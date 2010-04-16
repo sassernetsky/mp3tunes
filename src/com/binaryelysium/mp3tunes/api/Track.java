@@ -13,5 +13,4 @@ public interface Track extends LockerData
     public abstract int    getArtistId();
     public abstract String getArtistName();
     public abstract boolean sameMainMetaData(Track mTrack);
-
 }
