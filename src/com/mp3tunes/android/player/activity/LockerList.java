@@ -25,24 +25,20 @@ import com.mp3tunes.android.player.ListAdapter;
 import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
-import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.LockerDb.PreCacheTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.LifetimeLoggingListActivity;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.RemoteException;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -212,7 +208,7 @@ public class LockerList extends LifetimeLoggingListActivity
         case R.id.menu_opt_player:
             intent = new Intent("com.mp3tunes.android.player.PLAYER");
             startActivity(intent);
-            return true;
+            return true; 
         }
         return false;
     }
@@ -229,7 +225,7 @@ public class LockerList extends LifetimeLoggingListActivity
         
         ListAdapter adapter = new ListAdapter(LockerList.this);
         adapter.setSourceIconified(entries);
-        setListAdapter(adapter);
+        setListAdapter(adapter); 
         
         if (sense == TRANSLATION_LEFT)
             getListView().startAnimation(AnimationUtils.loadAnimation(this, R.anim.ltrtranslation));

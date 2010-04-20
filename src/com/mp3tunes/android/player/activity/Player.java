@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.binaryelysium.mp3tunes.api.Id;
@@ -111,6 +112,7 @@ public class Player extends LifetimeLoggingActivity
         mNextTrackData = (TextView)findViewById(R.id.next_track);
         mProgress      = (ProgressBar)findViewById(android.R.id.progress);
         mProgress.setMax(1000);
+        //mProgress.setOnSeekBarChangeListener(mSeekBarListener);
         
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
@@ -573,6 +575,36 @@ public class Player extends LifetimeLoggingActivity
             }
         }
     }
+    
+    SeekBar.OnSeekBarChangeListener mSeekBarListener = new SeekBar.OnSeekBarChangeListener ()
+    {
+        int mProgress;
+        
+        public void onProgressChanged(SeekBar seekBar, int progress,
+                boolean fromUser)
+        {
+            if (fromUser) {
+                mProgress = progress;
+            }
+        }
+
+        public void onStartTrackingTouch(SeekBar seekBar)
+        {
+        }
+
+        public void onStopTrackingTouch(SeekBar seekBar)
+        {
+            if (Music.sService != null) {
+                try {
+                    Log.w("Mp3Tunes", "Moving playhead to: " + Integer.toString(mProgress));
+                    Music.sService.setPosition(mProgress);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+    };
 
     class ProgressDialog extends android.app.ProgressDialog
     {

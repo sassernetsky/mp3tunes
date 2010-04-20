@@ -35,7 +35,7 @@
                     android:layout_gravity="center"
                     android:gravity="center"
                     android:paddingTop="3px"
-                    android:maxWidth="300dip"/>
+                    android:maxWidth="300dip" android:ellipsize="marquee" android:marqueeRepeatLimit="1" android:maxLines="1"/>
         </LinearLayout>
 
     <!-- Playback view -->
@@ -61,18 +61,6 @@
             android:layout_centerVertical="true">
             <TableRow
                 android:layout_height="wrap_content"
-                android:layout_width="fill_parent">
-                <TextView
-                    android:id="@+id/track_artist"
-                    style="@style/playback_info"
-                    android:layout_height="wrap_content"
-                    android:layout_width="fill_parent"
-                    android:textStyle="bold"
-                    android:textSize="8pt"
-                    android:maxWidth="300dip" />
-            </TableRow>
-            <TableRow
-                android:layout_height="wrap_content"
                 android:layout_width="fill_parent"
                 android:layout_marginBottom="10px">
                 <TextView
@@ -82,7 +70,19 @@
                     android:layout_width="fill_parent"
                     android:textStyle="bold"
                     android:textSize="8pt"
-                    android:maxWidth="300dip" />
+                    android:maxWidth="300dip" android:ellipsize="marquee" android:maxLines="1" android:marqueeRepeatLimit="1"/>
+            </TableRow>
+            <TableRow
+                android:layout_height="wrap_content"
+                android:layout_width="fill_parent">
+                <TextView
+                    android:id="@+id/track_artist"
+                    style="@style/playback_info"
+                    android:layout_height="wrap_content"
+                    android:layout_width="fill_parent"
+                    android:textStyle="bold"
+                    android:textSize="8pt"
+                    android:maxWidth="300dip" android:ellipsize="marquee" android:marqueeRepeatLimit="1" android:maxLines="1"/>
             </TableRow>
             <TableRow
                 android:layout_width="fill_parent"
@@ -110,7 +110,7 @@
                         android:layout_marginLeft="5dip"
                         android:layout_marginRight="5dip"
                         android:indeterminateOnly="false"
-                        android:progressDrawable="@+drawable/seekbar"
+                        android:progressDrawable="@drawable/seekbar"
                         android:layout_width="200dip"
                         android:layout_gravity="center_vertical" />
                     <TextView
@@ -138,16 +138,16 @@
             android:layout_below="@+id/album">
             <ImageButton
                 android:id="@+id/rew"
-                style="@+style/TunesButton.Rew" />
+                style="@style/TunesButton.Rew" />
             <ImageButton 
             	android:id="@+id/stop"
-                style="@+style/TunesButton.Stop" />
+                style="@style/TunesButton.Stop" />
             <ImageButton
                 android:id="@+id/play"
-                style="@+style/TunesButton.PlayPause" />
+                style="@style/TunesButton.PlayPause" />
             <ImageButton
                 android:id="@+id/fwd"
-                style="@+style/TunesButton.Fwd" />
+                style="@style/TunesButton.Fwd" />
         </LinearLayout>
     </RelativeLayout>
 

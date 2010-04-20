@@ -293,5 +293,12 @@ public class PlayerHandler
             Logger.log("addToPlaybackList left from: " + Long.toString(Thread.currentThread().getId()));
         }
     }
+
+    synchronized public boolean setPosition(int msec)
+    {
+        if (mTrack != null)
+            return mTrack.seekTo(msec);
+        return false;
+    }
     
 }

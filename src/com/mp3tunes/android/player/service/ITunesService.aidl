@@ -61,9 +61,8 @@ interface ITunesService {
 	long   getPosition(); 
 	
 	/* Set the position of the currently played track. Returns true 
-	   if the operation was successful.
+	   if the operation was successful.*/
 	boolean setPosition(in int msec);
-	*/
 	
 	/* Returns the percentage the track has buffered */
 	int	   getBufferPercent();
@@ -87,4 +86,5 @@ interface ITunesService {
 	void togglePlayback();
 	
 	IdParcel[] getTrackIds();
+	
 } 
