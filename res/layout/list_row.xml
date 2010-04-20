@@ -37,9 +37,8 @@
 				android:paddingLeft="16dip"  
 				android:layout_gravity="center" 
 				android:gravity="left|center_vertical" 
-				android:textSize="16dip" 
 				android:textStyle="bold" 
-				android:textColor="@drawable/list_entry_color"/>
+				android:textColor="@drawable/list_entry_color" android:textSize="23dip"/>
 		<TextView android:id="@+id/row_label_second"
 				android:layout_width="fill_parent"
 				android:layout_height="wrap_content"

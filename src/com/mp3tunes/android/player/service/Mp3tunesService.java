@@ -248,6 +248,11 @@ public class Mp3tunesService extends Service
         {
             mPlayerHandler.addToPlaybackList(getTracksForList(trackIds));
         }
+
+        public boolean setPosition(int msec) throws RemoteException
+        {
+            return mPlayerHandler.setPosition(msec);
+        }
         
     };
     

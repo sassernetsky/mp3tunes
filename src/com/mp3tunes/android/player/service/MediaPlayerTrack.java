@@ -577,11 +577,20 @@ public class MediaPlayerTrack
         return mErrorCode;
     }
 
-    public void seekTo(int i)
+    public boolean seekTo(int i)
     {
         synchronized (mState) {
-            if (mState == STATE.INITIALIZED)
-                mMp.seekTo(i);
+            if (mState == STATE.INITIALIZED) {
+                Logger.log("Moving service to: " + Integer.toString(i));
+                int total   = mMp.getDuration();
+                int percent = i / 10;
+                Logger.log("Moving service to: " + Integer.toString(percent) + " of: " + total);
+                int msecs   = (total * percent) / 100;
+                Logger.log("Moving service to msec: " + Integer.toString(msecs));
+                mMp.seekTo(msecs);
+                return true;
+            }
+            return false;
         }
         
     }
