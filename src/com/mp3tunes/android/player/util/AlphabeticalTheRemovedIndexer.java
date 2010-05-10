@@ -2,12 +2,9 @@ package com.mp3tunes.android.player.util;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import android.database.Cursor;
-import android.util.Log;
-
 import com.mp3tunes.android.player.util.ReindexingCursorWrapper.CursorIndexer;
 
 public class AlphabeticalTheRemovedIndexer implements CursorIndexer

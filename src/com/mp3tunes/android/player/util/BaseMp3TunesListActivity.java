@@ -4,31 +4,18 @@ import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
-import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
+import com.mp3tunes.android.player.content.RefreshTask;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.ListActivity;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
 
 public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
 {
@@ -41,8 +28,8 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
     private ReturnToLockerListAction mReturner = new ReturnToLockerListAction(this);
     
     protected FetchBrowserCursor mFetchBrowserCursorTask; 
-    protected LockerDb.RefreshTask mCursorTask;
-    protected LockerDb.RefreshTask mTracksTask;
+    protected RefreshTask mCursorTask;
+    protected RefreshTask mTracksTask;
     protected Cursor mCursor;
     protected boolean mLoadingCursor;
     

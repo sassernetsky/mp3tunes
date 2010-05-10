@@ -46,9 +46,10 @@ import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerCache;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
-import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumsTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshAlbumsTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
@@ -237,7 +238,8 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected album
-                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ALBUM, mCurrentAlbumId, this).execute();
+                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ALBUM, mCurrentAlbumId, this);
+                mPlayTracksTask.execute();
                 return true;
             }
             default:
@@ -347,11 +349,11 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     private void killTasks(Bundle state)
     {
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
-            mCursorTask.cancel(true);
+            mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel(true);
+            mTracksTask.cancelSafe();
         if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING) {
             mArtFetcher.cancel(true);
             if (state != null)
@@ -375,7 +377,8 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Albums");
             } else {
-                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                cleanUp();
+                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
             }
         }

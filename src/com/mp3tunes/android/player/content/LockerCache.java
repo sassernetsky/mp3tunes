@@ -18,16 +18,21 @@
 ***************************************************************************/
 package com.mp3tunes.android.player.content;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.binaryelysium.mp3tunes.api.Album;
+import com.binaryelysium.mp3tunes.api.Artist;
+import com.binaryelysium.mp3tunes.api.Id;
+import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Playlist;
-import com.mp3tunes.android.player.MP3tunesApplication;
+import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.content.Queries.MakeQueryException;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteException;
 
 public class LockerCache
 {
@@ -228,5 +233,90 @@ public class LockerCache
             return LockerCache.this;
         }
         
+    }
+    
+  
+    static public class RefreshArtistsTask extends RefreshTask
+    {
+        public RefreshArtistsTask(LockerDb db)
+        {
+            super(db, LockerCache.CACHES.ARTIST, null);
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException
+        {
+            List<Artist> artists = mDb.mLocker.getArtists(p.mCount, p.mCurrentSet);
+            return mDb.multiInsert(artists, p);
+        }
+    }
+
+    static public class RefreshAlbumsTask extends RefreshTask
+    {
+        public RefreshAlbumsTask(LockerDb db)
+        {
+            super(db, LockerCache.CACHES.ALBUM, null);
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException
+        {
+            List<Album> albums = mDb.mLocker.getAlbums(p.mCount, p.mCurrentSet);
+            return mDb.multiInsert(albums, p);
+        }
+    }
+    
+    static public class RefreshPlaylistsTask extends RefreshTask
+    {
+        public RefreshPlaylistsTask(LockerDb db)
+        {
+            super(db, LockerCache.CACHES.PLAYLIST, null);
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException
+        {
+            List<Playlist> playlists = mDb.mLocker.getPlaylists(p.mCount, p.mCurrentSet);
+            return mDb.multiInsert(playlists, p);
+        }
+    }
+    
+    static public class RefreshTracksTask extends RefreshTask
+    {
+        public RefreshTracksTask(LockerDb db)
+        {
+            super(db, LockerCache.CACHES.TRACK, null);
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException
+        {
+            List<Track> tracks = mDb.mLocker.getTracks(p.mCount, p.mCurrentSet);
+            return mDb.multiInsert(tracks, p);
+        }
+    }
+    
+    static public class RefreshPlaylistTracksTask extends RefreshTask
+    {
+        //this declaration hides mId in the parent class. 
+        protected Id mId;
+        public RefreshPlaylistTracksTask(LockerDb db, Id id)
+        {
+            super(db, id.asString(), id.asString());
+            mId = id;
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException
+        {
+            List<Track> tracks = mDb.mLocker.getTracksForPlaylist(id, p.mCount, p.mCurrentSet);
+            if (p.mCurrentSet == 0) mDb.deleteOldPlaylistTracks(id);
+            return mDb.insertTracksForPlaylist(tracks, id, p);
+        }
     }
 }

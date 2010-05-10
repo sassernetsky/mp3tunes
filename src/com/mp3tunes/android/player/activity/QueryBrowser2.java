@@ -252,68 +252,69 @@ public class QueryBrowser2 extends ExpandableListActivity
     private void killTasks()
     {
         if( mSearchTask != null && mSearchTask.getStatus() == AsyncTask.Status.RUNNING) {
-            mSearchTask.cancel(true);
+            mSearchTask.cancelSafe();
         }
     }
     
-    private class SearchTask extends AsyncTask<Void, Void, Boolean>
+    private class SearchTask extends LockerDb.RefreshSearchTask
     {
-        LockerDb.DbSearchResult res;
-        String                  mQuery;
-        
         SearchTask(String query)
         {
-            mQuery = query;
+            super (Music.getDb(getBaseContext()), 
+                   new DbSearchQuery(query, true, false, true), 
+                   new String[] {DbKeys.ID, DbKeys.TITLE, DbKeys.ARTIST_NAME},
+                   new String[] {DbKeys.ID, DbKeys.ARTIST_NAME, DbKeys.ALBUM_COUNT});
         }
+        
         @Override
         public void onPreExecute()
         {
             showDialog( PROGRESS );
         }
 
-        @Override
-        public Boolean doInBackground( Void... params )
-        {
-            System.out.println("Searching for " + mQuery);
-            String[] artist = new String[] {
-                    DbKeys.ID, DbKeys.ARTIST_NAME, DbKeys.ALBUM_COUNT
-            };
-            String[] track = new String[] {
-                    DbKeys.ID, DbKeys.TITLE, DbKeys.ARTIST_NAME
-            };
-            try {
-                
-                LockerDb db = Music.getDb(getBaseContext());
-                res = db.search(db.new DbSearchQuery(mQuery, true, false, true), track, artist);
-            } catch ( Exception e ) {
-                e.printStackTrace();
-                return false;
-            }
-            return true;
-        }
+//        @Override
+//        public Boolean doInBackground( Void... params )
+//        {
+//            System.out.println("Searching for " + mQuery);
+//            String[] artist = new String[] {
+//                    DbKeys.ID, DbKeys.ARTIST_NAME, DbKeys.ALBUM_COUNT
+//            };
+//            String[] track = new String[] {
+//                    DbKeys.ID, DbKeys.TITLE, DbKeys.ARTIST_NAME
+//            };
+//            try {
+//                
+//                LockerDb db = Music.getDb(getBaseContext());
+//                res = db.search(db.new DbSearchQuery(mQuery, true, false, true), track, artist);
+//            } catch ( Exception e ) {
+//                e.printStackTrace();
+//                return false;
+//            }
+//            return true;
+//        }
 
         @Override
         public void onPostExecute( Boolean result )
         {
             dismissDialog( PROGRESS );
-            if (!result || res == null || (res.mArtists == null && res.mTracks == null)) {
+            if (!result || mResult == null || (mResult.mArtists == null && mResult.mTracks == null)) {
                 Log.w("Mp3Tunes", "Search Failed");
                 return;
             }
             
             MatrixCursor parentCursor  = new MatrixCursor(mGroupFrom);
-            createParentRow(0, getBaseContext().getString(R.string.artists), parentCursor, res.mArtists.getCount());
-            createParentRow(1, getBaseContext().getString(R.string.tracks),  parentCursor, res.mTracks.getCount());
+            createParentRow(0, getBaseContext().getString(R.string.artists), parentCursor, mResult.mArtists.getCount());
+            createParentRow(1, getBaseContext().getString(R.string.tracks),  parentCursor, mResult.mTracks.getCount());
             mParentCursor =  parentCursor;
             
-            mArtistsCursor = new ReindexingCursorWrapper(addColumnToCursor(res.mArtists, ARTIST), new AlphabeticalTheRemovedIndexer(), 1);
-            mTracksCursor  = new ReindexingCursorWrapper(addColumnToCursor(res.mTracks,  TRACK),  new AlphabeticalTheRemovedIndexer(), 1);
+            mArtistsCursor = new ReindexingCursorWrapper(addColumnToCursor(mResult.mArtists, ARTIST), new AlphabeticalTheRemovedIndexer(), 1);
+            mTracksCursor  = new ReindexingCursorWrapper(addColumnToCursor(mResult.mTracks,  TRACK),  new AlphabeticalTheRemovedIndexer(), 1);
             mAdapter.changeCursor(mParentCursor);
             
-            if (res.mArtists != null)
-                res.mArtists.close();
-            if (res.mTracks != null)
-                res.mTracks.close();
+            if (mResult.mArtists != null)
+                mResult.mArtists.close();
+            if (mResult.mTracks != null)
+                mResult.mTracks.close();
         }
     }
     

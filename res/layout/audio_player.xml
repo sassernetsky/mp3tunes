@@ -75,7 +75,7 @@
                               android:layout_width="48dip"
                               android:gravity="right"
                               android:text="--:--" />
-                    <ProgressBar android:id="@android:id/progress"
+                    <SeekBar android:id="@android:id/progress"
                                  android:layout_height="15dip"
                                  android:paddingLeft="5dip"
                                  android:paddingRight="5dip"

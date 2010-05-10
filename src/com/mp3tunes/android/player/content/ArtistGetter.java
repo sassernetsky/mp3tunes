@@ -8,7 +8,6 @@ import android.database.DatabaseUtils;
 import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.Artist;
-import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerData;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;

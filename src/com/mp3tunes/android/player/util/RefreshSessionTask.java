@@ -9,7 +9,6 @@ import android.os.AsyncTask;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
-import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.activity.Login;
 
 public class RefreshSessionTask extends AsyncTask<Void, Void, Boolean>
