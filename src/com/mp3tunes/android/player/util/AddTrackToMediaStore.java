@@ -3,16 +3,12 @@ package com.mp3tunes.android.player.util;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 
 import com.binaryelysium.mp3tunes.api.HttpClientCaller;
-import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.Locker;
-import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.HttpClientCaller.CreateStreamCallback;
-import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.activity.Player;
 

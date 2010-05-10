@@ -15,8 +15,6 @@
  */
 package com.mp3tunes.android.player.activity;
 
-import java.util.concurrent.ExecutionException;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -29,9 +27,6 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.RemoteException;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -47,16 +42,14 @@ import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import com.binaryelysium.mp3tunes.api.Id;
-import com.binaryelysium.mp3tunes.api.LockerId;
 import com.mp3tunes.android.player.IdParcel;
-import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
-import com.mp3tunes.android.player.content.LockerDb.RefreshArtistsTask;
-import com.mp3tunes.android.player.content.LockerDb.RefreshTracksTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshArtistsTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
@@ -74,8 +67,6 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     private boolean mShowingDialog;
     
     private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
-    
-    private static final int REFRESH = 0;
     
     String[] mFrom = new String[] {
             DbKeys.ID,
@@ -286,7 +277,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         switch (item.getItemId()) {
             case PLAY_SELECTION: {
                 // play the selected artist
-                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ARTIST, mCurrentArtistId, this).execute();
+                mPlayTracksTask = new FetchAndPlayTracks(FetchAndPlayTracks.FOR.ARTIST, mCurrentArtistId, this);
+                mPlayTracksTask.execute();
                 return true;
             }
         }
@@ -353,11 +345,11 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
     private void killTasks()
     {
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
-            mCursorTask.cancel(true);
+            mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel(true);
+            mTracksTask.cancelSafe();
     }
     
     private String mArtistId;
@@ -377,6 +369,7 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Artists");
             } else {
+                cleanUp();
                 mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
             }

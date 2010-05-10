@@ -1,14 +1,5 @@
 package com.mp3tunes.android.player.content;
 
-import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDiskIOException;
-
-import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.Music.TRACK_MAPPING;
-
 public class CurrentPlaylist {
 	
 //	private SQLiteDatabase mDb;

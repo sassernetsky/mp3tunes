@@ -25,7 +25,7 @@ import com.mp3tunes.android.player.ListAdapter;
 import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
-import com.mp3tunes.android.player.content.LockerDb.PreCacheTask;
+import com.mp3tunes.android.player.content.PreCacheTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.LifetimeLoggingListActivity;
 
@@ -143,7 +143,7 @@ public class LockerList extends LifetimeLoggingListActivity
     private void killTasks()
     {
         if( mPreCacher != null && mPreCacher.getStatus() == AsyncTask.Status.RUNNING) {
-            mPreCacher.cancel(true);
+            mPreCacher.cancelSafe();
         }
     }
     

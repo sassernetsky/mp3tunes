@@ -13,7 +13,6 @@ import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerCache.Progress;
-import com.mp3tunes.android.player.content.LockerDb.IdPolicyException;
 
 public class Queries
 {
@@ -41,41 +40,55 @@ public class Queries
     
     private SQLiteStatement    mTrackInPlaylist;
 
-    Queries(LockerDb db)
+    Queries(LockerDb db) throws MakeQueryException
     {
         mDb = db;
+        mInsertArtistFromTrack = makeInsertArtistFromTrackStatement(mDb.mDb);
+        mInsertAlbumFromTrack  = makeInsertAlbumFromTrackStatement(mDb.mDb);
+        mInsertTrack           = makeInsertTrackStatement(mDb.mDb);
+        mInsertArtist          = makeInsertArtistStatement(mDb.mDb);
+        mInsertAlbum           = makeInsertAlbumStatement(mDb.mDb);
+        mInsertPlaylist        = makeInsertPlaylistStatement(mDb.mDb);
+        mUpdateArtist          = makeUpdateArtistStatement(mDb.mDb);
+        mUpdateAlbum           = makeUpdateAlbumStatement(mDb.mDb);
+        mUpdatePlaylist        = makeUpdatePlaylistStatement(mDb.mDb);
+        mArtistExists          = makeExistsQuery(mDb.mDb, DbTables.ARTIST);
+        mAlbumExists           = makeExistsQuery(mDb.mDb, DbTables.ALBUM);
+        mTrackExists           = makeExistsQuery(mDb.mDb, DbTables.TRACK);
+        mPlaylistExists        = makeExistsQuery(mDb.mDb, DbTables.PLAYLIST);
+        mCacheExists           = makeExistsQuery(mDb.mDb, DbTables.CACHE);
+        mInsertCache           = makeInsertCacheStatement(mDb.mDb);
+        mUpdateCache           = makeUpdateCacheStatement(mDb.mDb);;
+        mTrackInPlaylist       = makeTrackInPlaylistQuery(mDb.mDb);
     }
-    
-    synchronized public boolean artistExists(int id) throws MakeQueryException
+
+    public boolean artistExists(int id) throws MakeQueryException
     {
         return runExistsQuery(mDb.mDb, mArtistExists, DbTables.ARTIST, Integer.toString(id));
     }
     
-    synchronized public boolean albumExists(int id) throws MakeQueryException
+    public boolean albumExists(int id) throws MakeQueryException
     {
         return runExistsQuery(mDb.mDb, mAlbumExists, DbTables.ALBUM, Integer.toString(id));
     }
     
-    synchronized public boolean trackExists(int id) throws MakeQueryException
+    public boolean trackExists(int id) throws MakeQueryException
     {
         return runExistsQuery(mDb.mDb, mTrackExists, DbTables.TRACK, Integer.toString(id));
     }
     
-    synchronized public boolean playlistExists(String id) throws MakeQueryException
+    public boolean playlistExists(String id) throws MakeQueryException
     {
         return runExistsQuery(mDb.mDb, mPlaylistExists, DbTables.PLAYLIST, id);
     }
     
-    synchronized public boolean cacheExists(String id) throws MakeQueryException
+    public boolean cacheExists(String id) throws MakeQueryException
     {
         return runExistsQuery(mDb.mDb, mCacheExists, DbTables.CACHE, id);
     }
     
-    synchronized public boolean trackInPlaylist(String playlist, int track) throws MakeQueryException
+    public boolean trackInPlaylist(String playlist, int track) throws MakeQueryException
     {
-        if (mTrackInPlaylist == null)
-            mTrackInPlaylist = makeTrackInPlaylistQuery(mDb.mDb);
-        
         mTrackInPlaylist.bindString(1, playlist);
         mTrackInPlaylist.bindLong(  2, track);
         try {
@@ -86,11 +99,8 @@ public class Queries
         }
     }
     
-    synchronized public boolean updateArtist(Artist a) throws MakeQueryException
+    public boolean updateArtist(Artist a) throws MakeQueryException
     {
-        if (mUpdateArtist == null)
-            mUpdateArtist = makeUpdateArtistStatement(mDb.mDb);
-        
         assertLockerId(a.getId());
         
         mUpdateArtist.bindString(1, a.getName());
@@ -101,11 +111,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean updateAlbum(Album a) throws MakeQueryException
+    public boolean updateAlbum(Album a) throws MakeQueryException
     {
-        if (mUpdateAlbum == null) 
-            mUpdateAlbum = makeUpdateAlbumStatement(mDb.mDb);
-        
         assertLockerId(a.getId());
         
         String year;
@@ -124,11 +131,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean updatePlaylist(Playlist p, int index) throws MakeQueryException
+    public boolean updatePlaylist(Playlist p, int index) throws MakeQueryException
     {
-        if (mUpdatePlaylist == null)
-            mUpdatePlaylist = makeUpdatePlaylistStatement(mDb.mDb);
-       
         mUpdatePlaylist.bindString(1, p.getName());
         mUpdatePlaylist.bindLong(  2, p.getCount());
         mUpdatePlaylist.bindString(3, p.getFileName());
@@ -139,22 +143,16 @@ public class Queries
     }
     
     
-    synchronized public boolean insertArtist(Track t) throws MakeQueryException
+    public boolean insertArtist(Track t) throws MakeQueryException
     {
-        if (mInsertArtistFromTrack == null)
-            mInsertArtistFromTrack = makeInsertArtistFromTrackStatement(mDb.mDb);
-        
         mInsertArtistFromTrack.bindLong(  1, t.getArtistId());
         mInsertArtistFromTrack.bindString(2, t.getArtistName());
         mInsertArtistFromTrack.execute();
         return false;
     }
     
-    synchronized public boolean insertAlbum(Track t) throws MakeQueryException
+    public boolean insertAlbum(Track t) throws MakeQueryException
     {
-        if (mInsertAlbumFromTrack == null)
-            mInsertAlbumFromTrack = makeInsertAlbumFromTrackStatement(mDb.mDb);
-        
         mInsertAlbumFromTrack.bindLong(  1, t.getAlbumId());
         mInsertAlbumFromTrack.bindString(2, t.getAlbumTitle());
         mInsertAlbumFromTrack.bindLong(  3, t.getArtistId());
@@ -162,11 +160,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean insertTrack(Track t) throws MakeQueryException
+    public boolean insertTrack(Track t) throws MakeQueryException
     {
-        if (mInsertTrack == null)
-            mInsertTrack = makeInsertTrackStatement(mDb.mDb);
-        
         assertLockerId(t.getId());
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
@@ -180,11 +175,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean insertAlbum(Album a) throws MakeQueryException
+    public boolean insertAlbum(Album a) throws MakeQueryException
     {
-        if (mInsertAlbum == null)
-            mInsertAlbum = makeInsertAlbumStatement(mDb.mDb);
-        
         assertLockerId(a.getId());
         
         String year;
@@ -203,11 +195,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean insertArtist(Artist a) throws MakeQueryException
+    public boolean insertArtist(Artist a) throws MakeQueryException
     {
-        if (mInsertArtist == null)
-            mInsertArtist = makeInsertArtistStatement(mDb.mDb);
-        
         assertLockerId(a.getId());
         
         mInsertArtist.bindLong(  1, a.getId().asInt());
@@ -218,11 +207,8 @@ public class Queries
         return false;
     }
     
-    synchronized public boolean insertPlaylist(Playlist p, int index) throws MakeQueryException
+    public boolean insertPlaylist(Playlist p, int index) throws MakeQueryException
     {
-        if (mInsertPlaylist == null)
-            mInsertPlaylist = makeInsertPlaylistStatement(mDb.mDb);
-        
         mInsertPlaylist.bindString(1, p.getId().asString());
         mInsertPlaylist.bindString(2, p.getName());
         mInsertPlaylist.bindLong(  3, p.getCount());
@@ -232,11 +218,8 @@ public class Queries
         return false;
     }
     
-    synchronized public void updateCache(String id, long time, int state, Progress progress) throws MakeQueryException
+    public void updateCache(String id, long time, int state, Progress progress) throws MakeQueryException
     {
-        if (mUpdateCache == null)
-            mUpdateCache = makeUpdateCacheStatement(mDb.mDb);
-        
         int set   = 0;
         int count = 0;
         if (progress != null) {
@@ -252,11 +235,8 @@ public class Queries
         mUpdateCache.execute();
     }
 
-    synchronized public void insertCache(String id, long time, int state, Progress progress) throws MakeQueryException
+    public void insertCache(String id, long time, int state, Progress progress) throws MakeQueryException
     {
-        if (mInsertCache == null)
-            mInsertCache = makeInsertCacheStatement(mDb.mDb);
-        
         int set   = 0;
         int count = 0;
         if (progress != null) {
@@ -272,11 +252,8 @@ public class Queries
         mInsertCache.execute();
     }
 
-    synchronized static private boolean runExistsQuery(SQLiteDatabase db, SQLiteStatement stmt, String table, String id) throws MakeQueryException
+    static private boolean runExistsQuery(SQLiteDatabase db, SQLiteStatement stmt, String table, String id) throws MakeQueryException
     {
-        if (stmt == null)
-            stmt = makeExistsQuery(db, table);
-        
         stmt.bindString(1, id);
         try {
             stmt.simpleQueryForString();
@@ -286,7 +263,7 @@ public class Queries
         }
     }
     
-    synchronized static private SQLiteStatement makeTrackInPlaylistQuery(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeTrackInPlaylistQuery(SQLiteDatabase db) throws MakeQueryException
     {
         String query = 
             "SELECT " + DbKeys.PLAYLIST_INDEX + 
@@ -299,7 +276,7 @@ public class Queries
     }
     
     
-    synchronized static private SQLiteStatement makeExistsQuery(SQLiteDatabase db, String table) throws MakeQueryException
+    static private SQLiteStatement makeExistsQuery(SQLiteDatabase db, String table) throws MakeQueryException
     {
         String query = 
             "SELECT " + DbKeys.ID + 
@@ -309,7 +286,7 @@ public class Queries
     }
     
     
-    synchronized static private SQLiteStatement makeUpdateArtistStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeUpdateArtistStatement(SQLiteDatabase db) throws MakeQueryException
     {
         String query = 
             "UPDATE " + DbTables.ARTIST  + " "    +
@@ -320,7 +297,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeUpdateAlbumStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeUpdateAlbumStatement(SQLiteDatabase db) throws MakeQueryException
     {
         String query = 
             "UPDATE " + DbTables.ALBUM   + " "    +
@@ -334,7 +311,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeUpdatePlaylistStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeUpdatePlaylistStatement(SQLiteDatabase db) throws MakeQueryException
     {
         String query = 
             "UPDATE " + DbTables.PLAYLIST   + " "    +
@@ -346,7 +323,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertArtistFromTrackStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertArtistFromTrackStatement(SQLiteDatabase db) throws MakeQueryException
     {
         String query = "INSERT INTO " + DbTables.ARTIST + " (" +
                             DbKeys.ID          + ", " + 
@@ -355,7 +332,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertAlbumFromTrackStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertAlbumFromTrackStatement(SQLiteDatabase db) throws MakeQueryException
     {
         String query = "INSERT INTO " + DbTables.ALBUM + " (" +
                             DbKeys.ID + ", " +
@@ -365,7 +342,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertTrackStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertTrackStatement(SQLiteDatabase db)
     {
         String query = "INSERT INTO " + DbTables.TRACK + " (" +
                             DbKeys.ID           + ", " +
@@ -383,7 +360,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertAlbumStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertAlbumStatement(SQLiteDatabase db)
     {
         String query = "INSERT INTO " + DbTables.ALBUM + " (" +
                             DbKeys.ID          + ", " +
@@ -397,7 +374,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertArtistStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertArtistStatement(SQLiteDatabase db)
     {
         String query = "INSERT INTO " + DbTables.ARTIST + " (" +
                             DbKeys.ID          + ", " +
@@ -408,7 +385,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeInsertPlaylistStatement(SQLiteDatabase db) throws MakeQueryException
+    static private SQLiteStatement makeInsertPlaylistStatement(SQLiteDatabase db)
     {
         String query = "INSERT INTO " + DbTables.PLAYLIST + " (" +
                             DbKeys.ID             + ", " +
@@ -420,7 +397,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static  private SQLiteStatement makeInsertCacheStatement(SQLiteDatabase db) throws MakeQueryException
+    static  private SQLiteStatement makeInsertCacheStatement(SQLiteDatabase db)
     {
         String query = "INSERT INTO " + DbTables.CACHE + " (" +
                             DbKeys.ID          + ", " +
@@ -432,7 +409,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static  private SQLiteStatement makeUpdateCacheStatement(SQLiteDatabase db) throws MakeQueryException
+    static  private SQLiteStatement makeUpdateCacheStatement(SQLiteDatabase db)
     {
         String query = 
             "UPDATE " + DbTables.CACHE     + " "    +
@@ -444,7 +421,7 @@ public class Queries
         return makeStatement(db, query);
     }
     
-    synchronized static private SQLiteStatement makeStatement(SQLiteDatabase db, String query) throws MakeQueryException 
+    static private SQLiteStatement makeStatement(SQLiteDatabase db, String query) 
     {
         try {
             return db.compileStatement(query);
@@ -457,12 +434,17 @@ public class Queries
     static private void assertLockerId(Id id)
     {
         if (!LockerId.class.isInstance(id)) {
-            throw new IdPolicyException();
+            throw new Id.IdPolicyException();
         }
     }
     
-    static public class MakeQueryException extends Exception
+    static public class MakeQueryException extends RuntimeException
     {
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 3120482315125882355L;
         
     };
 }

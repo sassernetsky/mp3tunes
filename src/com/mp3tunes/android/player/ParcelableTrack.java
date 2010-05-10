@@ -51,7 +51,7 @@ public class ParcelableTrack extends ConcreteTrack implements Parcelable
         String artistName  = in.readString();
         int    albumId     = in.readInt();
         String albumTitle  = in.readString();
-        String fileKey     = in.readString();
+        //String fileKey     = in.readString();
         
         return new ConcreteTrack(id.getId(), playUrl, title, artistId, artistName, albumId, albumTitle);
     }

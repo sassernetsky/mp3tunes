@@ -18,7 +18,6 @@ package com.mp3tunes.android.player.activity;
 
 import java.io.IOException;
 
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -28,7 +27,7 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.media.AudioManager; //import android.media.MediaFile;
+import android.media.AudioManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -58,14 +57,15 @@ import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.AlbumGetter;
 import com.mp3tunes.android.player.content.ArtistGetter;
 import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerCache;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.MergeHelper;
 import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.content.LockerDb.RefreshAlbumTracksTask;
 import com.mp3tunes.android.player.content.LockerDb.RefreshArtistTracksTask;
-import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
-import com.mp3tunes.android.player.content.LockerDb.RefreshTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistTracksTask;
+import com.mp3tunes.android.player.content.RefreshTask;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.AlphabeticalTheRemovedIndexer;
@@ -231,14 +231,14 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
      * keeping track of whether the receivers have actually been registered by
      * the time onDestroy() is called.
      */
-    private void unregisterReceiverSafe(BroadcastReceiver receiver)
-    {
-        try {
-            unregisterReceiver(receiver);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
-    }
+//    private void unregisterReceiverSafe(BroadcastReceiver receiver)
+//    {
+//        try {
+//            unregisterReceiver(receiver);
+//        } catch (IllegalArgumentException e) {
+//            // ignore
+//        }
+//    }
 
     @Override
     public void onResume()
@@ -469,11 +469,11 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private void killTasks()
     {
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
-            mCursorTask.cancel(true);
+            mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancel(true);
+            mTracksTask.cancelSafe();
     }
     
     private class FetchPlaylistTracksTask extends RefreshPlaylistTracksTask
@@ -491,7 +491,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Playlist Tracks");
             } else {
-                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                cleanUp();
+                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
             }
         }
@@ -512,7 +513,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Artist Tracks");
             } else {
-                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                cleanUp();
+                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
             }
         }
@@ -533,7 +535,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Album Tracks");
             } else {
-                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                cleanUp();
+                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
             }
         }
@@ -746,7 +749,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         public RefreshTask getTask()
         {
             if (mLockerId.asString().equals(PlaylistBrowser.DOWNLOADED_TRACKS_ID)) {
-                mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
                 return null;
             }

@@ -2,15 +2,21 @@ package com.mp3tunes.android.player.util;
  
 import java.io.IOException;
 
+import org.json.JSONException;
+
 import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.activity.Player;
+import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.LockerDb.RefreshSearchTask.DbSearchQuery;
 import com.mp3tunes.android.player.content.Queries.MakeQueryException;
 
 import android.app.Notification;
@@ -65,7 +71,10 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
                 .addFileKey("")
                 .create();
             if (HttpClientCaller.getInstance().put(method, path, new Progress())) {
-                Music.getDb(mContext).refreshSearch(mTrack.getTitle());
+                LockerDb.RefreshSearchTask task = new LockerDb.RefreshSearchTask(Music.getDb(mContext), 
+                                         new DbSearchQuery(mTrack.getTitle(), true, false, true), null, null);
+                task.refresh();
+                //Music.getDb(mContext).refreshSearch(mTrack.getTitle());
                 sendFinishedNotification(mTrack, true);
                 return true;
             }
@@ -78,6 +87,10 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
         } catch (LockerException e) {
             e.printStackTrace();
         } catch (MakeQueryException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (LoginException e) {
             e.printStackTrace();
         }
         sendFinishedNotification(mTrack, false);

@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -18,7 +17,6 @@ import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -232,6 +230,17 @@ public class HttpClientCaller
     {
         try {
             HttpClient client = new DefaultHttpClient();
+            
+            
+            
+            
+//            KeyStore trustStore  = KeyStore.getInstance(KeyStore.getDefaultType());
+//            SSLSocketFactory socketFactory = new SSLSocketFactory(trustStore);
+//            socketFactory.setHostnameVerifier(new AllowAllHostnameVerifier());
+//            Scheme sch = new Scheme("https", socketFactory, 443);
+//            client.getConnectionManager().getSchemeRegistry().register(sch);
+            
+            
             String url = method.getCall();
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
@@ -260,6 +269,16 @@ public class HttpClientCaller
             Log.e("Mp3Tunes", Log.getStackTraceString(e));
             throw e;
         }
+//        } catch (KeyStoreException e) {
+//            e.printStackTrace();
+//        } catch (KeyManagementException e) {
+//            e.printStackTrace();
+//        } catch (NoSuchAlgorithmException e) {
+//            e.printStackTrace();
+//        } catch (UnrecoverableKeyException e) {
+//            e.printStackTrace();
+//        }
+//        throw new RuntimeException();
     }
     
     public byte[] callBytes(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 

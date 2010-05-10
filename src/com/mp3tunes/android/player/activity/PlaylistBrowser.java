@@ -17,7 +17,6 @@
 package com.mp3tunes.android.player.activity;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -57,12 +56,11 @@ import com.mp3tunes.android.player.LocalId;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.DbKeys;
+import com.mp3tunes.android.player.content.LockerCache;
 import com.mp3tunes.android.player.content.LockerDb;
-import com.mp3tunes.android.player.content.MediaStore;
-import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistsTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistsTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.BaseMp3TunesListActivity;
-import com.mp3tunes.android.player.util.FetchAndPlayTracks;
 import com.mp3tunes.android.player.util.ReindexingCursorWrapper;
 import com.mp3tunes.android.player.util.ReindexingCursorWrapper.CursorIndexer;
 
@@ -79,11 +77,10 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     
     private boolean mShowingDialog;
     
-    private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
+    //private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
     
     private int         mWorkingTitle;
     private int         mTitle;
-    private Music.Meta  mType;
     private boolean     mIsRadio;
     
     String[] mFrom = new String[] {
@@ -139,13 +136,11 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         if (!mIsRadio) {
             mTitle        = R.string.title_playlists;
             mWorkingTitle = R.string.title_working_playlists;
-            mType         = Music.Meta.PLAYLIST;
             progressText  = R.string.loading_playlists;
             errorText     = R.string.playlist_browser_error;
         } else {
             mTitle        = R.string.title_radio;
             mWorkingTitle = R.string.title_working_radio;
-            mType         = Music.Meta.RADIO;
             progressText  = R.string.loading_playmix;
             errorText     = R.string.playmix_browser_error;
         }
@@ -418,11 +413,11 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         Log.w("Mp3Tunes", "Trying to kill tasks");
         if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing tracks task");
-            mTracksTask.cancel(true);
+            mTracksTask.cancelSafe();
         }
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing playlist task");
-            mCursorTask.cancel(true);
+            mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
     }
@@ -443,8 +438,10 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
             mLoadingCursor = false;
             if (!result) {
                 Log.w("Mp3Tunes", "Got Error Fetching Playlists");
+                return;
             }
-            mTracksTask = new LockerDb.RefreshTracksTask(Music.getDb(getBaseContext()));
+            cleanUp();
+            mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
             mTracksTask.execute((Void[])null);
         }
     };

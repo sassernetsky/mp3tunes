@@ -5,10 +5,12 @@ import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
-import android.util.Log;
-
 public class RemoteMethod
 {
+//    public static final String API_GENERAL = "http://wwwafn.dev.mp3tunes.com/api/v1/";
+//    public static final String API_STORAGE = "http://wwwafn.dev.mp3tunes.com/api/v1/";
+//    public static final String API_LOGIN   = "https://shopafn.dev.mp3tunes.com/api/v1/";
+//    public static final String API_CONTENT = "http://wwwafn.dev.mp3tunes.com/storage/";
     public static final String API_GENERAL = "http://ws.mp3tunes.com/api/v1/";
     public static final String API_STORAGE = "http://ws.mp3tunes.com/api/v1/";
     public static final String API_LOGIN   = "https://shop.mp3tunes.com/api/v1/";

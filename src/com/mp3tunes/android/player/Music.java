@@ -21,7 +21,6 @@ package com.mp3tunes.android.player;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Formatter;
@@ -34,7 +33,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -53,7 +51,6 @@ import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerContext;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.activity.Login;
-import com.mp3tunes.android.player.content.CurrentPlaylist;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.DbTables;
 import com.mp3tunes.android.player.content.LockerDb;
@@ -469,8 +466,8 @@ public class Music
             return;
         }
         try {
-            Id curid = getCurrentTrackId();
-            int curpos = sService.getQueuePosition();
+//            Id curid = getCurrentTrackId();
+//            int curpos = sService.getQueuePosition();
 //            if (position != -1 && curpos == position && curid == list[position]) {
 //                // The selected file is the file that's currently playing;
 //                // figure out if we need to restart with a new playlist,
@@ -494,7 +491,7 @@ public class Music
         }
     }
     
-    private final static int [] sEmptyList = new int[0];
+    //private final static int [] sEmptyList = new int[0];
     
     private static IdParcel[] idArrayToIdParcelArray(Id[] ids)
     {

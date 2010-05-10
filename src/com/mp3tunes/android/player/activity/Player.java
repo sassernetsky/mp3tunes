@@ -2,9 +2,6 @@ package com.mp3tunes.android.player.activity;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
-
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -21,7 +18,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
-import android.util.TimingLogger;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -29,7 +25,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -50,7 +45,7 @@ import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.LockerDb;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.TrackGetter;
-import com.mp3tunes.android.player.content.LockerDb.RefreshPlaylistTracksTask;
+import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
@@ -74,7 +69,7 @@ public class Player extends LifetimeLoggingActivity
     private TextView mArtistName;
     private TextView mTrackName;
     private TextView mNextTrackData;
-    private ProgressBar mProgress;
+    private SeekBar mProgress;
     private ProgressDialog mBufferingDialog;
     
     private long mDuration;
@@ -110,9 +105,9 @@ public class Player extends LifetimeLoggingActivity
         mArtistName    = (TextView)findViewById(R.id.track_artist);
         mTrackName     = (TextView)findViewById(R.id.track_title);
         mNextTrackData = (TextView)findViewById(R.id.next_track);
-        mProgress      = (ProgressBar)findViewById(android.R.id.progress);
+        mProgress      = (SeekBar)findViewById(android.R.id.progress);
         mProgress.setMax(1000);
-        //mProgress.setOnSeekBarChangeListener(mSeekBarListener);
+        mProgress.setOnSeekBarChangeListener(mSeekBarListener);
         
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
@@ -738,11 +733,6 @@ public class Player extends LifetimeLoggingActivity
                     ids.add(createIdParcel(id, mId));
                 } while (mCursor.moveToNext());
             }
-            //IdParcel[] array = new IdParcel[ids.size()];
-            //for (int i = 0; i < ids.size(); i++) {
-            //    IdParcel id = ids.get(i);
-            //    array[i] = id;
-            //}
             return ids.toArray(new IdParcel[1]);
         }
         

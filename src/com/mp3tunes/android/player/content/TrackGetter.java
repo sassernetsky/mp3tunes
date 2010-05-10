@@ -22,11 +22,11 @@ public class TrackGetter extends MergeHelper
         android.provider.MediaStore.Audio.Media.ALBUM
     };
     
-    private static String[] sRemote = new String[] {
-        DbKeys.ID,
-        DbKeys.ARTIST_NAME,
-        DbKeys.PLAY_URL
-    };
+//    private static String[] sRemote = new String[] {
+//        DbKeys.ID,
+//        DbKeys.ARTIST_NAME,
+//        DbKeys.PLAY_URL
+//    };
 
     
     public TrackGetter(LockerDb db, ContentResolver resolver)

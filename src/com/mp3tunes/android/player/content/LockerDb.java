@@ -20,35 +20,17 @@
 
 package com.mp3tunes.android.player.content;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
 
 import org.json.JSONException;
 
-import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDiskIOException;
-import android.database.sqlite.SQLiteDoneException;
 import android.database.sqlite.SQLiteException;
-import android.database.sqlite.SQLiteStatement;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
-import android.os.Environment;
-import android.os.IBinder;
-import android.os.RemoteException;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import com.binaryelysium.mp3tunes.api.Album;
 import com.binaryelysium.mp3tunes.api.Artist;
@@ -63,8 +45,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
 import com.mp3tunes.android.player.Music;
-import com.mp3tunes.android.player.Music.Meta;
-import com.mp3tunes.android.player.Music.TRACK_MAPPING;
+import com.mp3tunes.android.player.content.LockerCache.Progress;
 import com.mp3tunes.android.player.content.Queries.MakeQueryException;
 
 /**
@@ -77,11 +58,11 @@ import com.mp3tunes.android.player.content.Queries.MakeQueryException;
 public class LockerDb
 {
 
-    private Context            mContext;
-    private Locker             mLocker;
-    SQLiteDatabase             mDb;
-    private Queries            mQueries;
-    private LockerCache        mCache;
+    Context         mContext;
+    Locker          mLocker;
+    SQLiteDatabase  mDb;
+    Queries         mQueries;
+    LockerCache     mCache;
     
     public LockerDb(Context context)
     {
@@ -117,6 +98,42 @@ public class LockerDb
         mDb.delete(DbTables.TOKEN, null, null);
         mDb.delete(DbTables.CACHE, null, null);
     }
+ 
+    //Basic Getters returning api data structures
+    
+    public Track getTrack(String name)
+    {
+        String[] args  = new String[] {name};
+        String   where = DbKeys.TITLE + "=?";
+        return cursorToTrack(mDb.query(DbTables.TRACK, Music.TRACK, where, args, null, null, null));
+    }
+    
+    public Track getTrack(LockerId id)
+    {
+        return cursorToTrack(mDb.query(DbTables.TRACK, Music.TRACK, "_id=" + id.asString(), null, null, null, null));
+    }
+    
+    public Artist getArtistById(Id id)
+    {
+        return cursorToArtist(mDb.query(DbTables.ARTIST, Music.ARTIST, DbKeys.ID + "=" + id.asString(), null, null, null, null));
+    }
+    
+    public Artist getArtistByName(String artistName)
+    {
+        return cursorToArtist(mDb.query(DbTables.ARTIST, Music.ARTIST, DbKeys.ARTIST_NAME + "=\"" + artistName + "\"", null, null, null, null));
+    }
+
+    public Album getAlbum(LockerId id)
+    {
+        return cursorToAlbum(mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ID + "=" + id.asInt(), null, null, null, null));
+    };
+    
+    public Album getAlbum(String name)
+    {
+        return cursorToAlbum(mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ALBUM_NAME + "=\"" + name + "\"", null, null, null, null));
+    }
+    
+    //Getters returning cursors
     
     public Cursor getRadioData(String[] from)throws IOException, LockerException
     {
@@ -165,6 +182,7 @@ public class LockerDb
                 null, null, null, DbKeys.TITLE);
     }
     
+    //replace big query with view
     public Cursor getTrackDataByPlaylist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
     {
         System.out.println("querying for tracks on album: " + mId.asString());
@@ -188,144 +206,30 @@ public class LockerDb
         .append(mId.asString()).append("' ").append("ORDER BY ")
         .append(DbKeys.PLAYLIST_INDEX);
 
-        Cursor c = mDb.rawQuery(query.toString(), null);
-        
-        
         return mDb.rawQuery(query.toString(), null);
     }
+
+    
+
     
     
-    public Track getTrack(String name)
+    class DataInserter
     {
         
-        Cursor c = mDb.query(DbTables.TRACK, Music.TRACK, DbKeys.TITLE + "=\"" + name + "\"", null, null, null, null);
-        if (c.moveToFirst()) {
-            int id              = c.getInt(Music.TRACK_MAPPING.ID);
-            int track           = c.getInt(Music.TRACK_MAPPING.TRACKNUM);
-            int artist_id       = c.getInt(Music.TRACK_MAPPING.ARTIST_ID);
-            int album_id        = c.getInt(Music.TRACK_MAPPING.ALBUM_ID);
-            String play_url     = c.getString(Music.TRACK_MAPPING.PLAY_URL);
-            String download_url = c.getString(Music.TRACK_MAPPING.DOWNLOAD_URL);
-            String title        = c.getString(Music.TRACK_MAPPING.TITLE);
-            String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
-            String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
-            String cover_url    = c.getString(Music.TRACK_MAPPING.COVER_URL);
-            Track t = new ConcreteTrack(new LockerId(id), play_url, title,
-                                artist_id, artist_name, album_id, album_name);
-            c.close();
-            return t;
+    private <T> void insert(T object, int index) throws IOException, SQLiteException
+    {
+        if (Track.class.isInstance(object)) {
+            insert((Track)object, index);
+        } else if (Artist.class.isInstance(object)) {
+            insert((Artist)object, index);
+        } else if (Album.class.isInstance(object)) {
+            insert((Album)object, index);
+        } else if (Playlist.class.isInstance(object)) {
+            insert((Playlist)object, index);
         }
-        c.close();
-        return null;
     }
     
-    public Track getTrack(LockerId id)
-    {
-        
-        Cursor c = mDb.query(DbTables.TRACK, Music.TRACK, "_id=" + id.asString(), null, null, null, null);
-        if (c.moveToFirst()) {
-            int track           = c.getInt(Music.TRACK_MAPPING.TRACKNUM);
-            int artist_id       = c.getInt(Music.TRACK_MAPPING.ARTIST_ID);
-            int album_id        = c.getInt(Music.TRACK_MAPPING.ALBUM_ID);
-            String play_url     = c.getString(Music.TRACK_MAPPING.PLAY_URL);
-            String download_url = c.getString(Music.TRACK_MAPPING.DOWNLOAD_URL);
-            String title        = c.getString(Music.TRACK_MAPPING.TITLE);
-            String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
-            String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
-            String cover_url    = c.getString(Music.TRACK_MAPPING.COVER_URL);
-
-            Track t = new ConcreteTrack(id, play_url, title, artist_id, artist_name, album_id, album_name);
-
-            c.close();
-            return t;
-        }
-        c.close();
-        return null;
-    }
-    
-    public Artist getArtistById(Id id)
-    {
-        Cursor c = mDb.query(DbTables.ARTIST, Music.ARTIST, DbKeys.ID + "=" + id.asString(), null, null, null, null);
-        
-        if (c.getCount() > 1)
-            Log.e("Mp3Tunes", "Got more than one id for artist name: " + id.asString());
-        if (c.moveToFirst()) {
-            Artist a = new Artist(new LockerId(c.getInt(Music.ARTIST_MAPPING.ID)), c.getString(Music.ARTIST_MAPPING.ARTIST_NAME));
-            c.close();
-            return a;
-        }
-        c.close();
-        return null;
-    }
-    
-    public Artist getArtistByName(String artistName)
-    {
-        Cursor c = mDb.query(DbTables.ARTIST, Music.ARTIST, DbKeys.ARTIST_NAME + "=\"" + artistName + "\"", null, null, null, null);
-        
-        if (c.getCount() > 1)
-            Log.e("Mp3Tunes", "Got more than one id for artist name: " + artistName);
-        if (c.moveToFirst()) {
-            Artist a = new Artist(new LockerId(c.getInt(Music.ARTIST_MAPPING.ID)), c.getString(Music.ARTIST_MAPPING.ARTIST_NAME));
-            c.close();
-            return a;
-        }
-        c.close();
-        return null;
-    }
-
-    
-    private Album buildAlbum(Cursor c)
-    {
-        if (c.getCount() > 1)
-            Log.e("Mp3Tunes", "Got more than one album");
-        if (c.moveToFirst()) {
-            Album a = new Album(new LockerId(c.getInt(Music.ALBUM_MAPPING.ID)), c.getString(Music.ALBUM_MAPPING.ALBUM_NAME));
-            c.close();
-            return a;
-        }
-        c.close();
-        return null;
-    }
-    
-    public Album getAlbum(LockerId id)
-    {
-        Cursor c = mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ID + "=" + id.asInt(), null, null, null, null);
-        return buildAlbum(c);
-    };
-    
-    public Album getAlbum(String name)
-    {
-        Cursor c = mDb.query(DbTables.ALBUM, Music.ALBUM, DbKeys.ALBUM_NAME + "=\"" + name + "\"", null, null, null, null);
-        return buildAlbum(c);
-    }
-
-    public DbSearchResult search(DbSearchQuery query, String[] track, String[] artist) throws MakeQueryException
-    {
-        try {
-            // Perform the single http search call
-            refreshSearch(query.mQuery);
-            DbSearchResult res = new DbSearchResult();
-            if (query.mTracks)
-                res.mTracks = querySearch(query.mQuery, Music.Meta.TRACK, track);
-            //if (query.mAlbums)
-            //    res.mAlbums = querySearch(query.mQuery, Music.Meta.ALBUM);
-            if (query.mArtists)
-                res.mArtists = querySearch(query.mQuery, Music.Meta.ARTIST, artist);
-
-            System.out.println("Got artists: " + res.mArtists.getCount());
-            System.out.println("Got tracks: " + res.mTracks.getCount());
-            return res;
-        } catch (SQLiteException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (LockerException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public void insertTrack(Track track) throws IOException, SQLiteException, MakeQueryException
+    private void insert(Track track, int index) throws IOException, SQLiteException
     {
 
         if (track == null) {
@@ -357,8 +261,7 @@ public class LockerDb
         }
     }
     
-    public void insertArtist(Artist artist) throws IOException,
-            SQLiteException, MakeQueryException
+    private void insert(Artist artist, int index) throws IOException, SQLiteException
     {
         if (artist == null) {
             System.out.println("OMG Artist NULL");
@@ -377,7 +280,7 @@ public class LockerDb
         }
     }
 
-    public void insertAlbum(Album album) throws IOException, SQLiteException, MakeQueryException
+    private void insert(Album album, int index) throws IOException, SQLiteException
     {
         if (album == null) {
             System.out.println("OMG Album NULL");
@@ -396,9 +299,8 @@ public class LockerDb
             throw e;
         }
     }
-
-    public void insertPlaylist(Playlist playlist, int index)
-            throws IOException, SQLiteException, MakeQueryException
+    
+    private void insert(final Playlist playlist, final int index) throws IOException, SQLiteException
     {
         if (playlist == null) {
             System.out.println("OMG Playlist NULL");
@@ -416,120 +318,41 @@ public class LockerDb
             throw e;
         }
     }
-
-    private List<Artist> getArtists(LockerCache.Progress progress) throws LockerException
-    {
-        List<Artist> artists;
-        try {
-            artists = mLocker.getArtists(progress.mCount, progress.mCurrentSet);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            e.printStackTrace();
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        return artists;
+    
     }
     
-    private boolean insertArtists(List<Artist> artists) throws SQLiteException, IOException, MakeQueryException
+    <T> boolean multiInsert(List<T> list, LockerCache.Progress progress) throws SQLiteException, IOException, MakeQueryException
     {
+        DataInserter inserter = new DataInserter();
         mDb.beginTransaction();
         try {
-            for (Artist a : artists) {
-                insertArtist(a);
-            }
-            mDb.setTransactionSuccessful();
-        } finally {
-            mDb.endTransaction();
-        }
-        return artists.size() > 0;
-    }
-
-    private List<Album> getAlbums(LockerCache.Progress progress) throws LockerException
-    {
-        List<Album> albums;
-        try {
-            albums = mLocker.getAlbums(progress.mCount, progress.mCurrentSet);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            e.printStackTrace();
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        return albums;
-    }
-    
-    private boolean insertAlbums(List<Album> albums) throws SQLiteException, IOException, MakeQueryException
-    {
-        mDb.beginTransaction();
-        try {
-            for (Album a : albums) {
-                insertAlbum(a);
-            }
-            mDb.setTransactionSuccessful();
-        } finally {
-            mDb.endTransaction();
-        }
-        return albums.size() > 0;
-    }
-    
-    private List<Playlist> getPlaylists(LockerCache.Progress progress) throws LockerException
-    {
-        List<Playlist> playlists;
-        try {
-            playlists = mLocker.getPlaylists(progress.mCount, progress.mCurrentSet);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        return playlists;
-    }
-    
-    private boolean insertPlaylists(List<Playlist> playlists, LockerCache.Progress progress) throws SQLiteException, IOException, MakeQueryException
-    {
-        System.out.println("beginning insertion of " +playlists.size()
-                + " playlists");
-        int i = progress.mCurrentSet * progress.mCount;
-        mDb.beginTransaction();
-        try {
-            for (Playlist p : playlists) {
-                insertPlaylist(p, i);
+            int i = 0;
+            if (progress != null) i = progress.mCurrentSet * progress.mCount;
+            for (T o: list) {
+                inserter.insert(o, i);
                 i++;
             }
             mDb.setTransactionSuccessful();
         } finally {
             mDb.endTransaction();
         }
-        return playlists.size() > 0;
+        return list.size() > 0;
     }
 
+
+    
     private void refreshAlbumsForArtist(final int artist_id) throws SQLiteException,
             IOException, LockerException, MakeQueryException
     {
-        List<Album> albums;
-        try {
-            albums = mLocker.getAlbumsForArtist(artist_id);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
+        DataInserter inserter = new DataInserter();
+        List<Album> albums = mLocker.getAlbumsForArtist(artist_id);
 
         System.out.println("beginning insertion of " + albums.size()
                 + " albums for artist id " + artist_id);
         mDb.beginTransaction();
         try {
             for (Album a : albums) {
-                insertAlbum(a);
+                inserter.insert(a, 0);
             }
             mDb.setTransactionSuccessful();
         } finally {
@@ -538,119 +361,22 @@ public class LockerDb
         System.out.println("insertion complete");
     }
     
-    private List<Track> getTracks(LockerCache.Progress progress) throws LockerException
-    {
-        List<Track> tracks;
-        try {
-            tracks = mLocker.getTracks(progress.mCount, progress.mCurrentSet);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        return tracks;
-    }
     
-    private boolean insertTracks(List<Track> tracks) throws SQLiteException, IOException, MakeQueryException
-    {
-        mDb.beginTransaction();
-        try {
-            for (Track t : tracks) {
-                insertTrack(t);
-            }
-        mDb.setTransactionSuccessful();
-        } finally {
-            mDb.endTransaction();
-        }  
-        return tracks.size() > 0;
-    }
 
-    private void refreshTracksforAlbum(final int album_id) throws SQLiteException,
-            IOException, LockerException, MakeQueryException
-    {
-        List<Track> tracks;
-        try {
-            tracks = mLocker.getTracksForAlbumFromJson(album_id);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-
-        System.out.println("beginning insertion of " + tracks.size()
-                + " tracks for album id " + album_id);
-        
-        mDb.beginTransaction();
-        try {
-            for (Track t : tracks) {
-                insertTrack(t);
-            }
-            mDb.setTransactionSuccessful();
-        } finally {
-            mDb.endTransaction();
-        }
-        System.out.println("insertion complete");
-    }
-
-    private List<Track> getTracksForAlbum(final int album_id) throws SQLiteException,
-            IOException, LockerException, MakeQueryException
-    {
-        try {
-            return mLocker.getTracksForAlbumFromJson(album_id);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-    }
     
-    private List<Track> getTracksForArtist(final int artist_id) throws LockerException
-    {
-        try {
-            return mLocker.getTracksForArtistFromJson(artist_id);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-    }
-
-    private List<Track> getTracksForPlaylist(LockerCache.Progress progress, String playlist_id) throws LockerException
-    {
-        List<Track> tracks;
-        try {
-            tracks = mLocker.getTracksForPlaylist(playlist_id, progress.mCount, progress.mCurrentSet);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        return tracks;
-    }
-    
-    private void deleteOldPlaylistTracks(String playlist_id)
+    void deleteOldPlaylistTracks(String playlist_id)
     {
         String   where     = "playlist_id=?";
         String[] whereArgs = new String[] {playlist_id};
         mDb.delete(DbTables.PLAYLIST_TRACKS, where, whereArgs);
     }
     
-    private boolean insertTracksForPlaylist(List<Track> tracks, String playlist_id, LockerCache.Progress progress) throws SQLiteException, IOException, MakeQueryException
+    boolean insertTracksForPlaylist(List<Track> tracks, String playlist_id, LockerCache.Progress progress) throws SQLiteException, IOException, MakeQueryException
     {
         System.out.println("beginning insertion of " + tracks.size()
                 + " tracks for playlist id " + playlist_id);
         
-        insertTracks(tracks);
+        multiInsert(tracks, progress);
         
         int index = 0 + (progress.mCount * progress.mCurrentSet);
         ContentValues cv = new ContentValues();
@@ -666,138 +392,7 @@ public class LockerDb
         return tracks.size() > 0;
     }
     
-    public void refreshSearch(String query) throws SQLiteException, IOException, LockerException, MakeQueryException
-    {
-        SearchResult results = null;
-        try {
-            results = mLocker.search(query);
-        } catch (InvalidSessionException e) {
-            throw new LockerException("Bad Session Data");
-        } catch (JSONException e) {
-            throw new LockerException("Sever Sent Corrupt Data");
-        } catch (LoginException e) {
-            throw new LockerException("Unable to refresh session");
-        }
-        for (Artist a : results.getArtists()) {
-            insertArtist(a);
-        }
-        for (Album a : results.getAlbums()) {
-            insertAlbum(a);
-        }
-        for (Track t : results.getTracks()) {
-            insertTrack(t);
-        }
-        System.out.println("insertion complete");
-    }
-
-    private Cursor querySearch(String query, Music.Meta type, String[] columns)
-    {
-        String table;
-        String selection;
-        String[] selectionArgs = new String[] {"%" + query + "%"};
-        switch (type) {
-            case TRACK:
-                table = "track";
-                selection = "lower(title) LIKE lower(?)";
-                break;
-            case ARTIST:
-                table = "artist";
-                columns = Music.ARTIST;
-                selection = "lower(artist_name) LIKE lower(?)";
-                break;
-            case ALBUM:
-                table = "album";
-                selection = "lower(album_name) LIKE lower(?)";
-                break;
-            default:
-                return null;
-        }
-        return mDb.query(table, columns, selection, selectionArgs, null, null, null,
-                null);
-    }
-
-    public class DbSearchResult
-    {
-        public Cursor mArtists = null;
-        public Cursor mAlbums  = null;
-        public Cursor mTracks  = null;
-    }
-
-    public class DbSearchQuery
-    {
-        public DbSearchQuery(String query, boolean artists, boolean albums,
-                boolean tracks)
-        {
-            mQuery = query;
-            mArtists = artists;
-            mAlbums = albums;
-            mTracks = tracks;
-        }
-
-        public String  mQuery;
-        public boolean mArtists;
-        public boolean mAlbums;
-        public boolean mTracks;
-    }
     
-    abstract public class LockerDataCall {
-        public abstract Cursor get(String[] columns) throws SQLiteException, IOException, LockerException;
-    };
-    
-    public class GetAlbums extends LockerDataCall
-    {
-        public Cursor get(String[] columns) throws SQLiteException, IOException, LockerException
-        {
-            return getAlbumData(columns, null);//
-        }
-    };
-    
-    public class GetArtists extends LockerDataCall
-    {
-        public Cursor get(String[] columns) throws IOException, LockerException
-        {
-            return getArtistData(columns, null);
-        }
-    };
-    
-    abstract public class LockerDataByCall {
-        public abstract Cursor get(String[] columns, LockerId id) throws SQLiteException, IOException, LockerException;
-    };
-    
-    public class GetAlbumsByArtist extends LockerDataByCall
-    {
-        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException, SQLiteException
-        {
-            try {
-                return getAlbumDataByArtist(columns, id);
-            } catch (MakeQueryException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-    };
-    
-    public class GetTracksByAlbum extends LockerDataByCall
-    {
-        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException
-        {
-            return getTrackDataByAlbum(columns, id);
-        }
-    };
-    
-    public class GetTracksByArtist extends LockerDataByCall
-    {
-        public Cursor get(String[] columns, LockerId id) throws IOException, LockerException
-        {
-            return getTrackDataByArtist(columns, id);
-        }
-    };
-
-    static public class IdPolicyException extends RuntimeException
-    {
-        private static final long serialVersionUID = -5529281068172111226L;
-
-    }
     
     void updateCache(String id, long time, int state, LockerCache.Progress progress) throws MakeQueryException 
     {
@@ -812,233 +407,66 @@ public class LockerDb
         }
     }
     
-    static public class PreCacheTask extends RefreshTask
+    public Cursor getCache(String[] projection)
     {
-        public PreCacheTask(LockerDb db)
-        {
-            super(db);
-        }
-        
-        private void cacheData(String cache) throws SQLiteException, IOException, LockerException, MakeQueryException
-        {
-            if (mDb.mCache.getCacheState(cache) == LockerCache.CacheState.UNCACHED) {
-                mDb.mCache.beginCaching(cache, System.currentTimeMillis());
-                LockerCache.Progress p = mDb.mCache.getProgress(cache);
-                if (mDb.refreshDispatcher(cache, p, this, null))
-                    p.mCurrentSet++;
-            }
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            Log.w("Mp3Tunes", "Starting PreCache");
-            try {
-                
-                cacheData(LockerCache.CACHES.ARTIST);
-                cacheData(LockerCache.CACHES.ALBUM);
-                cacheData(LockerCache.CACHES.PLAYLIST);
-                Log.w("Mp3Tunes", "PreCache done");
-                return true;
-            } catch (SQLiteException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (LockerException e) {
-                e.printStackTrace();
-            } catch (MakeQueryException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            Log.w("Mp3Tunes", "PreCache Failed");
-            return false;
-        }
+        return mDb.query(DbTables.CACHE, projection, null, null, null, null, null);
     }
     
-    private boolean refreshDispatcher(String cacheId, LockerCache.Progress p, RefreshTask task, String id) throws SQLiteException, IOException, LockerException, MakeQueryException
-    {
-        if (cacheId.equals(LockerCache.CACHES.ARTIST)) {
-                List<Artist> artists = getArtists(p);
-                if (task.isCancelled()) return false;
-                return insertArtists(artists);
-        } else if (cacheId.equals(LockerCache.CACHES.ALBUM)) {
-                List<Album> albums = getAlbums(p);
-                if (task.isCancelled()) return false;
-                return insertAlbums(albums);
-        } else if (cacheId.equals(LockerCache.CACHES.TRACK)) {
-                List<Track> tracks = getTracks(p);
-                if (task.isCancelled()) return false;
-                return insertTracks(tracks);
-        } else if (cacheId.equals(LockerCache.CACHES.PLAYLIST)) {
-                List<Playlist> playlists = getPlaylists(p);
-                if (task.isCancelled()) return false;
-                return insertPlaylists(playlists, p);
-        } else {
-            List<Track> tracks = getTracksForPlaylist(p, id);
-            if (task.isCancelled()) return false;
-            if (p.mCurrentSet == 0) deleteOldPlaylistTracks(id);
-            if (task.isCancelled()) return false;
-            return insertTracksForPlaylist(tracks, id, p);
-        }
-    }
+
+    //helpers to turn cursors into api data structures
     
-    private boolean refreshTask(String cacheId, RefreshTask task, String id)
+    private Track cursorToTrack(Cursor c) 
     {
-        Log.w("Mp3Tunes", "Starting Refresh");
+        if (c == null) return null;
         try {
-            int state = mCache.getCacheState(cacheId);
-            if (state != LockerCache.CacheState.CACHED) {
-                Log.w("Mp3Tunes", "Not cached yet");
-                if (state == LockerCache.CacheState.UNCACHED)
-                    mCache.beginCaching(cacheId, System.currentTimeMillis());
-                LockerCache.Progress p = mCache.getProgress(cacheId);
-                while (refreshDispatcher(cacheId, p, task, id)) {
-                    p.mCurrentSet++;
-                    task.publish();
-                }
-                mCache.finishCaching(cacheId);
+            if (c.moveToFirst()) {
+                int id              = c.getInt(Music.TRACK_MAPPING.ID);
+                int artist_id       = c.getInt(Music.TRACK_MAPPING.ARTIST_ID);
+                int album_id        = c.getInt(Music.TRACK_MAPPING.ALBUM_ID);
+                String play_url     = c.getString(Music.TRACK_MAPPING.PLAY_URL);
+                String title        = c.getString(Music.TRACK_MAPPING.TITLE);
+                String artist_name  = c.getString(Music.TRACK_MAPPING.ARTIST_NAME);
+                String album_name   = c.getString(Music.TRACK_MAPPING.ALBUM_NAME);
+                Track t = new ConcreteTrack(new LockerId(id), play_url, title,
+                                artist_id, artist_name, album_id, album_name);
+                return t;
             }
-            mCache.saveCache(this);
-            Log.w("Mp3Tunes", "Refresh Succeeded");
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        } 
-        Log.w("Mp3Tunes", "Refresh Failed");
-        return false;
+        } finally {
+            c.close();
+        }
+        return null;
     }
     
-    abstract static public class RefreshTask extends AsyncTask <Void, Void, Boolean>
+    private Artist cursorToArtist(Cursor c)
     {
-        protected LockerDb mDb;
+        if (c == null) return null;
+        try {
+        if (c.moveToFirst()) {
+            Artist a = new Artist(new LockerId(c.getInt(Music.ARTIST_MAPPING.ID)), c.getString(Music.ARTIST_MAPPING.ARTIST_NAME));
+            c.close();
+            return a;
+        }
+        } finally {
+            c.close();
+        }
+        return null;
+    }
+    
+    private Album cursorToAlbum(Cursor c)
+    {
+        if (c.getCount() > 1)
+            Log.e("Mp3Tunes", "Got more than one album");
+        if (c.moveToFirst()) {
+            Album a = new Album(new LockerId(c.getInt(Music.ALBUM_MAPPING.ID)), c.getString(Music.ALBUM_MAPPING.ALBUM_NAME));
+            c.close();
+            return a;
+        }
+        c.close();
+        return null;
+    }
+    
 
-        public RefreshTask(LockerDb db)
-        {
-            mDb = db;
-        }
-        
-        public void publish()
-        {
-            publishProgress();
-        }
-        
-        @Override
-        protected void onCancelled()
-        {
-            Log.w("Mp3tunes", "onCancelled called");
-            if (mDb.mDb.inTransaction()) {
-                Log.w("Mp3tunes", "ending transaction");
-                mDb.mDb.endTransaction();
-            }
-        }
-    }
-    
-    static public class RefreshArtistsTask extends RefreshTask
-    {
-        public RefreshArtistsTask(LockerDb db)
-        {
-            super(db);
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            try {
-                Log.w("Mp3Tunes", "Starting RefreshArtists");
-                return mDb.refreshTask(LockerCache.CACHES.ARTIST, this, null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                }
-            return false;
-        }
-    }
-
-    static public class RefreshAlbumsTask extends RefreshTask
-    {
-        public RefreshAlbumsTask(LockerDb db)
-        {
-            super(db);
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            try {
-                Log.w("Mp3Tunes", "Starting RefreshAlbums");
-                return mDb.refreshTask(LockerCache.CACHES.ALBUM, this, null);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-        }
-    }
-    
-    static public class RefreshPlaylistsTask extends RefreshTask
-    {
-        public RefreshPlaylistsTask(LockerDb db)
-        {
-            super(db);
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            try {
-                Log.w("Mp3Tunes", "Starting RefreshAlbums");
-                return mDb.refreshTask(LockerCache.CACHES.PLAYLIST, this, null);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-        }
-    }
-    
-    static public class RefreshTracksTask extends RefreshTask
-    {
-        public RefreshTracksTask(LockerDb db)
-        {
-            super(db);
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            try {
-                Log.w("Mp3Tunes", "Starting RefreshTracks");
-                return mDb.refreshTask(LockerCache.CACHES.TRACK, this, null);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-        }
-    }
-    
-    static public class RefreshPlaylistTracksTask extends RefreshTask
-    {
-        protected Id mId;
-        
-        public RefreshPlaylistTracksTask(LockerDb db, Id id)
-        {
-            super(db);
-            mId = id;
-        }
-        
-        @Override
-        protected Boolean doInBackground(Void... params)
-        {
-            try {
-                Log.w("Mp3Tunes", "Starting RefreshTracks for playlist");
-                if (LockerId.class.isInstance(mId))
-                    return mDb.refreshTask(mId.asString(), this, mId.asString());
-                else 
-                    return true;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-            
-        }
-    }
+    //Refresh tasks that are not cached
     
     static public class RefreshAlbumTracksTask extends RefreshTask
     {
@@ -1058,15 +486,21 @@ public class LockerDb
                     AlbumGetter getter = new AlbumGetter(mDb, mDb.mContext.getContentResolver());
                     LockerId id = getter.getLockerId(mId);
                     if (id == null) return true;
-                    //mDb.refreshTracksforAlbum(id.asInt());
-                    List<Track> tracks = mDb.getTracksForAlbum(id.asInt());
-                    if (isCancelled()) return false;
-                    mDb.insertTracks(tracks);
+                    List<Track> tracks = mDb.mLocker.getTracksForAlbumFromJson(id.asInt());
+                    mDb.multiInsert(tracks, null);
                     return true;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 return false;
+        }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException,
+                MakeQueryException
+        {
+            return false;
         }
     }
     
@@ -1088,20 +522,238 @@ public class LockerDb
                 ArtistGetter getter = new ArtistGetter(mDb, mDb.mContext.getContentResolver());
                 LockerId id = getter.getLockerId(mId);
                 if (id == null) return true;
-                List<Track> tracks = mDb.getTracksForArtist(id.asInt());
-                if (isCancelled()) return false;
-                mDb.insertTracks(tracks);
-                //mDb.refreshTracksforArtist(id.asInt());
+                List<Track> tracks = mDb.mLocker.getTracksForArtistFromJson(id.asInt());
+                mDb.multiInsert(tracks, null);
                 return true;
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return false;
         }
+
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException,
+                MakeQueryException
+        {
+            return false;
+        }
     }
     
-    public Cursor getCache(String[] projection)
+    
+    static public class RefreshSearchTask extends RefreshTask
     {
-        return mDb.query(DbTables.CACHE, projection, null, null, null, null, null);
+        private   String[]       mTrack;
+        private   String[]       mArtist;
+        private   DbSearchQuery  mQuery;
+        protected DbSearchResult mResult;
+        
+        public RefreshSearchTask(LockerDb db, DbSearchQuery query, String[] track, String[] artist)
+        {
+            super(db);
+            mQuery  = query;
+            mTrack  = track;
+            mArtist = artist;
+        }
+        
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            try {
+                refresh();
+                System.out.println("insertion complete");
+                
+                mResult = new DbSearchResult();
+                if (mQuery.mTracks)
+                    mResult.mTracks = querySearch(mQuery.mQuery, Music.Meta.TRACK, mTrack);
+                if (mQuery.mArtists)
+                    mResult.mArtists = querySearch(mQuery.mQuery, Music.Meta.ARTIST, mArtist);
+                
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        
+        @Override
+        protected boolean dispatch(String cacheId, Progress p, String id)
+                throws SQLiteException, IOException, LockerException,
+                MakeQueryException
+        {
+            return false;
+        }
+        
+        public void refresh() throws LockerException, InvalidSessionException, JSONException, LoginException, SQLiteException, IOException
+        {
+            SearchResult results = null;
+            results = mDb.mLocker.search(mQuery.mQuery);
+        
+            DataInserter inserter = mDb.new DataInserter();
+            for (Artist a : results.getArtists()) {
+                inserter.insert(a, 0);
+            }
+            for (Album a : results.getAlbums()) {
+                inserter.insert(a, 0);
+            }
+            for (Track t : results.getTracks()) {
+                inserter.insert(t, 0);
+            }
+            System.out.println("insertion complete");
+        }
+        
+        private Cursor querySearch(String query, Music.Meta type, String[] columns)
+        {
+            String table;
+            String selection;
+            String[] selectionArgs = new String[] {"%" + query + "%"};
+            switch (type) {
+                case TRACK:
+                    table = "track";
+                    selection = "lower(title) LIKE lower(?)";
+                    break;
+                case ARTIST:
+                    table = "artist";
+                    columns = Music.ARTIST;
+                    selection = "lower(artist_name) LIKE lower(?)";
+                    break;
+                case ALBUM:
+                    table = "album";
+                    selection = "lower(album_name) LIKE lower(?)";
+                    break;
+                default:
+                    return null;
+            }
+            return mDb.mDb.query(table, columns, selection, selectionArgs, null, null, null,
+                    null);
+        }
+        
+        static public class DbSearchResult
+        {
+            public Cursor mArtists = null;
+            public Cursor mAlbums  = null;
+            public Cursor mTracks  = null;
+        }
+        
+        static public class DbSearchQuery
+        {
+            public DbSearchQuery(String query, boolean artists, boolean albums,
+                    boolean tracks)
+            {
+                mQuery = query;
+                mArtists = artists;
+                mAlbums = albums;
+                mTracks = tracks;
+            }
+
+            public String  mQuery;
+            public boolean mArtists;
+            public boolean mAlbums;
+            public boolean mTracks;
+        }
     }
+    
+    
+//    //The code that manages search
+//    //TODO: There is perhaps no code in the project that needs rewriting more than this
+//    
+//    public DbSearchResult search(DbSearchQuery query, String[] track, String[] artist) throws MakeQueryException
+//    {
+//        try {
+//            // Perform the single http search call
+//            refreshSearch(query.mQuery);
+//            DbSearchResult res = new DbSearchResult();
+//            if (query.mTracks)
+//                res.mTracks = querySearch(query.mQuery, Music.Meta.TRACK, track);
+//            //if (query.mAlbums)
+//            //    res.mAlbums = querySearch(query.mQuery, Music.Meta.ALBUM);
+//            if (query.mArtists)
+//                res.mArtists = querySearch(query.mQuery, Music.Meta.ARTIST, artist);
+//
+//            System.out.println("Got artists: " + res.mArtists.getCount());
+//            System.out.println("Got tracks: " + res.mTracks.getCount());
+//            return res;
+//        } catch (SQLiteException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (LockerException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
+//    
+//    public void refreshSearch(String query) throws SQLiteException, IOException, LockerException, MakeQueryException
+//    {
+//        SearchResult results = null;
+//        try {
+//            results = mLocker.search(query);
+//        } catch (InvalidSessionException e) {
+//            throw new LockerException("Bad Session Data");
+//        } catch (JSONException e) {
+//            throw new LockerException("Sever Sent Corrupt Data");
+//        } catch (LoginException e) {
+//            throw new LockerException("Unable to refresh session");
+//        }
+//        
+//        DataInserter inserter = new DataInserter();
+//        for (Artist a : results.getArtists()) {
+//            inserter.insert(a, 0);
+//        }
+//        for (Album a : results.getAlbums()) {
+//            inserter.insert(a, 0);
+//        }
+//        for (Track t : results.getTracks()) {
+//            inserter.insert(t, 0);
+//        }
+//        System.out.println("insertion complete");
+//    }
+//    private Cursor querySearch(String query, Music.Meta type, String[] columns)
+//    {
+//        String table;
+//        String selection;
+//        String[] selectionArgs = new String[] {"%" + query + "%"};
+//        switch (type) {
+//            case TRACK:
+//                table = "track";
+//                selection = "lower(title) LIKE lower(?)";
+//                break;
+//            case ARTIST:
+//                table = "artist";
+//                columns = Music.ARTIST;
+//                selection = "lower(artist_name) LIKE lower(?)";
+//                break;
+//            case ALBUM:
+//                table = "album";
+//                selection = "lower(album_name) LIKE lower(?)";
+//                break;
+//            default:
+//                return null;
+//        }
+//        return mDb.query(table, columns, selection, selectionArgs, null, null, null,
+//                null);
+//    }
+//    public class DbSearchResult
+//    {
+//        public Cursor mArtists = null;
+//        public Cursor mAlbums  = null;
+//        public Cursor mTracks  = null;
+//    }
+//    public class DbSearchQuery
+//    {
+//        public DbSearchQuery(String query, boolean artists, boolean albums,
+//                boolean tracks)
+//        {
+//            mQuery = query;
+//            mArtists = artists;
+//            mAlbums = albums;
+//            mTracks = tracks;
+//        }
+//
+//        public String  mQuery;
+//        public boolean mArtists;
+//        public boolean mAlbums;
+//        public boolean mTracks;
+//    }
+    
 }

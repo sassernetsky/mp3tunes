@@ -167,10 +167,7 @@ public class PlaybackErrorCodes
             return mInfo.get(code);
         }
         
-        public boolean isFatalError(int error)
-        {
-            return false;
-        }
+        
     }
 
     public static String getInfo(int code)

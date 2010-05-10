@@ -47,11 +47,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.binaryelysium.mp3tunes.api.InvalidSessionException;
-import com.binaryelysium.mp3tunes.api.LockerId;
 import com.binaryelysium.mp3tunes.api.RemoteMethod;
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.content.TrackGetter;
-
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -60,7 +57,6 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.util.Log;
 
