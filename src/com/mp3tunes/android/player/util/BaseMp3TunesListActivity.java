@@ -116,6 +116,8 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
     {
         if (mLoadingCursor) {
             forceQueueNextRefresh(delay);
+        } else {
+            Music.setSpinnerState(this, false);
         }
     }
     
