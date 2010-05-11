@@ -25,6 +25,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -69,7 +70,7 @@ public class Player extends LifetimeLoggingActivity
     private TextView mArtistName;
     private TextView mTrackName;
     private TextView mNextTrackData;
-    private SeekBar mProgress;
+    private ProgressBar mProgress;
     private ProgressDialog mBufferingDialog;
     
     private long mDuration;
@@ -105,9 +106,9 @@ public class Player extends LifetimeLoggingActivity
         mArtistName    = (TextView)findViewById(R.id.track_artist);
         mTrackName     = (TextView)findViewById(R.id.track_title);
         mNextTrackData = (TextView)findViewById(R.id.next_track);
-        mProgress      = (SeekBar)findViewById(android.R.id.progress);
+        mProgress      = (ProgressBar)findViewById(android.R.id.progress);
         mProgress.setMax(1000);
-        mProgress.setOnSeekBarChangeListener(mSeekBarListener);
+        //mProgress.setOnSeekBarChangeListener(mSeekBarListener);
         
         mPrevButton = ( ImageButton ) findViewById( R.id.rew );
         mPlayButton = ( ImageButton ) findViewById( R.id.play );
@@ -307,6 +308,7 @@ public class Player extends LifetimeLoggingActivity
         
         } catch (RemoteException e) {
             e.printStackTrace();
+            handleRemoteException();
         } finally {
         }
         return super.onOptionsItemSelected(item);
@@ -336,6 +338,7 @@ public class Player extends LifetimeLoggingActivity
                 Music.sService.prev();
             } catch (RemoteException e) {
                 e.printStackTrace();
+                handleRemoteException();
             }
         }
     };
@@ -348,6 +351,7 @@ public class Player extends LifetimeLoggingActivity
                 Music.sService.togglePlayback();
             } catch (RemoteException e) {
                 e.printStackTrace();
+                handleRemoteException();
             }
         }
     };
@@ -360,7 +364,9 @@ public class Player extends LifetimeLoggingActivity
             } else {
                 mPlayButton.setImageResource( R.drawable.pause_button );
             }
-        } catch ( RemoteException ex ) {}
+        } catch ( RemoteException ex ) {
+            handleRemoteException();
+        }
     }
     
     private View.OnClickListener mNextListener = new View.OnClickListener() {
@@ -371,6 +377,7 @@ public class Player extends LifetimeLoggingActivity
                 Music.sService.next();
             } catch ( RemoteException e ) {
                 e.printStackTrace();
+                handleRemoteException();
             }
         }
     };
@@ -383,9 +390,20 @@ public class Player extends LifetimeLoggingActivity
                 Music.sService.stop();
             } catch ( RemoteException e ) {
                 e.printStackTrace();
+                handleRemoteException();
             }
         }
     };
+    
+    private void handleRemoteException()
+    {
+        try {
+            dismissDialog(BUFFERING_DIALOG);
+        } catch (Exception e2) {
+        } finally {
+            finish();
+        }
+    }
 
     private BroadcastReceiver mStatusListener = new BroadcastReceiver() {
 

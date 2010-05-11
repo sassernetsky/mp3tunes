@@ -433,16 +433,25 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         }
         
         @Override
+        protected void onPreExecute()
+        {
+            Music.setSpinnerState(PlaylistBrowser.this, true);
+        }
+        
+        @Override
         protected  void onPostExecute(Boolean result)
         {
+            //Music.setSpinnerState(PlaylistBrowser.this, false);
             mLoadingCursor = false;
             if (!result) {
                 Log.w("Mp3Tunes", "Got Error Fetching Playlists");
+                //Music.setSpinnerState(PlaylistBrowser.this, false);
                 return;
             }
             cleanUp();
             mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
             mTracksTask.execute((Void[])null);
+            
         }
     };
     
