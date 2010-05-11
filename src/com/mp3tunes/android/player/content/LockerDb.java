@@ -72,6 +72,7 @@ public class LockerDb
         if (mDb == null) {
             throw new SQLiteDiskIOException("Error creating database");
         }
+        mDb.setLockingEnabled(true);
 
         mQueries = new Queries(this);
 

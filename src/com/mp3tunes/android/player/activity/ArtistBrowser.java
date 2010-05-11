@@ -363,6 +363,12 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
         }
         
         @Override
+        protected void onPreExecute()
+        {
+            Music.setSpinnerState(ArtistBrowser.this, true);
+        }
+        
+        @Override
         protected  void onPostExecute(Boolean result)
         {
             mLoadingCursor = false;

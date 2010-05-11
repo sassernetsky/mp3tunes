@@ -12,6 +12,7 @@ import com.mp3tunes.android.player.util.AsyncTaskSynchronizedCancel;
 
 abstract public class RefreshTask extends AsyncTaskSynchronizedCancel <Void, Void, Boolean>
 {
+    
     protected LockerDb mDb;
     protected String   mCacheId;
     protected String   mId;
@@ -82,7 +83,11 @@ abstract public class RefreshTask extends AsyncTaskSynchronizedCancel <Void, Voi
     
     protected void cleanUp()
     {
-        mDb.mCache.saveCache(mDb);
+        try {
+            mDb.mCache.saveCache(mDb);
+        } catch (Exception e) {
+            Log.w("Mp3Tunes", Log.getStackTraceString(e));
+        }
     }
     
     //classes that override the dispatch can unlock the lock but if they do then they must relock it before they return.

@@ -3,6 +3,7 @@ package com.mp3tunes.android.player.content;
 import java.io.IOException;
 import java.util.List;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteException;
 import android.util.Log;
 
