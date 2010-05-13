@@ -493,6 +493,8 @@ public class Player extends LifetimeLoggingActivity
                 int buffpercent = Music.sService.getBufferPercent();
                 long remaining = 1000 - (pos % 1000);
                 
+                Log.w("Mp3tunes", "pos: " + Long.toString(pos) + " duration: " + Long.toString(mDuration));
+                
                 if (pos > 0 && mDuration > 0 && pos <= mDuration) {
                     mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
                     mTotalTime.setText(Music.makeTimeString(this, mDuration / 1000));    
