@@ -1,4 +1,4 @@
-package com.mp3tunes.android.player.serviceold;
+package com.mp3tunes.android.player.service;
 
 import android.content.Context;
 import android.content.ContextWrapper;

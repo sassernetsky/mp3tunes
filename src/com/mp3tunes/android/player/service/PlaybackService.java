@@ -5,8 +5,6 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.IPlaybackService;
-import com.mp3tunes.android.player.serviceold.Logger;
-import com.mp3tunes.android.player.serviceold.PlaybackErrorCodes;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 import android.app.Service;
