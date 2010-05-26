@@ -1,4 +1,4 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
 import java.io.IOException;
 
@@ -205,7 +205,7 @@ public class MediaPlayerTrack
         Logger.log("Album:           " + mTrack.getArtistName());
         
         try {
-            String url = mTrack.getPlayUrl(Bitrate.getBitrate(mService, mContext));
+            String url = mTrack.getPlayUrl("mp3", Bitrate.getBitrate(mService, mContext));
             if (LockerId.class.isInstance(mTrack.getId())) {
                 Logger.log("checking local store");
                 if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {

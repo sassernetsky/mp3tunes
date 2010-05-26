@@ -22,7 +22,7 @@ public class ParcelableTrack extends ConcreteTrack implements Parcelable
     public void writeToParcel(Parcel out, int flags)
     {
         out.writeParcelable(new IdParcel(getId()), flags);
-        out.writeString(getPlayUrl(0));
+        out.writeString(getPlayUrl(null, 0));
         out.writeString(getTitle());
         out.writeInt(getArtistId());
         out.writeString(getArtistName());
