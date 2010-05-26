@@ -1,8 +1,8 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
-import com.mp3tunes.android.player.service.MediaPlayerTrack.BufferedCallback;
-import com.mp3tunes.android.player.service.PlaybackList.PlaybackListEmptyException;
-import com.mp3tunes.android.player.service.PlaybackList.PlaybackListOutOfBounds;
+import com.mp3tunes.android.player.serviceold.MediaPlayerTrack.BufferedCallback;
+import com.mp3tunes.android.player.serviceold.PlaybackList.PlaybackListEmptyException;
+import com.mp3tunes.android.player.serviceold.PlaybackList.PlaybackListOutOfBounds;
 import com.mp3tunes.android.player.util.Timer;
 
 class TrackCacher

@@ -1,4 +1,4 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
 import com.binaryelysium.mp3tunes.api.Track;
 
