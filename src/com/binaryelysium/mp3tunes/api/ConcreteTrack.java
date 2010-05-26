@@ -43,7 +43,7 @@ public class ConcreteTrack implements Track
     public ConcreteTrack(Track t)
     {
         mId          = t.getId();
-        mPlayUrl     = t.getPlayUrl(0);
+        mPlayUrl     = t.getPlayUrl(null, 0);
         mTitle       = t.getTitle();
         mArtistId    = t.getArtistId();
         mArtistName  = t.getArtistName();
@@ -106,15 +106,16 @@ public class ConcreteTrack implements Track
         return mFileKey;
     }
 
-    public String getPlayUrl(int requestedBitrate)
+    public String getPlayUrl(String container, int requestedBitrate)
     {
         if (LockerId.class.isInstance(mId)) {
             if (mFileKey == null) getFileKey();
+            if (container == null) container = "mp3";
             RemoteMethod method;
             try {
                 method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_PLAY)
                     .addFileKey(mFileKey)
-                    .addParam("fileformat", "mp3")
+                    .addParam("fileformat", container)
                     .addParam("bitrate", Integer.toString(requestedBitrate))
                     .create();
             } catch (InvalidSessionException e) {
@@ -184,5 +185,24 @@ public class ConcreteTrack implements Track
         if (t == null) return false;
         
         return (compare(t.getTitle(), mTitle) && compare(t.getAlbumTitle(), mAlbumTitle) && compare(t.getArtistName(), mArtistName));
+    }
+
+    public String getUrl()
+    {
+        if (LockerId.class.isInstance(mId)) {
+            if (mFileKey == null) getFileKey();
+            RemoteMethod method;
+            try {
+                method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_GET)
+                    .addFileKey(mFileKey)
+                    .create();
+            } catch (InvalidSessionException e) {
+                e.printStackTrace();
+                return null;
+            }
+            return method.getCall();
+        } else {
+            return mPlayUrl;
+        }
     }
 }

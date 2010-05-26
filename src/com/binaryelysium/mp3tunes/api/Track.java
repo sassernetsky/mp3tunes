@@ -8,7 +8,8 @@ public interface Track extends LockerData
     public abstract String getTitle();
     public abstract String getFileKey();
     public abstract int    getAlbumId();
-    public abstract String getPlayUrl(int requestedBitrate);
+    public abstract String getPlayUrl(String container, int requestedBitrate);
+    public abstract String getUrl();
     public abstract String getAlbumTitle();
     public abstract int    getArtistId();
     public abstract String getArtistName();

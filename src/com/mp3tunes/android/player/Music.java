@@ -54,8 +54,8 @@ import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.DbTables;
 import com.mp3tunes.android.player.content.LockerDb;
-import com.mp3tunes.android.player.service.Mp3tunesService;
-import com.mp3tunes.android.player.service.ITunesService;
+import com.mp3tunes.android.player.service.PlaybackService;
+import com.mp3tunes.android.player.service.IPlaybackService;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 
 /**
@@ -266,7 +266,7 @@ public class Music
         return res;
     }
     
-    public static ITunesService sService = null;
+    public static IPlaybackService sService = null;
     private static HashMap<Context, ServiceBinder> sConnectionMap = new HashMap<Context, ServiceBinder>();
     
     public static boolean bindToService(Context context) {
@@ -274,11 +274,11 @@ public class Music
     }
 
     public static boolean bindToService(Context context, ServiceConnection callback) {
-        context.startService(new Intent(context, Mp3tunesService.class));
+        context.startService(new Intent(context, PlaybackService.class));
         ServiceBinder sb = new ServiceBinder(callback);
         sConnectionMap.put(context, sb);
         return context.bindService((new Intent()).setClass(context,
-                Mp3tunesService.class), sb, 0);
+                PlaybackService.class), sb, 0);
     }
     
     public static void unbindFromService(Context context) {
@@ -302,7 +302,7 @@ public class Music
         }
         
         public void onServiceConnected(ComponentName className, android.os.IBinder service) {
-            sService = ITunesService.Stub.asInterface(service);
+            sService = IPlaybackService.Stub.asInterface(service);
 //            initAlbumArtCache();
             if (mCallback != null) {
                 mCallback.onServiceConnected(className, service);
@@ -432,17 +432,6 @@ public class Music
         }
         return null;
     }
-
-//    public static void playAll(Context context, Cursor cursor, int position) {
-//        playAll(context, cursor, position, false);
-//    }
-//    
-//    private static void playAll(Context context, Cursor cursor, int position, boolean force_shuffle) {
-//        
-//        id[] list = getSongListForCursor(cursor);
-//        System.out.println("list " + list.length);
-//        playAll(context, list, position, force_shuffle);
-//    }
     
     public static void playAll(Context context, Id[] list, int position )
     {
@@ -454,10 +443,6 @@ public class Music
             Toast.makeText(context, "Music service died", Toast.LENGTH_SHORT).show();
             return;
         }
-        //if (sDb == null) {
-        //    Toast.makeText(context, "Database connection died", Toast.LENGTH_SHORT).show();
-        //    return;
-        //}
         if (list.length == 0) {
             Log.d("MusicUtils", "attempt to play empty song list");
             // Don't try to play empty playlists. Nothing good will come of it.
@@ -466,22 +451,10 @@ public class Music
             return;
         }
         try {
-//            Id curid = getCurrentTrackId();
-//            int curpos = sService.getQueuePosition();
-//            if (position != -1 && curpos == position && curid == list[position]) {
-//                // The selected file is the file that's currently playing;
-//                // figure out if we need to restart with a new playlist,
-//                // or just launch the playback activity.
-//                int [] playlist = sCp.getQueue();
-//                if (Arrays.equals(list, playlist))
-//                    return; 
-//            }
             if (position < 0) {
                 position = 0;
             }
             sService.createPlaybackList(idArrayToIdParcelArray(list));
-            //Music.sCp.clearQueue();
-            //Music.sCp.insertQueueItems( list );
             sService.startAt(position); // +1 because the dbase queue is 1-indexed
         } catch (RemoteException ex) {
         } finally {
@@ -642,5 +615,41 @@ public class Music
             }
         }
         return sDb;
+    }
+    
+    static public String getMP3tunesStorageRoot()
+    {
+        return makeDirInExternalStorage("mp3tunes");
+    }
+    
+    static public String getMP3tunesMusicDir()
+    {
+        return makeDirInExternalStorage("mp3tunes/music");
+    }
+    
+    static public String getMP3tunesCacheDir()
+    {
+        return makeDirInExternalStorage("mp3tunes/cache");
+    }
+    
+    static private String makeDirInExternalStorage(String path)
+    {
+        File storageDir = Environment.getExternalStorageDirectory();
+        Log.w("Mp3Tunes", "External Storage dir: " + storageDir.getAbsolutePath());
+        if (storageDir.isDirectory()) {
+            File mp3tunesDir = new File(storageDir, path);
+            Log.w("Mp3Tunes", "mp3tunes dir: " + mp3tunesDir.getAbsolutePath());
+            if (mp3tunesDir.isDirectory()) {
+                Log.w("Mp3Tunes", "mp3tunes dir exists");
+                return mp3tunesDir.getAbsolutePath();
+            } else {
+                Log.w("Mp3Tunes", "making mp3tunes dir");
+                if (mp3tunesDir.mkdirs()) {
+                    return mp3tunesDir.getAbsolutePath();
+                }
+            }
+        }
+        Log.w("Mp3Tunes", "Make Mp3Tunes directory failed");
+        return null;
     }
 }

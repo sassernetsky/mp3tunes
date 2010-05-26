@@ -3,7 +3,7 @@ package com.mp3tunes.android.player.service;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.IdParcel;
 
-interface ITunesService {  
+interface IPlaybackService {  
 
 	/* Pause playback */
 	void pause(); 
@@ -22,34 +22,6 @@ interface ITunesService {
 
 	/* Play the track at a particular position in the playlist */
 	void startAt(int pos);
-	
-	/* SHUFFLE or NORMAL */
-	/*void setShuffleMode(int mode);*/
-	
-	/* Get the shuffle state */
-	/*int getShuffleMode();*/
-	
-	/* NONE, SONG, or PLAYLIST */
-	/*void setRepeatMode(int mode);*/
-	
-	/* Get the repeat state */
-	/*int getRepeatMode();*/
-
-	
-	/* Returns the meta data of the current track
-	 0: track name
-	 1: track id
-	 2: artist name
-	 3: artist id
-	 4: album name
-	 5: album id
-	
-	String[] getMetadata();
-
-	String getArtUrl();
-	Bitmap getAlbumArt();
-	void setAlbumArt(in Bitmap art);
-	*/
 	
 	ParcelableTrack getTrack();
 	ParcelableTrack nextTrack();
@@ -74,17 +46,10 @@ interface ITunesService {
 	/* Returns true if a track is currently playing but paused */
 	boolean isPaused();
 
-
 	int getQueuePosition();
-	/*	
-	void moveQueueItem(int index1, int index2);
-	int removeQueueItem(int first, int last);
-	*/
-	
 	void createPlaybackList(in IdParcel[] track_ids);
 	void addToPlaybackList(in IdParcel[] track_ids);
 	void togglePlayback();
-	
 	IdParcel[] getTrackIds();
 	
 } 
