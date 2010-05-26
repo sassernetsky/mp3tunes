@@ -48,6 +48,7 @@ import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.service.PlaybackService.NoCurrentTrackException;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 import com.mp3tunes.android.player.util.LifetimeLoggingActivity;
@@ -454,6 +455,8 @@ public class Player extends LifetimeLoggingActivity
             e.printStackTrace();
         } catch (RemoteException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally  {
         }
     }
@@ -493,7 +496,7 @@ public class Player extends LifetimeLoggingActivity
                 int buffpercent = Music.sService.getBufferPercent();
                 long remaining = 1000 - (pos % 1000);
                 
-                Log.w("Mp3tunes", "pos: " + Long.toString(pos) + " duration: " + Long.toString(mDuration));
+                //Log.w("Mp3tunes", "pos: " + Long.toString(pos) + " duration: " + Long.toString(mDuration));
                 
                 if (pos > 0 && mDuration > 0 && pos <= mDuration) {
                     mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
@@ -513,6 +516,8 @@ public class Player extends LifetimeLoggingActivity
                 return remaining;
             } catch (IllegalArgumentException e) {
                 //Log.e("Mp3Tunes", Log.getStackTraceString(e));
+            } catch (NoCurrentTrackException e) {
+                //Log.w("Mp3Tunes", "Do Nothing for now"); 
             } catch (RemoteException e) {
                 Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }

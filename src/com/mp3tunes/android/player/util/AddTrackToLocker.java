@@ -63,7 +63,7 @@ public class AddTrackToLocker extends AsyncTask<Void, Void, Boolean>
             return true;
         }
         sendStartedNotification(mTrack, true, 0, 0);
-        String path = mTrack.getPlayUrl(0);
+        String path = mTrack.getUrl();
         Log.w("Mp3Tunes", "Trying to upload: " + path + " to locker");
         
         try {

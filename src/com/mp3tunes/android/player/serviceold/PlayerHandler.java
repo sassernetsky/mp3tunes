@@ -1,4 +1,4 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
 import java.util.Vector;
 
@@ -8,10 +8,10 @@ import android.content.ContextWrapper;
 import android.telephony.TelephonyManager;
 
 import com.binaryelysium.mp3tunes.api.Track;
-import com.mp3tunes.android.player.service.MediaPlayerTrack.TrackFinishedHandler;
-import com.mp3tunes.android.player.service.PlaybackList.PlaybackListEmptyException;
-import com.mp3tunes.android.player.service.PlaybackList.PlaybackListFinishedException;
-import com.mp3tunes.android.player.service.PlaybackList.PlaybackListOutOfBounds;
+import com.mp3tunes.android.player.serviceold.MediaPlayerTrack.TrackFinishedHandler;
+import com.mp3tunes.android.player.serviceold.PlaybackList.PlaybackListEmptyException;
+import com.mp3tunes.android.player.serviceold.PlaybackList.PlaybackListFinishedException;
+import com.mp3tunes.android.player.serviceold.PlaybackList.PlaybackListOutOfBounds;
 
 public class PlayerHandler
 {

@@ -1,4 +1,4 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
 import android.app.Notification;
 import android.app.NotificationManager;

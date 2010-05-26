@@ -97,6 +97,6 @@
                 android:resource="@xml/searchable"
             />
         </activity>
-		<service android:name=".service.Mp3tunesService"  />
+		<service android:name=".service.PlaybackService"  />
 </application>
 </manifest> 
