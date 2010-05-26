@@ -4,6 +4,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
+
 /**
  * Class responsible for fading in/out volume, for instance when a phone
  * call arrives
@@ -32,7 +33,7 @@ public abstract class FadeVolumeTask extends TimerTask
     private int mSteps;
     private int mMode;
     
-    private PlayerHandler mPlayerHandler;
+    private PlaybackHandler mPlaybackHandler;
 
     /**
      * Constructor, launches timer immediately
@@ -45,9 +46,9 @@ public abstract class FadeVolumeTask extends TimerTask
      * @param steps
      *            Number of volume gradations within given fade time
      */
-    public FadeVolumeTask(PlayerHandler player, int mode, int millis)
+    public FadeVolumeTask(PlaybackHandler player, int mode, int millis)
     {
-        mPlayerHandler = player;
+        mPlaybackHandler = player;
         this.mMode = mode;
         this.mSteps = millis / 20; // 20 times per second
         this.onPreExecute();
@@ -65,7 +66,7 @@ public abstract class FadeVolumeTask extends TimerTask
             volumeValue *= (float) (mCurrentStep) / (float) mSteps;
         }
 
-        mPlayerHandler.getMediaPlayerTrack().setVolume(volumeValue, volumeValue);
+        mPlaybackHandler.setVolume(volumeValue, volumeValue);
 
         if (mCurrentStep >= mSteps) {
             this.onPostExecute();
