@@ -3,7 +3,6 @@ package com.mp3tunes.android.player.service;
 import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.LockerId;
-import com.mp3tunes.android.player.serviceold.Logger;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 
 import android.content.Context;

@@ -1,4 +1,7 @@
-package com.mp3tunes.android.player.serviceold;
+package com.mp3tunes.android.player.service;
+
+import com.mp3tunes.android.player.serviceold.MediaPlayerTrack;
+import com.mp3tunes.android.player.serviceold.PlayerHandler;
 
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
@@ -6,15 +9,15 @@ import android.telephony.TelephonyManager;
 
 public class Mp3TunesPhoneStateListener extends PhoneStateListener 
 {
-    private FadeVolumeTask mFadeVolumeTask = null;
-    private PlayerHandler  mPlayerHandler;
-    private boolean        mFadingIn  = false;   
-    private boolean        mFadingOut = false;
-    private boolean        mFadedOut  = false;
+    private FadeVolumeTask  mFadeVolumeTask = null;
+    private PlaybackHandler mPlaybackHandler;
+    private boolean         mFadingIn  = false;   
+    private boolean         mFadingOut = false;
+    private boolean         mFadedOut  = false;
     
-    public Mp3TunesPhoneStateListener(PlayerHandler player)
+    public Mp3TunesPhoneStateListener(PlaybackHandler player)
     {
-        mPlayerHandler = player;
+        mPlaybackHandler = player;
     }
 
     
@@ -30,12 +33,12 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
             if (!mFadedOut || mFadingIn) {
                 return;
             }
-            mFadeVolumeTask = new FadeVolumeTask(mPlayerHandler, FadeVolumeTask.FADE_IN,
+            mFadeVolumeTask = new FadeVolumeTask(mPlaybackHandler, FadeVolumeTask.FADE_IN,
                     5000) {
                 @Override
                 public void onPreExecute()
                 {
-                    mPlayerHandler.unpause();
+                    mPlaybackHandler.unpause();
                 }
 
                 @Override
@@ -49,10 +52,8 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
         } else {
             //Check to see if the current track is already paused
             //if it is do nothing
-            if (mPlayerHandler == null) return;
-            MediaPlayerTrack t = mPlayerHandler.getMediaPlayerTrack();
-            if (t == null)    return;
-            if (t.isPaused()) return;
+            if (mPlaybackHandler == null) return;
+            if (mPlaybackHandler.isPaused()) return;
             if (mFadingOut)   return;
             mFadingOut = true;
 
@@ -60,11 +61,11 @@ public class Mp3TunesPhoneStateListener extends PhoneStateListener
             int duration = state == TelephonyManager.CALL_STATE_RINGING ? 3000
                     : 1500;
 
-            mFadeVolumeTask = new FadeVolumeTask(mPlayerHandler, FadeVolumeTask.FADE_OUT,
+            mFadeVolumeTask = new FadeVolumeTask(mPlaybackHandler, FadeVolumeTask.FADE_OUT,
                     duration) {
                 @Override public void onPostExecute()
                 {
-                    mPlayerHandler.pause();
+                    mPlaybackHandler.pause();
                     mFadedOut       = true;
                     mFadeVolumeTask = null;
                 }
