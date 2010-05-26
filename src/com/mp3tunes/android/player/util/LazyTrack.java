@@ -1,5 +1,7 @@
 package com.mp3tunes.android.player.util;
 
+import java.lang.ref.WeakReference;
+
 import android.content.Context;
 import android.util.Log;
 
@@ -12,14 +14,14 @@ import com.mp3tunes.android.player.content.MediaStore;
 
 public class LazyTrack implements Track
 {
-    private ConcreteTrack mTrack;
-    private Id           mTrackId;
-    private Context       mContext;
+    private ConcreteTrack          mTrack;
+    private Id                     mTrackId;
+    private WeakReference<Context> mContext;
     
     public LazyTrack(Id id, Context context)
     {
         mTrackId = id;
-        mContext = context;
+        mContext = new WeakReference<Context>(context);
     }
     
     public String getName()
@@ -71,11 +73,11 @@ public class LazyTrack implements Track
         return mTrackId;
     }
 
-    public String getPlayUrl(int requestedBitrate)
+    public String getPlayUrl(String container, int requestedBitrate)
     {
         if (mTrack == null)  createTrack();
         
-        return mTrack.getPlayUrl(requestedBitrate);
+        return mTrack.getPlayUrl(container, requestedBitrate);
     }
 
     public String getTitle()
@@ -87,8 +89,8 @@ public class LazyTrack implements Track
     
     private void createTrack()
     {
-        LockerDb db = Music.getDb(mContext);
-        MediaStore store = new MediaStore(db, mContext.getContentResolver());
+        LockerDb db = Music.getDb(mContext.get());
+        MediaStore store = new MediaStore(db, mContext.get().getContentResolver());
         mTrack = (ConcreteTrack)store.getTrack(mTrackId);
         if (mTrack == null) {
             Log.w("Mp3Tunes", "Lazy Track got a null track from store, this should not be allowed to happen");
@@ -102,6 +104,13 @@ public class LazyTrack implements Track
         if (mTrack == null)  createTrack();
 
         return mTrack.sameMainMetaData(t);
+    }
+
+    public String getUrl()
+    {
+        if (mTrack == null)  createTrack();
+
+        return mTrack.getUrl();
     }
 
 }

@@ -165,7 +165,7 @@ public class Queries
         assertLockerId(t.getId());
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
-        mInsertTrack.bindString(2,  t.getPlayUrl(0));
+        mInsertTrack.bindString(2,  t.getPlayUrl(null, 0));
         mInsertTrack.bindString(4,  t.getTitle());
         mInsertTrack.bindString(6,  t.getArtistName());
         mInsertTrack.bindString(7,  t.getAlbumTitle());

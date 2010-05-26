@@ -1,11 +1,11 @@
-package com.mp3tunes.android.player.service;
+package com.mp3tunes.android.player.serviceold;
 
 import java.util.Vector;
 
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
-import com.mp3tunes.android.player.service.ITunesService;
+import com.mp3tunes.android.player.serviceold.ITunesService;
 import com.mp3tunes.android.player.util.LazyTrack;
 import com.mp3tunes.android.player.util.Timer;
 

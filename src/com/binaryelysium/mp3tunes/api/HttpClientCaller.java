@@ -3,6 +3,7 @@ package com.binaryelysium.mp3tunes.api;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -350,12 +351,10 @@ public class HttpClientCaller
         public void handleContentType(String contentType);
         public OutputStream createStream();
     }
-    
-    public boolean callStream(RemoteMethod method, CreateStreamCallback fileCreator, Progress progress) throws IOException
+    public boolean callStream(String url, CreateStreamCallback fileCreator, Progress progress) throws IOException
     {
         try {
             HttpClient client = new DefaultHttpClient();
-            String url = method.getCall();
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
             ResponseHandler<Boolean> responseHandler = new OutputStreamResponseHandler(fileCreator, progress);
@@ -374,6 +373,34 @@ public class HttpClientCaller
         }
     };
     
+    
+    public boolean callStream(String url, OutputStream stream, Progress progress, String contentType) throws IOException
+    {
+        try {
+            HttpClient client = new DefaultHttpClient();
+            Log.w("Mp3tunes", "Calling: " + url);
+            HttpGet get = new HttpGet(url);
+            OutputStreamResponseHandler2 responseHandler = new OutputStreamResponseHandler2(stream, progress);
+            boolean response = client.execute(get, responseHandler);
+            contentType = responseHandler.getContentType();
+            client.getConnectionManager().shutdown();
+            return response;
+        } catch (UnknownHostException e) {
+            Log.e("Mp3Tunes", "UnknownHostException: what do we do?");
+            throw e;
+        } catch (SocketException e) {
+            Log.e("Mp3Tunes", "SocketException: what do we do?");
+            throw e;
+        } catch (IOException e) {
+            Log.e("Mp3Tunes", Log.getStackTraceString(e));
+            throw e;
+        }
+    };
+    
+    public boolean callStream(RemoteMethod method, CreateStreamCallback fileCreator, Progress progress) throws IOException
+    {
+        return callStream(method.getCall(), fileCreator, progress);
+    };
     
     private class OutputStreamResponseHandler implements ResponseHandler<Boolean>  
     {
@@ -406,6 +433,53 @@ public class HttpClientCaller
                     size = input.read(buffer);
                     if (size == -1) break;
                     stream.write(buffer, 0, size);
+                    total += size;
+                    mProgress.run(total, length);
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+    }
+    
+    private class OutputStreamResponseHandler2 implements ResponseHandler<Boolean>  
+    {
+        OutputStream mStream;
+        Progress     mProgress;
+        String       mContentType;
+        OutputStreamResponseHandler2(OutputStream stream, Progress progress)
+        {
+            mStream   = stream;
+            mProgress = progress;
+        }
+        
+        public String getContentType()
+        {
+            return mContentType;
+        }
+        
+        public Boolean handleResponse(HttpResponse response) throws ClientProtocolException, IOException 
+        {
+            String contentType = "";
+            for (Header h :response.getAllHeaders()) {
+                if (h.getName().equals("Content-Type")) mContentType = h.getValue();
+            }
+            
+            //OutputStream stream = new FileOutputStream(mFile);
+            
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                Long length = entity.getContentLength();
+                InputStream input = entity.getContent();
+                byte[] buffer = new byte[4096];
+                int size  = 0;
+                int total = 0;
+                while (true) {
+                    size = input.read(buffer);
+                    if (size == -1) break;
+                    mStream.write(buffer, 0, size);
                     total += size;
                     mProgress.run(total, length);
                 }
