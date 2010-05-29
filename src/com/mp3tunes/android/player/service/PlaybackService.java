@@ -28,6 +28,7 @@ public class PlaybackService extends Service
     private TrackDownloader      mDownloader;
     private GuiNotifier          mNotifier;
     private int                  mErrorCount;
+    private Object               mChangingTrackLock;
     
     private Mp3TunesPhoneStateListener mPhoneStateListener;
     private TelephonyManager           mTelephonyManager;
@@ -43,9 +44,10 @@ public class PlaybackService extends Service
         //music
         setForeground(true);
         
+        mChangingTrackLock = new Object();
         mPlayStateLocker = new MusicPlayStateLocker(getBaseContext());
         mPlayStateLocker.lock();
-        mDownloader      = new TrackDownloader();
+        mDownloader      = new TrackDownloader(mChangingTrackLock);
         mPlaybackQueue   = new PlaybackQueue(this, getBaseContext(), mDownloader);
         mPlaybackHandler = new PlaybackHandler(getBaseContext(), new MyOnInfoListener(), new MyOnErrorListener(), new MyOnCompletionListener());
         mServer          = HttpServer.startServer(mPlaybackQueue);
@@ -215,11 +217,21 @@ public class PlaybackService extends Service
 
         public void next() throws RemoteException
         {
-            CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
-            if (!mPlaybackHandler.play(t)) {
-                throw new PlaybackFailedExcpetion();
+            Logger.log("next() waiting on lock");
+            synchronized (mChangingTrackLock) {
+                Logger.log("next() obtained lock");
+                try {
+                    CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
+                    Logger.log("next() playing: " + t.getFileKey());
+                    if (!mPlaybackHandler.play(t)) {
+                        throw new PlaybackFailedExcpetion();
+                    }
+                    mNotifier.nextTrack(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                    Logger.log("next() giving up lock");
+                }
             }
-            mNotifier.nextTrack(t);
         }
 
         public ParcelableTrack nextTrack() throws RemoteException
@@ -235,13 +247,19 @@ public class PlaybackService extends Service
 
         public void prev() throws RemoteException
         {
-            Logger.log("changing to previous track");
-            CachedTrack t = mPlaybackQueue.previousPlaybackTrack();
-            if (t == null) throw new PlaybackOutOfRangeException();
-            if (!mPlaybackHandler.play(t)) {
-                throw new PlaybackFailedExcpetion();
+            synchronized (mChangingTrackLock) {
+                try {
+                    Logger.log("changing to previous track");
+                    CachedTrack t = mPlaybackQueue.previousPlaybackTrack();
+                    if (t == null) throw new PlaybackOutOfRangeException();
+                    if (!mPlaybackHandler.play(t)) {
+                        throw new PlaybackFailedExcpetion();
+                    }
+                    mNotifier.prevTrack(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }
             }
-            mNotifier.prevTrack(t);
         }
 
         public boolean setPosition(int msec) throws RemoteException
@@ -257,14 +275,20 @@ public class PlaybackService extends Service
 
         public void startAt(int pos) throws RemoteException
         {
-            if (!mPlaybackQueue.setPlaybackPosition(pos)) {
-                throw new PlaybackOutOfRangeException();
+            synchronized (mChangingTrackLock) {
+                try {
+                    if (!mPlaybackQueue.setPlaybackPosition(pos)) {
+                        throw new PlaybackOutOfRangeException();
+                    }
+                    CachedTrack t = mPlaybackQueue.getPlaybackTrack();
+                    if (!mPlaybackHandler.play(t)) {
+                        throw new PlaybackFailedExcpetion();
+                    }
+                    mNotifier.play(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }   
             }
-            CachedTrack t = mPlaybackQueue.getPlaybackTrack();
-            if (!mPlaybackHandler.play(t)) {
-                throw new PlaybackFailedExcpetion();
-            }
-            mNotifier.play(t);
         }
 
         public void stop() throws RemoteException
@@ -339,17 +363,22 @@ public class PlaybackService extends Service
         {
             Logger.log("Track complete");
             mPlaybackHandler.finish();
-            CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
-            if (t == null) {
-                mNotifier.stop(null);
-                return;
+            synchronized (mChangingTrackLock) {
+                CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
+                if (t == null) {
+                    mNotifier.stop(null);
+                    return;
+                }
+                try {
+                    mNotifier.nextTrack(t);
+                    if (!mPlaybackHandler.play(t)) {
+                        mNotifier.sendPlaybackError(t, "Unable to play: " + t.getAlbumTitle() + " by: " + t.getArtistName());
+                        return;
+                    }
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }
             }
-            mNotifier.nextTrack(t);
-            if (!mPlaybackHandler.play(t)) {
-                mNotifier.sendPlaybackError(t, "Unable to play: " + t.getAlbumTitle() + " by: " + t.getArtistName());
-                return;
-            }
-            
         }
     };
     

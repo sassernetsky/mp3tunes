@@ -374,17 +374,38 @@ public class HttpClientCaller
     };
     
     
-    public boolean callStream(String url, OutputStream stream, Progress progress, String contentType) throws IOException
+    public boolean callStream(String url, ResponseHandler<Boolean> handler) throws IOException
     {
         try {
             HttpClient client = new DefaultHttpClient();
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
-            OutputStreamResponseHandler2 responseHandler = new OutputStreamResponseHandler2(stream, progress);
-            boolean response = client.execute(get, responseHandler);
-            contentType = responseHandler.getContentType();
+            boolean response = client.execute(get, handler);
             client.getConnectionManager().shutdown();
             return response;
+        }catch (HttpResponseException e) {
+            Log.e("Mp3Tunes", "Status code: " + Integer.toString(e.getStatusCode()));
+            if (e.getStatusCode() == 401) {
+                try {
+                    if (handleBadSession()) {
+                        int sidStart = url.indexOf("sid=") + 4;
+                        assert (sidStart != -1);
+                        int sidEnd   = url.indexOf('&', sidStart);
+                        if (sidEnd != -1)
+                            url.replace(url.substring(sidStart, sidEnd), LockerContext.instance().getSessionId());
+                        else 
+                            url.replace(url.substring(sidStart), LockerContext.instance().getSessionId());
+                        return callStream(url, handler);
+                    }
+                } catch (LockerException e1) {
+                    e1.printStackTrace();
+                } catch (LoginException e1) {
+                    e1.printStackTrace();
+                } catch (InvalidSessionException e1) {
+                    e1.printStackTrace();
+                }
+            }
+            throw e;
         } catch (UnknownHostException e) {
             Log.e("Mp3Tunes", "UnknownHostException: what do we do?");
             throw e;
