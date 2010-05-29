@@ -4,8 +4,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
+
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.ResponseHandler;
 
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -14,17 +22,20 @@ import android.util.Log;
 
 import com.binaryelysium.mp3tunes.api.HttpClientCaller;
 import com.binaryelysium.mp3tunes.api.Track;
+import com.binaryelysium.mp3tunes.api.HttpClientCaller.Progress;
 import com.binaryelysium.util.FileUtils;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.util.Pair;
 
 public class TrackDownloader
 {
-    int                        mNextJobId = 1;
-    PriorityBlockingQueue<Job> mQueue;
-    boolean                    mDestroying;
-    HttpClientCaller.Progress  mProgressCallback;
-    private Job                mJob;
+    int                                 mNextJobId = 1;
+    PriorityBlockingQueue<Job>          mQueue;
+    boolean                             mDestroying;
+    HttpClientCaller.Progress           mProgressCallback;
+    private Job                         mJob;
+    private OutputStreamResponseHandler mOutputHandler;
+    private Object                      mChangingTrackLock;
     
     private final int POLL = 0;
     
@@ -36,11 +47,12 @@ public class TrackDownloader
         static final int SKIPPEDTRACK = 100;
         static final int FORSTORAGE   = 0;
     }
-    public TrackDownloader()
+    public TrackDownloader(Object lock)
     {
         mNextJobId  = 0;
         mQueue      = new PriorityBlockingQueue<Job>(10, new JobComparator());
         mDestroying = false;
+        mChangingTrackLock = lock;
         mHandler.handleMessage(mHandler.obtainMessage(POLL));
     }
     
@@ -120,6 +132,7 @@ public class TrackDownloader
                     job.priority = Priority.SKIPPEDTRACK;
                     mQueue.add(job);
                 } else {
+                    mQueue.add(job);
                     break;
                 }
             } while (true);
@@ -129,14 +142,27 @@ public class TrackDownloader
     public void resetPriority(Integer id, int priority)
     {
         synchronized (mQueue) {
+            
+            if (mJob.priority == Priority.NOWPLAYING) {
+                Logger.log("resetPriority(): Cancelling  download of: " + mJob.track.getTitle());
+                mJob.cancelled = true;
+            }
+            
+            Logger.log("resetPriority(): called with id: " + id.intValue() + " priority: " + priority + " num jobs: " + mQueue.size());
             for (Job job : mQueue) {
+                Logger.log("resetPriority(): mQueue job " + job.id + " downloads: " + job.track.getTitle());
                 if (id.equals(job.id)) {
                     mQueue.remove(job);
+                    Logger.log("Changing priority of: " + job.track.getTitle() + " from: " + job.priority + " to: " + priority);
                     job.priority = priority;
-                    mQueue.add(job);
+                    if (mQueue.add(job))
+                        Logger.log("Changing priority successful");
+                    else 
+                        Logger.log("Changing priority failed");
                     break;
                 }
             }
+            Logger.log("resetPriority() done");
         }
     }
     
@@ -145,6 +171,7 @@ public class TrackDownloader
         synchronized (job.track) {
             job.track.setStatus(CachedTrack.Status.queued);
             mQueue.add(job);     
+            Logger.log("addJob(): job count: " + mQueue.size());
         }
     }
 
@@ -191,14 +218,16 @@ public class TrackDownloader
         CachedTrack      track;
         String           url;
         FileOutputStream stream;
+        Boolean          cancelled;
         
         
         public Job(int priority, CachedTrack track, String url) 
         {
-            this.id       = mNextJobId;
-            this.priority = priority;
-            this.track    = track;
-            this.url      = url;
+            this.id        = mNextJobId;
+            this.priority  = priority;
+            this.track     = track;
+            this.url       = url;
+            this.cancelled = false;
             try {
                 Logger.log("Creating stream for file: " + track.getPath());
                 this.stream   = new FileOutputStream(track.getPath());
@@ -229,6 +258,7 @@ public class TrackDownloader
     
     private final Handler mHandler = new Handler() {
         
+        private int mCount = 0;
         private void pollNext(long delay) 
         {
             Message msg = mHandler.obtainMessage(POLL);
@@ -241,17 +271,30 @@ public class TrackDownloader
                 Thread t = new Thread() {
                     public void run() {
                         while (!mDestroying) {
-                            synchronized (mQueue) {
-                                mJob = mQueue.poll();
-                            }
-                            if (mJob == null) break;
-                            mJob.track.setStatus(CachedTrack.Status.downloading);
-                            String contentType = null;
-                            try {
-                                
+                            if (mCount > 240) mCount = 0;
+                            mCount++;
+                            if (mCount == 1) Logger.log("handleMessage() waiting on lock");
+                            synchronized (mChangingTrackLock) {
+                                if (mCount == 1) Logger.log("handleMessage() obtained lock");
+                                synchronized (mQueue) {
+                                    for (Job job : mQueue) {
+                                            Logger.log("Priority of: " + job.track.getTitle() + " is: " + job.priority);
+                                    }
+                                    mJob = mQueue.poll();
+                                }
+                                if (mJob == null) break;
+                                Logger.log("handleMessage(): job count: " + mQueue.size());
+                                Logger.log("");
+                                mJob.track.setStatus(CachedTrack.Status.downloading);
+                                mOutputHandler = new OutputStreamResponseHandler(mJob);
                                 Logger.log("Begining download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "'");
                                 Logger.log("At: " + mJob.url);
-                                if (HttpClientCaller.getInstance().callStream(mJob.url, mJob.stream, mJob.track.mProgress, contentType)) {
+                                Logger.log("Priority: " + mJob.priority);
+                                if (mCount == 1) Logger.log("handleMessage() giving up lock");
+                            }
+                            try {
+                                if (HttpClientCaller.getInstance().callStream(mJob.url, mOutputHandler)) {
+                                    String contentType = mOutputHandler.getContentType();
                                     Logger.log("Download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "' successful");
                                     Logger.log("At: " + mJob.url);
                                     //If we did not know what the file format was when we started the download then we need to see
@@ -285,9 +328,9 @@ public class TrackDownloader
                                 Logger.log("Download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "' Failed");
                                 Logger.log("At: " + mJob.url);
                                 mJob.track.setStatus(CachedTrack.Status.failed);
-                                if (!new File(mJob.track.getPath()).delete()) {
-                                    Logger.log("Failed to delete old file: " + mJob.track.getPath());
-                                }
+//                                if (!new File(mJob.track.getPath()).delete()) {
+//                                    Logger.log("Failed to delete old file: " + mJob.track.getPath());
+//                                }
                             }
                         }
                         mHandler.post(mPoll);
@@ -337,8 +380,52 @@ public class TrackDownloader
             }
             return newFile;
         }
-        
     };
+    
+    static private class OutputStreamResponseHandler implements ResponseHandler<Boolean>  
+    {
+        Job          mJob;
+        String       mContentType;
+        
+        OutputStreamResponseHandler(Job job)
+        {
+            mJob = job;
+        }
+        
+        public String getContentType()
+        {
+            return mContentType;
+        }
+        
+        public Boolean handleResponse(HttpResponse response) throws ClientProtocolException, IOException 
+        {
+            String contentType = "";
+            for (Header h :response.getAllHeaders()) {
+                if (h.getName().equals("Content-Type")) mContentType = h.getValue();
+            }
+            
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                Long length = entity.getContentLength();
+                InputStream input = entity.getContent();
+                byte[] buffer = new byte[4096];
+                int size  = 0;
+                int total = 0;
+                while (true) {
+                    if (mJob.cancelled) return false;
+                    size = input.read(buffer);
+                    if (size == -1) break;
+                    mJob.stream.write(buffer, 0, size);
+                    total += size;
+                    mJob.track.mProgress.run(total, length);
+                }
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+    }
     
     public class AlreadyDownloadedException extends Exception
     {
