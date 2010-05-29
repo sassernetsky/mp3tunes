@@ -21,6 +21,8 @@ package com.mp3tunes.android.player.activity;
 
 import java.util.ArrayList;
 
+import com.binaryelysium.mp3tunes.api.LockerId;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ListAdapter;
 import com.mp3tunes.android.player.ListEntry;
 import com.mp3tunes.android.player.Music;
@@ -75,7 +77,8 @@ public class LockerList extends LifetimeLoggingListActivity
         new Option(R.string.albums, R.drawable.album_icon),
         new Option(R.string.playlists, R.drawable.playlist_icon),
         new Option(R.string.radio, R.drawable.radio_icon),
-        new Option(R.string.search, R.drawable.search_icon)
+        new Option(R.string.search, R.drawable.search_icon),
+        new Option(R.string.shuffle, R.drawable.playlist_icon)
     };
     
     // sense of the animation when changing menu
@@ -257,6 +260,10 @@ public class LockerList extends LifetimeLoggingListActivity
             break;
         case R.string.playlists:
             intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/playlist");
+            break;
+        case R.string.shuffle:
+            intent = new Intent("com.mp3tunes.android.player.PLAYER");
+            intent.putExtra("playlist", new IdParcel(new LockerId("RANDOM_TRACKS")));
             break;
         default:
             return;
