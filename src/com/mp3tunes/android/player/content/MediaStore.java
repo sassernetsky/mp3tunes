@@ -41,7 +41,17 @@ public class MediaStore
     public Cursor getArtistData(String[] columns)throws IOException, LockerException
     {
         String[] joinBy =  new String[] {DbKeys.ARTIST_NAME};
-        return getData(columns, joinBy, sArtistsUri, DbKeys.ARTIST_NAME, new GetArtists());
+
+        String[] cols = rmLocalCol(columns);
+        String[] projection = lockerDbToMediaStoreColumns(cols);
+        String where = android.provider.MediaStore.Audio.Media.ARTIST + "!=?";
+        String[] whereArgs = new String[] {"<unknown>"};
+
+        Cursor locker = mLockerDb.getArtistData(cols, null);
+        Cursor store = mCr.query(sArtistsUri, projection, where, whereArgs, 
+                              lockerDbToMediaStoreKey(DbKeys.ARTIST_NAME));
+        return merge(locker, store, columns, joinBy);
+        //return getData(columns, joinBy, sArtistsUri, DbKeys.ARTIST_NAME, new GetArtists());
     }
     
     public Cursor getAlbumData(String[] columns)throws IOException, LockerException
@@ -116,7 +126,9 @@ public class MediaStore
         String[] projection = new String[cols.length + 1];
         System.arraycopy(cols, 0, projection, 0, cols.length);
         projection[projection.length - 1] = android.provider.MediaStore.MediaColumns.DATE_ADDED;
-        String where = android.provider.MediaStore.Audio.AudioColumns.IS_MUSIC + "!=0";
+        String where = android.provider.MediaStore.Audio.AudioColumns.IS_MUSIC + "!=0 AND " + 
+                       android.provider.MediaStore.Audio.Media.ARTIST + "!=\"<unknown>\" AND " +
+                       android.provider.MediaStore.Audio.Media.ARTIST + "!=\"Ringtone\"";
         
         Cursor c = mCr.query(sTracksUri, projection, where, null, android.provider.MediaStore.MediaColumns.DATE_ADDED);
         

@@ -1,5 +1,6 @@
 package com.mp3tunes.android.player.service;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.Vector;
 
@@ -125,18 +126,24 @@ class PlaybackQueue
     {
         fetchTrack(mQueue.get(mPlaybackPosition), TrackDownloader.Priority.NOWPLAYING);
         
-        for (int i = mPlaybackPosition + 1; i < mPlaybackPosition + mForwardCacheSize; i++) {
-            int priority = TrackDownloader.Priority.FUTURETRACK;
-            if (i == (mPlaybackPosition + 1)) priority = TrackDownloader.Priority.NEXTTRACK;
-            fetchTrack(mQueue.get(i), priority);
-        }
+        try {
+            for (int i = mPlaybackPosition + 1; i < mPlaybackPosition + mForwardCacheSize; i++) {
+                int priority = TrackDownloader.Priority.FUTURETRACK;
+                if (i == (mPlaybackPosition + 1)) priority = TrackDownloader.Priority.NEXTTRACK;
+                fetchTrack(mQueue.get(i), priority);
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {}
         
-        for (int i = mPlaybackPosition - 1; i < mPlaybackPosition - mPreviousCacheSize; i++)
-            fetchTrack(mQueue.get(i), TrackDownloader.Priority.FUTURETRACK);
+        try {
+            for (int i = mPlaybackPosition - 1; i < mPlaybackPosition - mPreviousCacheSize; i++)
+                fetchTrack(mQueue.get(i), TrackDownloader.Priority.FUTURETRACK);
+        } catch (ArrayIndexOutOfBoundsException e) {}
     }
 
     private void fetchTrack(TrackData t, int priority)
     {
+        Logger.log("fetchTrack() Setting priority of track: '" + t.mTrack.getTitle() + "' by: '" + t.mTrack.getArtistName() + "'");
+        Logger.log("fetchTrack() Priority: " + priority);
         //Check to see if this is a local track. If it is then no downloading is needed
         if (LocalId.class.isInstance(t.mTrack.getId())) {
             t.mCachedTrack = new CachedTrack((LocalId)t.mTrack.getId(), t.mTrack);
@@ -154,17 +161,28 @@ class PlaybackQueue
         //if we already have a cached track then we are moving arround in the playlist so we just adjust
         //priorities.  Otherwise we need to tell the downloader to cache the track for us.
         if (t.mCachedTrack != null) { 
+            Logger.log("fetchTrack() already have CachedTrack");
             synchronized (t.mCachedTrack) {
                 int status = t.mCachedTrack.getStatus();
-                if (status == CachedTrack.Status.finished || status == CachedTrack.Status.failed || t.mJobId == null)
+                Logger.log("Status == " + status);
+                if (t.mJobId == null)
+                    Logger.log("JobId null");
+                if (status == CachedTrack.Status.finished || status == CachedTrack.Status.failed || t.mJobId == null) {
+                    Logger.log("No need to fetch track");
                     return;
+                }
                 if (status == CachedTrack.Status.created || status == CachedTrack.Status.queued) {
                     mDownloader.resetPriority(t.mJobId, priority);
                     return; 
                 }
-                //TODO: deal with re-prioritizing tracks that are downloading 
+                if (status == CachedTrack.Status.downloading) {
+                    mDownloader.resetPriority(t.mJobId, priority);
+                    return;
+                }
+                Logger.log("fetchTrack() case not matched");
             }
         } else {
+            Logger.log("fetchTrack() must create CachedTrack");
             Pair<Integer, CachedTrack> result = mDownloader.downloadTrack(t.mTrack, priority, "mp3", Bitrate.getBitrate(mService.get(), mContext.get()));
             t.mCachedTrack = result.second;
             t.mJobId        = result.first;
@@ -200,6 +218,27 @@ class PlaybackQueue
             return ids;
         }
         return new IdParcel[] {};
+    }
+
+    synchronized public void cleanFailures()
+    {
+        for (TrackData data : mQueue) {
+            if (data.mCachedTrack != null) {
+                CachedTrack t = data.mCachedTrack;
+                if (t.getStatus() == CachedTrack.Status.failed) {
+                    String path = t.getPath();
+                    if (path != null) {
+                        File file = new File(path);
+                        if (file.exists()) {
+                            if (!file.delete()) {
+                                Logger.log("Failed to delete old file: " + path);
+                            }
+                        }
+                    }
+                    data.mCachedTrack = null;
+                }
+            }
+        }        
     }
     
     
