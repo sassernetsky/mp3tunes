@@ -177,7 +177,7 @@ public class LockerDb
     
     public Cursor getTrackDataByArtist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
     {
-        System.out.println("querying for tracks on album: " + mId.asString());
+        System.out.println("querying for tracks by artist: " + mId.asString());
         if (mId == null) return null;
         return mDb.query(DbTables.TRACK, from, DbKeys.ARTIST_ID + "=" + mId.asString(), 
                 null, null, null, DbKeys.TITLE);
@@ -186,7 +186,7 @@ public class LockerDb
     //replace big query with view
     public Cursor getTrackDataByPlaylist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
     {
-        System.out.println("querying for tracks on album: " + mId.asString());
+        System.out.println("querying for tracks on playlist: " + mId.asString());
         if (mId == null) return null;
         
         StringBuilder query = new StringBuilder("SELECT DISTINCT ")
