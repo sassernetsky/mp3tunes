@@ -153,6 +153,8 @@ public class CachedTrack implements Track
             int p = (int)((progress * 100) / total);
             if (mProgress == p) return;
             mProgress = p;
+            if ((mProgress % 10) == 0)
+            Logger.log("Download of: " + CachedTrack.this.getTitle() + " file key: " + CachedTrack.this.getFileKey() + " at: " + mProgress + "%");
         }
         
     }

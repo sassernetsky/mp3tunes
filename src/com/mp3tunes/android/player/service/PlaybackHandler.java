@@ -3,6 +3,8 @@ package com.mp3tunes.android.player.service;
 import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.LockerId;
+import com.mp3tunes.android.player.service.PlaybackService.MyOnCompletionListener;
+import com.mp3tunes.android.player.service.PlaybackService.MyOnErrorListener;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
 
 import android.content.Context;
@@ -21,13 +23,13 @@ public class PlaybackHandler
     private boolean     mPrepared;
     private Context     mContext;
     
-    private OnCompletionListener mOnCompletionListener;
-    private OnErrorListener      mOnErrorListener;
-    private OnInfoListener       mOnInfoListener;
-    private OnPreparedListener   mOnPreparedListener;
+    private OnCompletionListener      mOnCompletionListener;
+    private MyOnErrorListener         mOnErrorListener;
+    private OnInfoListener            mOnInfoListener;
+    private OnPreparedListener        mOnPreparedListener;
     private OnBufferingUpdateListener mOnBufferingUpdateListener;
     
-    public PlaybackHandler(Context context, OnInfoListener info, OnErrorListener error, OnCompletionListener comp)
+    public PlaybackHandler(Context context, OnInfoListener info, MyOnErrorListener error, MyOnCompletionListener comp)
     {
         mContext = context;
         
@@ -180,8 +182,8 @@ public class PlaybackHandler
 
         public void onBufferingUpdate(MediaPlayer mp, int percent)
         {
-            Logger.log("buffered to: " + percent);
-            
+            if (mTrack.getStatus() == CachedTrack.Status.failed)
+                mOnErrorListener.onTrackFailed(mp, percent);
         }
         
     }

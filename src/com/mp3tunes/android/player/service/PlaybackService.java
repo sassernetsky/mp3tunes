@@ -47,7 +47,7 @@ public class PlaybackService extends Service
         mChangingTrackLock = new Object();
         mPlayStateLocker = new MusicPlayStateLocker(getBaseContext());
         mPlayStateLocker.lock();
-        mDownloader      = new TrackDownloader(mChangingTrackLock);
+        mDownloader      = new TrackDownloader(this, mChangingTrackLock);
         mPlaybackQueue   = new PlaybackQueue(this, getBaseContext(), mDownloader);
         mPlaybackHandler = new PlaybackHandler(getBaseContext(), new MyOnInfoListener(), new MyOnErrorListener(), new MyOnCompletionListener());
         mServer          = HttpServer.startServer(mPlaybackQueue);
@@ -293,10 +293,7 @@ public class PlaybackService extends Service
 
         public void stop() throws RemoteException
         {
-            mPlaybackHandler.stop();
-            mPlaybackHandler.finish();
-            mPlaybackQueue.clear();
-            mDownloader.clear();
+            finish();
             mNotifier.stop(null);
         }
 
@@ -313,10 +310,22 @@ public class PlaybackService extends Service
         }
     };
     
-    private class MyOnErrorListener implements MediaPlayer.OnErrorListener
+    void finish()
+    {
+        synchronized (mChangingTrackLock) {
+            Logger.log("calling finish");
+            mPlaybackHandler.stop();
+            mPlaybackHandler.finish();
+            mPlaybackQueue.clear();
+            mDownloader.clear();
+        }
+    }
+    
+    class MyOnErrorListener implements MediaPlayer.OnErrorListener
     {  
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
+            Logger.log("In Error handler");
             synchronized (mPlaybackHandler) {
                 CachedTrack track = mPlaybackQueue.getPlaybackTrack();
                 Logger.log("MediaPlayer got error name: " + track.getTitle());
@@ -324,15 +333,18 @@ public class PlaybackService extends Service
                     mPlaybackHandler.finish();
                     if (extra == -11) {
                         mNotifier.sendPlaybackError(track, "Timeout downloading track");
+                        finish();
                         return true;
                     } else {
                         mNotifier.sendPlaybackError(track, PlaybackErrorCodes.getError(extra));
+                        finish();
                         return true;
                     }
                 } else if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
                     mPlaybackHandler.finish();
                     if (mErrorCount > 5) {
                         mNotifier.sendPlaybackError(track, "Unable to restart failed media server");
+                        finish();
                         return true;
                     }
                     mPlaybackHandler.play(track);
@@ -341,6 +353,28 @@ public class PlaybackService extends Service
                 mPlaybackHandler.finish();
                 //returning false will call OnCompletionHandler
                 return false;
+            }
+        }
+        
+        public void onTrackFailed(MediaPlayer mp, int percent)
+        {
+            Logger.log("Track download failed at: " + percent);
+            mPlaybackHandler.finish();
+            synchronized (mChangingTrackLock) {
+                CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
+                if (t == null) {
+                    mNotifier.stop(null);
+                    return;
+                }
+                try {
+                    mNotifier.nextTrack(t);
+                    if (!mPlaybackHandler.play(t)) {
+                        mNotifier.sendPlaybackError(t, "Unable to play: " + t.getAlbumTitle() + " by: " + t.getArtistName());
+                        return;
+                    }
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }
             }
         }
     };
@@ -357,7 +391,7 @@ public class PlaybackService extends Service
         }
     };
     
-    private class MyOnCompletionListener implements MediaPlayer.OnCompletionListener 
+    class MyOnCompletionListener implements MediaPlayer.OnCompletionListener 
     {    
         public void onCompletion(MediaPlayer mp)
         {

@@ -167,8 +167,9 @@ public class HttpServer
                         return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): No current playback track.");
                     
                     int status = track.getStatus();
-                    if (status == CachedTrack.Status.failed)
-                        return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): download failed");
+                    if (status == CachedTrack.Status.failed) {
+                        return new Response("408 Request Timeout"/*NanoHTTPD.HTTP_RANGE_ERROR*/, NanoHTTPD.MIME_PLAINTEXT, "Download failed");
+                    }
                     
                     if (status == CachedTrack.Status.finished) {
                         length = f.length();
