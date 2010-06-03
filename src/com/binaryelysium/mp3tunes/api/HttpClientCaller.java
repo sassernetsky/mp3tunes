@@ -14,6 +14,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
@@ -21,6 +22,8 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
@@ -374,16 +377,22 @@ public class HttpClientCaller
     };
     
     
-    public boolean callStream(String url, ResponseHandler<Boolean> handler) throws IOException
+    public boolean callStream(String url, ResponseHandler<Boolean> handler, HttpRequestRetryHandler retry) throws IOException
     {
         try {
-            HttpClient client = new DefaultHttpClient();
+            DefaultHttpClient client = new DefaultHttpClient();
+            if (retry != null)
+                client.setHttpRequestRetryHandler(retry);
+            HttpParams params = client.getParams();
+            HttpConnectionParams.setConnectionTimeout(params, 10000);
+            HttpConnectionParams.setSoTimeout(params, 7000);
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
             boolean response = client.execute(get, handler);
             client.getConnectionManager().shutdown();
             return response;
         }catch (HttpResponseException e) {
+            //TODO: add this kind of code to a HttpRequestRetryHandler
             Log.e("Mp3Tunes", "Status code: " + Integer.toString(e.getStatusCode()));
             if (e.getStatusCode() == 401) {
                 try {
@@ -395,7 +404,7 @@ public class HttpClientCaller
                             url.replace(url.substring(sidStart, sidEnd), LockerContext.instance().getSessionId());
                         else 
                             url.replace(url.substring(sidStart), LockerContext.instance().getSessionId());
-                        return callStream(url, handler);
+                        return callStream(url, handler, retry);
                     }
                 } catch (LockerException e1) {
                     e1.printStackTrace();

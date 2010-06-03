@@ -801,6 +801,7 @@ public class Player extends LifetimeLoggingActivity
                     setCursor();
                     
                     //Make sure that we have new tracks to add
+                    Log.w("Mp3Tunes", "FetchPlaylistTracksTask cursor: " + mCursor.getCount() + " mTracks: " + mTracks);
                     if (mCursor.getCount() > mTracks) {
                         IdParcel[] array = createIdParcels();
                         
