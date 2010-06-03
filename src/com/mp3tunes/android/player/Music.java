@@ -652,4 +652,22 @@ public class Music
         Log.w("Mp3Tunes", "Make Mp3Tunes directory failed");
         return null;
     }
+
+    //TODO: add a setting for max cache size
+    public static long getMaxCacheSize(Context context)
+    {
+        long size = -1;
+        try {
+            size = Long.valueOf(PreferenceManager
+                .getDefaultSharedPreferences(context).getString("cache", "-1"));
+            return size;
+        } catch (Exception e) {}
+        return size;
+    }
+
+    public static long getMinFreeStorageSize()
+    {
+        //for now make sure that the user has at least 50mb free
+        return 52428800;
+    }
 }
