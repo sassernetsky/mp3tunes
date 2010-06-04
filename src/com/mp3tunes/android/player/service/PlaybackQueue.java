@@ -67,6 +67,7 @@ class PlaybackQueue
         if (mQueue.size() > mPlaybackPosition) {
             mDownloader.setMaxPriority(TrackDownloader.Priority.SKIPPEDTRACK);
             fetchTracks();
+            mDownloader.cancelOldDownload(mQueue.get(mPlaybackPosition).mCachedTrack);
             return getPlaybackTrack();
         }
         return null;
@@ -78,6 +79,7 @@ class PlaybackQueue
         if (mPlaybackPosition > 0) {
             mDownloader.setMaxPriority(TrackDownloader.Priority.SKIPPEDTRACK);
             fetchTracks();
+            mDownloader.cancelOldDownload(mQueue.get(mPlaybackPosition).mCachedTrack);
             return getPlaybackTrack();
         }
         return null;
@@ -106,6 +108,7 @@ class PlaybackQueue
             mPlaybackPosition = pos;
             mDownloader.setMaxPriority(TrackDownloader.Priority.SKIPPEDTRACK);
             fetchTracks();
+            mDownloader.cancelOldDownload(mQueue.get(pos).mCachedTrack);
             return true;
         }
         return false;
@@ -146,6 +149,7 @@ class PlaybackQueue
         Logger.log("fetchTrack() Priority: " + priority);
         //Check to see if this is a local track. If it is then no downloading is needed
         if (LocalId.class.isInstance(t.mTrack.getId())) {
+            Logger.log("fetchTrack(): have local track");
             t.mCachedTrack = new CachedTrack((LocalId)t.mTrack.getId(), t.mTrack);
             return;
         }
@@ -155,6 +159,7 @@ class PlaybackQueue
         //at the moment so I am placing a guard here
         if (t.mTrack.getFileKey().startsWith("/sdcard")) {
             t.mCachedTrack = new CachedTrack(new LocalId(0), t.mTrack);
+            Logger.log("fetchTrack(): should have local track");
             return;
         }
         

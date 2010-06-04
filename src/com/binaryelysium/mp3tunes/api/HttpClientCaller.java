@@ -19,6 +19,7 @@ import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -376,8 +377,27 @@ public class HttpClientCaller
         }
     };
     
+    static public abstract class CancellableResponseHandler implements ResponseHandler<Boolean>
+    {
+        HttpRequestBase mRequest;
+        
+        public abstract Boolean handleResponse(HttpResponse response)
+                throws ClientProtocolException, IOException;
+        
+        void setRequest(HttpRequestBase request)
+        {
+            mRequest = request;
+        }
+        
+        public void abort()
+        {
+            if (mRequest != null)
+                mRequest.abort();
+        }
+    };
     
-    public boolean callStream(String url, ResponseHandler<Boolean> handler, HttpRequestRetryHandler retry) throws IOException
+    
+    public boolean callStream(String url, CancellableResponseHandler handler, HttpRequestRetryHandler retry) throws IOException
     {
         try {
             DefaultHttpClient client = new DefaultHttpClient();
@@ -388,6 +408,7 @@ public class HttpClientCaller
             HttpConnectionParams.setSoTimeout(params, 7000);
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
+            handler.setRequest(get);
             boolean response = client.execute(get, handler);
             client.getConnectionManager().shutdown();
             return response;

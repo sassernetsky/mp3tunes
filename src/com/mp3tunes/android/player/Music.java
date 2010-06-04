@@ -635,15 +635,11 @@ public class Music
     static private String makeDirInExternalStorage(String path)
     {
         File storageDir = Environment.getExternalStorageDirectory();
-        Log.w("Mp3Tunes", "External Storage dir: " + storageDir.getAbsolutePath());
         if (storageDir.isDirectory()) {
             File mp3tunesDir = new File(storageDir, path);
-            Log.w("Mp3Tunes", "mp3tunes dir: " + mp3tunesDir.getAbsolutePath());
             if (mp3tunesDir.isDirectory()) {
-                Log.w("Mp3Tunes", "mp3tunes dir exists");
                 return mp3tunesDir.getAbsolutePath();
             } else {
-                Log.w("Mp3Tunes", "making mp3tunes dir");
                 if (mp3tunesDir.mkdirs()) {
                     return mp3tunesDir.getAbsolutePath();
                 }

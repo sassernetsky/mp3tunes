@@ -58,28 +58,28 @@ public class HttpServer
 
         public Response serve( String uri, String method, Properties header, Properties parms )
         {
-            Logger.log( method + " '" + uri + "' " );
+            Logger.log("HttpServer: " +  method + " '" + uri + "' " );
 
             Enumeration<?> e = header.propertyNames();
             while ( e.hasMoreElements()) {
                 String value = (String)e.nextElement();
-                Logger.log( "  Request Header: '" + value + "' = '" + header.getProperty( value ) + "'" );
+                Logger.log("HttpServer: " +   "  Request Header: '" + value + "' = '" + header.getProperty( value ) + "'" );
             }
             e = parms.propertyNames();
             while ( e.hasMoreElements()) {
                 String value = (String)e.nextElement();
-                Logger.log( "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
+                Logger.log("HttpServer: " +   "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
             }
 
             String fileKey = uri.substring(uri.lastIndexOf('/') + 1,uri.indexOf('_'));
             Response r = serveFile( uri, header, new File(mRoot), fileKey);
-            Logger.log("Got response: " + r.status + " " + r.toString());
+            Logger.log("HttpServer: " +  "Got response: " + r.status + " " + r.toString());
             if (r.status == NanoHTTPD.HTTP_INTERNALERROR)
                 Logger.log("Error: " + r.errorMessage);
             e = r.header.propertyNames();
             while ( e.hasMoreElements()) {
                 String value = (String)e.nextElement();
-                Logger.log( "  Response Header: '" + value + "' = '" + r.header.getProperty( value ) + "'" );
+                Logger.log("HttpServer: " +   "  Response Header: '" + value + "' = '" + r.header.getProperty( value ) + "'" );
             }
             
             if (method.equals("HEAD"))
@@ -93,6 +93,7 @@ public class HttpServer
          */
         public Response serveFile( String uri, Properties header, File homeDir, String fileKey)
         {
+            Logger.log("HttpServer: in serve file");
             // Make sure we won't die of an exception later
             if ( !homeDir.isDirectory())
                 return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): given homeDir is not a directory.");
@@ -108,13 +109,13 @@ public class HttpServer
 
             File f = new File( homeDir, uri );
             if ( !f.exists()) {
-                Logger.log("No file at: " + f.getAbsolutePath());
+                Logger.log("HttpServer: " +  "No file at: " + f.getAbsolutePath());
                 return new Response(NanoHTTPD.HTTP_NOTFOUND, NanoHTTPD.MIME_PLAINTEXT, "Error 404, file not found.");
             }
             
             // List the directory, if necessary
             if ( f.isDirectory()) {
-                Logger.log("No file at: " + f.getAbsolutePath());
+                Logger.log("HttpServer: " +  "No file at: " + f.getAbsolutePath());
                 return new Response(NanoHTTPD.HTTP_NOTFOUND, NanoHTTPD.MIME_PLAINTEXT, "Error 404, file not found.");
             }
 
@@ -138,30 +139,31 @@ public class HttpServer
                     String to   = "";
                     if ( range.startsWith( "bytes=" )) {
                         range = range.substring( "bytes=".length());
-                        Logger.log("range1: " + range);
+                        Logger.log("HttpServer: " +  "range1: " + range);
                         int minus = range.indexOf( '-' );
                         if ( minus > 0 ) {
                             from = range.substring( 0, minus );
                             to   = range.substring(minus + 1);
-                            Logger.log("range2: " + range);
+                            Logger.log("HttpServer: " +  "range2: " + range);
                         }
                         try {
                             startFrom = Long.parseLong(from);
-                            Logger.log("range2: " + startFrom);
+                            Logger.log("HttpServer: " +  "range2: " + startFrom);
                         } catch ( NumberFormatException nfe ) {
-                            Logger.log("Range parse error");
+                            Logger.log("HttpServer: " +  "Range parse error");
                         }
                         try {
                             end = Long.parseLong(to);
-                            Logger.log("range2: " + end);
+                            Logger.log("HttpServer: " +  "range2: " + end);
                         } catch ( NumberFormatException nfe ) {
-                            Logger.log("Range parse error");
+                            Logger.log("HttpServer: " +  "Range parse error");
                         }
                     }
                 }
 
                 CachedTrack track = mQueue.getTrackByFileKey(fileKey);
                 long length = 0;
+                Logger.log("HttpServer: waiting for track length");
                 do {
                     if (track == null) 
                         return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): No current playback track.");
@@ -188,7 +190,7 @@ public class HttpServer
                 //opencore will wait forever for data that will never come.  I have been unable to come up with a
                 //solution that is not fragile other than what is below.  We have included an MP3 that contains silence
                 //and set the server up to return data from it until opencore has the ammount of data that it expects.
-                Logger.log("File length: " + Long.toString(length) + " Start from: " + Long.toString(startFrom));
+                Logger.log("HttpServer: " +  "File length: " + Long.toString(length) + " Start from: " + Long.toString(startFrom));
                 InputStream fis = null;  
                 if (startFrom >= length) {
                     if (startFrom > end) {
@@ -207,7 +209,7 @@ public class HttpServer
             
                 return r;
             } catch( IOException ioe ) {
-                Logger.log("Server got IOException trying to read file");
+                Logger.log("HttpServer: " +  "Server got IOException trying to read file");
                 return new Response(NanoHTTPD.HTTP_FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: Reading file failed.");
             }
         }
