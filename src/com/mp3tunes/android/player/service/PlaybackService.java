@@ -329,12 +329,19 @@ public class PlaybackService extends Service
             synchronized (mPlaybackHandler) {
                 CachedTrack track = mPlaybackQueue.getPlaybackTrack();
                 Logger.log("MediaPlayer got error name: " + track.getTitle());
-                if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
+                if (track.getStatus() == CachedTrack.Status.failed) {
+                    mNotifier.sendPlaybackError(track, track.getErrorMessage());
+                    finish();
+                    return true;
+                } else if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
                     mPlaybackHandler.finish();
                     if (extra == -11) {
                         mNotifier.sendPlaybackError(track, "Timeout downloading track");
                         finish();
                         return true;
+                    //} else if (extra == -1004) {
+                    //    mPlaybackHandler.play(track);
+                    //    return true;
                     } else {
                         mNotifier.sendPlaybackError(track, PlaybackErrorCodes.getError(extra));
                         finish();

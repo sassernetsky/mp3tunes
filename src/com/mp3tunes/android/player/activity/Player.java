@@ -812,6 +812,8 @@ public class Player extends LifetimeLoggingActivity
                             addToCurrentPlaybackList(array);
                         }
                         mTracks = mCursor.getCount();
+                    } else {
+                        return;
                     }
                 }
                 queueNextRefresh(500);
@@ -822,6 +824,8 @@ public class Player extends LifetimeLoggingActivity
             } catch (LockerException e) {
                 e.printStackTrace();
             } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

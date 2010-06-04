@@ -10,13 +10,14 @@ import com.mp3tunes.android.player.LocalId;
 
 public class CachedTrack implements Track
 {
-    Track  mTrack;
-    String mCachedUrl;
-    String mCachedPath;
-    String mFormat;
-    int    mBitrate;
-    int    mStatus;
+    Track    mTrack;
+    String   mCachedUrl;
+    String   mCachedPath;
+    String   mFormat;
+    int      mBitrate;
+    int      mStatus;
     Progress mProgress;
+    String   mError;
     
     public CachedTrack(Track t, String path, String url, String format, int bitrate)
     {
@@ -27,6 +28,7 @@ public class CachedTrack implements Track
         mBitrate    = bitrate;
         mStatus     = Status.created;
         mProgress   = new Progress();
+        mError      = "no error";
     }
     
     public CachedTrack(LocalId id, Track t)
@@ -167,5 +169,15 @@ public class CachedTrack implements Track
     public long getContentLength()
     {
         return mProgress.mTotal;
+    }
+    
+    public void setErrorMessage(String message)
+    {
+        mError = message;
+    }
+    
+    public String getErrorMessage()
+    {
+        return mError;
     }
 }
