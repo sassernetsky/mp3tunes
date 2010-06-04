@@ -116,9 +116,19 @@ class PlaybackQueue
     
     synchronized public CachedTrack getTrackByFileKey(String key)
     {
+        Logger.log("key: " + key);
         for (TrackData data : mQueue) {
             if (data.mCachedTrack != null) {
-                if (data.mCachedTrack.getFileKey().equals(key))
+                String fileKey = data.mCachedTrack.getFileKey();
+                Logger.log("filekey: " + fileKey);
+                if (fileKey.equals(key))
+                    return data.mCachedTrack;
+                
+                fileKey = fileKey.replace("/", "_slash_");
+                fileKey = fileKey.replace(".", "_dot_");
+                fileKey = fileKey.replace("%", "_percent_");
+                Logger.log("filekey: " + fileKey);
+                if (fileKey.equals(key))
                     return data.mCachedTrack;
             }
         } 

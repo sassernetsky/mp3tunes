@@ -204,7 +204,11 @@ public class TrackDownloader
         try {
             String dir = Music.getMP3tunesCacheDir();
             if (dir != null) {
-                String name = fileKey + "_" + Integer.toString(bitrate) + "." + format;
+                String name = fileKey + "_" + Integer.toString(bitrate);
+                name = name.replace("/", "_slash_");
+                name = name.replace(".", "_dot_");
+                name = name.replace("%", "_percent_");
+                name += "." + format;
                 File file = new File(dir, name);
                 if (file.createNewFile()) return file.getAbsolutePath();
                 throw new AlreadyDownloadedException(file.getAbsolutePath());
@@ -224,6 +228,7 @@ public class TrackDownloader
                 name = name.replaceAll(" ", "_");
                 name = name.replace("/", "_slash_");
                 name = name.replace(".", "_dot_");
+                name = name.replace("%", "_percent_");
                 name += ".tmp";
                 File file = new File(dir, name);
                 if (file.createNewFile()) return file.getAbsolutePath();
@@ -560,8 +565,10 @@ public class TrackDownloader
     }
     public void clear()
     {
-        mJob.cancelled = true;
-        mQueue.clear();
+        if (mJob != null)
+            mJob.cancelled = true;
+        if (mQueue != null)
+            mQueue.clear();
     }
     
     private void freeCacheSpace()
