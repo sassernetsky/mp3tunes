@@ -139,7 +139,7 @@ public class MediaStore
                               lockerDbToMediaStoreKey(DbKeys.TITLE));
         }
         if (lockerId != null) {
-            locker = mLockerDb.getTrackDataByAlbum(cols, lockerId);
+            locker = mLockerDb.getTrackDataByArtist(cols, lockerId);
         }
         return merge(locker, store, columns, joinBy);
     }

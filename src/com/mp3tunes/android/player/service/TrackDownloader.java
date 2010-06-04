@@ -34,6 +34,7 @@ import com.binaryelysium.util.FileUtils;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.util.Pair;
 import com.mp3tunes.android.player.util.StorageInfo;
+import com.mp3tunes.android.player.util.Timer;
 
 public class TrackDownloader
 {
@@ -45,6 +46,7 @@ public class TrackDownloader
     private OutputStreamResponseHandler mOutputHandler;
     private Object                      mChangingTrackLock;
     private Context                     mContext;
+    private Timer                       mTimer;
     
     private final int POLL = 0;
     
@@ -72,19 +74,29 @@ public class TrackDownloader
         try {
             //Create new job to get file
             String path = getCachePath(track.getFileKey(), format, bitrate);
-            Logger.log("created file at: " + path);
+            Logger.log("downloadTrack(): created file at: " + path);
             CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), format, bitrate);
             Job job    = new Job(priority, cached, cached.getPlayUrl());
             addJob(job);
             return new Pair<Integer, CachedTrack>(job.id, cached);
-        } catch (AlreadyDownloadedException e) {
+        } catch (AlreadyDownloadedException e) {      
             //we already have a file. First we see if there is a job running for it
             String path = e.getPath();
+            Logger.log("downloadTrack(): already have file at: " + path);
             Job job = getJobByPath(path);
             if (job != null) {
+                Logger.log("downloadTrack(): Already have job adjusting priority");
                 job.priority = priority;
                 return new Pair<Integer, CachedTrack>(job.id, job.track);
             }
+            Logger.log("downloadTrack(): No job checking for small file length");
+            File file = new File(path);
+            if (file.length() < 1024) {
+                Logger.log("downloadTrack(): file length: " + file.length() + "assumed to be to small for a audio file");
+                if (file.delete()) return downloadTrack(track,  priority, format, bitrate);
+            }
+            
+            Logger.log("downloadTrack(): Assuming previous complete download");
             //There is no job running this means that 
             CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), format, bitrate);
             cached.setStatus(CachedTrack.Status.finished);
@@ -153,10 +165,12 @@ public class TrackDownloader
     {
         synchronized (mQueue) {
             
-            if (mJob.priority == Priority.NOWPLAYING) {
-                Logger.log("resetPriority(): Cancelling  download of: " + mJob.track.getTitle());
-                mJob.cancelled = true;
-            }
+//            if (mJob.priority == Priority.NOWPLAYING) {
+//                Logger.log("resetPriority(): Cancelling  download of: " + mJob.track.getTitle());
+//                mJob.cancelled = true;
+//            } else {
+//                Logger.log("resetPriority(): Not Cancelling  download of: " + mJob.track.getTitle() + " priority: " + mJob.priority);
+//            }
             
             Logger.log("resetPriority(): called with id: " + id.intValue() + " priority: " + priority + " num jobs: " + mQueue.size());
             for (Job job : mQueue) {
@@ -277,10 +291,11 @@ public class TrackDownloader
         }
 
         
-        void fail()
+        void fail(String message)
         {
             Logger.log("Download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "' Failed");
             Logger.log("At: " + mJob.url);
+            mJob.track.setErrorMessage(message);
             mJob.track.setStatus(CachedTrack.Status.failed);
         }
         
@@ -312,7 +327,7 @@ public class TrackDownloader
                                 Logger.log("Failed to delete old file: " + oldFile);
                             }
                         } else {
-                            fail();
+                            fail("Failed to move track");
                         }
                     } else {
                         //This should be a problem with our server so we want to crash here so we know about it
@@ -328,10 +343,10 @@ public class TrackDownloader
         {
             if (mCount > 240) mCount = 0;
             mCount++;
-            if (mCount == 1) Logger.log("handleMessage() waiting on lock");
+            if (mCount == 1) Logger.log("setupNextJob(): waiting on lock");
             
             synchronized (mChangingTrackLock) {
-                if (mCount == 1) Logger.log("handleMessage() obtained lock");
+                if (mCount == 1) Logger.log("setupNextJob(): obtained lock");
                 
                 synchronized (mQueue) {
                 try {
@@ -346,18 +361,17 @@ public class TrackDownloader
                 } catch (Exception e) {}
 
                     for (Job job : mQueue) {
-                            Logger.log("Priority of: " + job.track.getTitle() + " is: " + job.priority);
+                            Logger.log("setupNextJob(): Priority of: " + job.track.getTitle() + " is: " + job.priority);
                     }
                     mJob = mQueue.poll();
                 }
                 if (mJob == null) return false;
-                Logger.log("handleMessage(): job count: " + mQueue.size());
-                Logger.log("");
+                Logger.log("setupNextJob(): job count: " + mQueue.size());
                 mJob.track.setStatus(CachedTrack.Status.downloading);
                 mOutputHandler = new OutputStreamResponseHandler(mJob);
-                Logger.log("Begining download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "'");
-                Logger.log("At: " + mJob.url);
-                Logger.log("Priority: " + mJob.priority);
+                Logger.log("setupNextJob(): Begining download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "'");
+                Logger.log("setupNextJob(): At: " + mJob.url);
+                Logger.log("setupNextJob(): Priority: " + mJob.priority);
                 if (mCount == 1) Logger.log("handleMessage() giving up lock");
                 
                 //check to make sure we have cache space
@@ -366,22 +380,26 @@ public class TrackDownloader
             return true;
         }
         
-        void handleSocketException()
+        void handleSocketException(String message)
         {
             try {
                 if (mOutputHandler.mReturn) {
                     succeed();
                 } else {
-                    fail();
+                    fail(message);
                 }
             } catch (Exception e) {
                 Logger.log(e);
-                fail();
+                fail(message);
             }
         }
         
         void performDownload() throws IOException
         {
+            if (mTimer != null) {
+                mTimer.push();
+                mTimer = null;
+            }
             if (!HttpClientCaller.getInstance().callStream(mJob.url, mOutputHandler, null)) {
                 throw new IOException();
             }
@@ -397,12 +415,13 @@ public class TrackDownloader
                             try {
                                 performDownload();
                             } catch (SocketTimeoutException e) {
-                                handleSocketException();
+                                
+                                handleSocketException("network timeout error");
                             } catch (SocketException e) {
-                                handleSocketException();
+                                handleSocketException("broken network connection error");
                             } catch (IOException e) {
                                 e.printStackTrace();
-                                fail();
+                                fail(e.getMessage());
                             }
                             moveToPermenentLocation();
                             
@@ -457,7 +476,7 @@ public class TrackDownloader
     };
     
     
-    static private class OutputStreamResponseHandler implements ResponseHandler<Boolean>  
+    static private class OutputStreamResponseHandler extends HttpClientCaller.CancellableResponseHandler  
     {
         Job          mJob;
         String       mContentType;
@@ -466,6 +485,7 @@ public class TrackDownloader
         
         OutputStreamResponseHandler(Job job)
         {
+            super();
             mJob = job;
         }
         
@@ -479,7 +499,6 @@ public class TrackDownloader
             if (mReturn != null) return mReturn;
             mReturn = false;
             
-            String contentType = "";
             for (Header h :response.getAllHeaders()) {
                 if (h.getName().equals("Content-Type")) mContentType = h.getValue();
             }
@@ -492,7 +511,11 @@ public class TrackDownloader
                 int size  = 0;
                 int total = 0;
                 while (true) {
-                    if (mJob.cancelled) return false;
+                    if (mJob.cancelled) {
+                        Logger.log("Cancelling job");
+                        abort();
+                        return false;
+                    }
                     try {
                         size = input.read(buffer);
                     } catch (SocketTimeoutException e) {
@@ -520,23 +543,6 @@ public class TrackDownloader
                 return false;
             }
         }
-
-        public HttpRequestRetryHandler myRetryHandler = new HttpRequestRetryHandler() {
-            HttpRequestRetryHandler mFallthrough = new DefaultHttpRequestRetryHandler();
-            public boolean retryRequest(IOException exception, int executionCount, HttpContext context)
-            {
-                if (exception instanceof SocketException) {
-                    Logger.log("Got SocketException delegating response back to the handler.");
-                    while (true) {
-                        synchronized (OutputStreamResponseHandler.this.mLock) {
-                            if (OutputStreamResponseHandler.this.mReturn != null) break;
-                        }
-                    }
-                    return true;    
-                }
-                return mFallthrough.retryRequest(exception, executionCount, context);
-            }
-        };
     }
     
     public class AlreadyDownloadedException extends Exception
@@ -594,5 +600,32 @@ public class TrackDownloader
                 }
         }
         return choice;
+    }
+
+    public void cancelOldDownload(CachedTrack track)
+    {
+        synchronized (mQueue) {
+            //Nothing to cancel
+            if (mJob == null) {
+                Logger.log("cancelOldDownload(): Not cancelling: no track downloading");
+                return;
+            }
+            
+            //we are already downloading the track
+            if (track.getFileKey().equals(mJob.track.getFileKey())) {
+                Logger.log("cancelOldDownload(): Not cancelling: downloading: " + mJob.track.getFileKey() + " need to download: " + track.getFileKey());
+                return;
+            }
+        
+            //the track is already downloaded
+            if (track.getStatus() == CachedTrack.Status.finished) {
+                Logger.log("cancelOldDownload(): Not cancelling: " + track.getFileKey() + " already downloaded");
+                return;
+            }
+        
+            Logger.log("cancelOldDownload(): Cancelling  download of: " + mJob.track.getTitle() + " in favor of: " + track.getFileKey());
+            mTimer = new Timer("Begining cancel");
+            mJob.cancelled = true;
+        }
     }
 }
