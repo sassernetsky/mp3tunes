@@ -3,6 +3,7 @@ package com.mp3tunes.android.player.service;
 import java.io.IOException;
 
 import com.binaryelysium.mp3tunes.api.LockerId;
+import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.service.PlaybackService.MyOnCompletionListener;
 import com.mp3tunes.android.player.service.PlaybackService.MyOnErrorListener;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
@@ -15,6 +16,7 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
+import android.os.AsyncTask;
 
 public class PlaybackHandler
 {
@@ -22,6 +24,10 @@ public class PlaybackHandler
     private CachedTrack mTrack;
     private boolean     mPrepared;
     private Context     mContext;
+    
+    private PrepareTask mPrepareTask;
+    
+    private long        mDuration;
     
     private OnCompletionListener      mOnCompletionListener;
     private MyOnErrorListener         mOnErrorListener;
@@ -50,7 +56,13 @@ public class PlaybackHandler
             mPrepared = false;
         }
         mTrack = t;
-        return prepare();
+        mPrepareTask = new PrepareTask();
+        if (mPrepareTask.runAsync()) {
+            Logger.log("Running prepare async");
+            mPrepareTask.execute((Void[])null);
+            return true;
+        }
+        return mPrepareTask.prepare();
     }
     
     synchronized public void pause()
@@ -83,8 +95,12 @@ public class PlaybackHandler
     
     synchronized public long getDuration()
     {
-        if (mPrepared)
-            return mMp.getDuration();
+        if (mPrepared) {
+            long duration = mMp.getDuration();
+            if (duration > 0)
+                return duration;
+            return mDuration;
+        }
         return 0;
     }
 
@@ -112,6 +128,98 @@ public class PlaybackHandler
         }
     }
     
+    class PrepareTask extends AsyncTask<Void, Void, Boolean>
+    {
+        String mUrl = null;
+        boolean runAsync()
+        {
+            Logger.log("preparing track: " + mTrack.getTitle());
+            Logger.log("Artist:          " + mTrack.getArtistName());
+            Logger.log("Album:           " + mTrack.getArtistName());
+            
+            mUrl = mTrack.getCachedUrl();
+            if (LockerId.class.isInstance(mTrack.getId())) {
+                Logger.log("checking local store");
+                if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
+                    mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
+                    mUrl = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
+                } else {
+                    int status = mTrack.getStatus();
+                    assert(status != CachedTrack.Status.failed);
+                    createMediaPlayer();
+                    if (status == CachedTrack.Status.finished)
+                        return false;
+                    return true;
+                }
+            } else {
+                mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
+            }
+            createMediaPlayer();
+            return false;
+        }
+        
+        void createMediaPlayer()
+        {
+            //State Idle
+            mMp = new MediaPlayer();
+            mMp.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            
+            setListeners();
+        }
+        
+        boolean prepare()
+        {
+            try {
+                //State Initialized
+                Logger.log("playing: " + mUrl);
+                mMp.setOnPreparedListener(mOnPreparedListener);
+
+                mMp.setDataSource(mUrl);
+                mMp.prepareAsync();
+            
+                //make sure volume is up
+                mMp.setVolume(1.0f, 1.0f);
+                return true;
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            } catch (IllegalStateException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+        
+        void waitForDownloadToBegin()
+        {
+            Logger.log("Waiting on download to begin");
+            while (mTrack.getContentLength() == 0) {}
+            mDuration = mTrack.getContentLength() * 8000 / mTrack.mBitrate;
+            Logger.log("Duration set to: " + mDuration);
+        }
+        
+        @Override
+        protected void onPreExecute()
+        {
+        }
+        
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            waitForDownloadToBegin();
+            return prepare();
+        }
+        
+        @Override
+        protected void onPostExecute(Boolean ret)
+        {
+            if (!ret) {
+                mOnErrorListener.onTrackFailed(mMp, 0);
+            }
+        }
+        
+    };
+    
   //This function must only be called by functions that hold both the mState lock and the mPreCaching locks
     private boolean prepare()
     {
@@ -127,6 +235,8 @@ public class PlaybackHandler
                     mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
                     url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
                 }
+                while (mTrack.getContentLength() == 0) {}
+                mDuration = mTrack.getContentLength() * 8000 / mTrack.mBitrate;
             } else {
                 mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
             }
