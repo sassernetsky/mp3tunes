@@ -71,7 +71,7 @@ public class HttpServer
                 Logger.log("HttpServer: " +   "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
             }
 
-            String fileKey = uri.substring(uri.lastIndexOf('/') + 1,uri.indexOf('_'));
+            String fileKey = uri.substring(uri.lastIndexOf('/') + 1,uri.lastIndexOf('_'));
             Response r = serveFile( uri, header, new File(mRoot), fileKey);
             Logger.log("HttpServer: " +  "Got response: " + r.status + " " + r.toString());
             if (r.status == NanoHTTPD.HTTP_INTERNALERROR)
@@ -163,8 +163,8 @@ public class HttpServer
 
                 CachedTrack track = mQueue.getTrackByFileKey(fileKey);
                 long length = 0;
-                Logger.log("HttpServer: waiting for track length");
-                do {
+//                Logger.log("HttpServer: waiting for track length");
+//                do {
                     if (track == null) 
                         return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): No current playback track.");
                     
@@ -175,12 +175,13 @@ public class HttpServer
                     
                     if (status == CachedTrack.Status.finished) {
                         length = f.length();
-                        break;
+//                        break;
+                    } else {
+                        length = track.getContentLength();
                     }
-                    
-                    length = track.getContentLength();
-                } while (length == 0);
+//                } while (length == 0);
                 //if (startFrom == 0) length += 30000;
+
                 
                 
                 //The Http client in opencore does not behave itself.  It does not adjust its expected content size in
