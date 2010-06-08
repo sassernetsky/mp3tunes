@@ -32,6 +32,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.HttpClientCaller.Progress;
 import com.binaryelysium.util.FileUtils;
 import com.mp3tunes.android.player.Music;
+import com.mp3tunes.android.player.service.CachedTrack.AlreadyDownloadedException;
 import com.mp3tunes.android.player.util.Pair;
 import com.mp3tunes.android.player.util.StorageInfo;
 import com.mp3tunes.android.player.util.Timer;
@@ -72,62 +73,63 @@ public class TrackDownloader
     public Pair<Integer, CachedTrack> downloadTrack(Track track,  int priority, String format, int bitrate)
     {
         try {
-            //Create new job to get file
-            String path = getCachePath(track.getFileKey(), format, bitrate);
-            Logger.log("downloadTrack(): created file at: " + path);
-            CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), format, bitrate);
-            Job job    = new Job(priority, cached, cached.getPlayUrl());
-            addJob(job);
-            return new Pair<Integer, CachedTrack>(job.id, cached);
-        } catch (AlreadyDownloadedException e) {      
-            //we already have a file. First we see if there is a job running for it
+            //First we try to create a CachedTrack for the Track
+            CachedTrack cached = new CachedTrack(track, format, bitrate);
+            
+            //If the track isn't finished then create a job to download it
+            if (cached.getStatus() != CachedTrack.Status.finished) {
+                Job job    = new Job(priority, cached, cached.getPlayUrl());
+                addJob(job);
+                return new Pair<Integer, CachedTrack>(job.id, cached);
+            }
+            
+            //If the track is already finished then no job is needed
+            return new Pair<Integer, CachedTrack>(null, cached);
+        } catch (AlreadyDownloadedException e) {
+            //We have a file in the temporary location for this track. So, we check to see if there is a job
+            //to download it already
             String path = e.getPath();
             Logger.log("downloadTrack(): already have file at: " + path);
             Job job = getJobByPath(path);
             if (job != null) {
+                //We have a job so we want to adjust the priority and return it
                 Logger.log("downloadTrack(): Already have job adjusting priority");
                 job.priority = priority;
                 return new Pair<Integer, CachedTrack>(job.id, job.track);
             }
-            Logger.log("downloadTrack(): No job checking for small file length");
-            File file = new File(path);
-            if (file.length() < 1024) {
-                Logger.log("downloadTrack(): file length: " + file.length() + "assumed to be to small for a audio file");
-                if (file.delete()) return downloadTrack(track,  priority, format, bitrate);
-            }
             
-            Logger.log("downloadTrack(): Assuming previous complete download");
-            //There is no job running this means that 
-            CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), format, bitrate);
-            cached.setStatus(CachedTrack.Status.finished);
-            return new Pair<Integer, CachedTrack>(null, cached);
+            //Since there was no current job for this temporary track we assume that it is a failed download.
+            //In this case we delete it and create a new one
+            
+            File file = new File(path);
+            if (file.delete()) return downloadTrack(track, priority, format, bitrate);
+            return new Pair<Integer, CachedTrack>(job.id, job.track);
         }
     }
 
     //Note: It is not safe to stream files downloaded with this call until the job that is completed
-    public Pair<Integer, CachedTrack> downloadTrack(Track track) throws AlreadyDownloadedException
-    {
-        try {
-            String path = getLocalStoragePath(track);
-            CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), null, 0);
-            Job job    = new Job(Priority.FORSTORAGE, cached, cached.getUrl());
-            addJob(job);
-            return new Pair<Integer, CachedTrack>(job.id, cached);
-        } catch (AlreadyDownloadedException e) {
-            //we already have a file. First we see if there is a job running for it
-            String path = e.getPath();
-            Job job = getJobByPath(path);
-            if (job != null) {
-                job.priority = Priority.FORSTORAGE;
-                return new Pair<Integer, CachedTrack>(job.id, job.track);
-            }
-        
-            //There is no job running this means that 
-            CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), null, 0);
-            cached.setStatus(CachedTrack.Status.finished);
-            return new Pair<Integer, CachedTrack>(null, cached);
-        }
-    }
+//    public Pair<Integer, CachedTrack> downloadTrack(Track track) throws AlreadyDownloadedException
+//    {
+//        try {
+//            CachedTrack cached = new CachedTrack(track, null, 0);
+//            Job job    = new Job(Priority.FORSTORAGE, cached, cached.getUrl());
+//            addJob(job);
+//            return new Pair<Integer, CachedTrack>(job.id, cached);
+//        } catch (AlreadyDownloadedException e) {
+//            //we already have a file. First we see if there is a job running for it
+//            String path = e.getPath();
+//            Job job = getJobByPath(path);
+//            if (job != null) {
+//                job.priority = Priority.FORSTORAGE;
+//                return new Pair<Integer, CachedTrack>(job.id, job.track);
+//            }
+//        
+//            //There is no job running this means that 
+//            CachedTrack cached = new CachedTrack(track, path, HttpServer.pathToUrl(path), null, 0);
+//            cached.setStatus(CachedTrack.Status.finished);
+//            return new Pair<Integer, CachedTrack>(null, cached);
+//        }
+//    }
     
     private Job getJobByPath(String path)
     {
@@ -163,15 +165,7 @@ public class TrackDownloader
     
     public void resetPriority(Integer id, int priority)
     {
-        synchronized (mQueue) {
-            
-//            if (mJob.priority == Priority.NOWPLAYING) {
-//                Logger.log("resetPriority(): Cancelling  download of: " + mJob.track.getTitle());
-//                mJob.cancelled = true;
-//            } else {
-//                Logger.log("resetPriority(): Not Cancelling  download of: " + mJob.track.getTitle() + " priority: " + mJob.priority);
-//            }
-            
+        synchronized (mQueue) {           
             Logger.log("resetPriority(): called with id: " + id.intValue() + " priority: " + priority + " num jobs: " + mQueue.size());
             for (Job job : mQueue) {
                 Logger.log("resetPriority(): mQueue job " + job.id + " downloads: " + job.track.getTitle());
@@ -199,48 +193,7 @@ public class TrackDownloader
         }
     }
 
-    private String getCachePath(String fileKey, String format, int bitrate) throws AlreadyDownloadedException
-    {
-        try {
-            String dir = Music.getMP3tunesCacheDir();
-            if (dir != null) {
-                String name = fileKey + "_" + Integer.toString(bitrate);
-                name = name.replace("/", "_slash_");
-                name = name.replace(".", "_dot_");
-                name = name.replace("%", "_percent_");
-                name += "." + format;
-                File file = new File(dir, name);
-                if (file.createNewFile()) return file.getAbsolutePath();
-                throw new AlreadyDownloadedException(file.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-    
-    private String getLocalStoragePath(Track track) throws AlreadyDownloadedException
-    {
-        try {
-            String dir = Music.getMP3tunesMusicDir();
-            if (dir != null) {
-                String name = track.getArtistName() + "-" + track.getTitle();
-                name = name.replaceAll(" ", "_");
-                name = name.replace("/", "_slash_");
-                name = name.replace(".", "_dot_");
-                name = name.replace("%", "_percent_");
-                name += ".tmp";
-                File file = new File(dir, name);
-                if (file.createNewFile()) return file.getAbsolutePath();
-                throw new AlreadyDownloadedException(file.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private class Job
+    public class Job
     {
         int              id;
         int              priority;
@@ -311,39 +264,6 @@ public class TrackDownloader
             mJob.track.setStatus(CachedTrack.Status.finished);
         }
         
-        //We need to have this function to support using lockerget.  When we run a lockerget we do not know the type
-        //of audio file we are going to get until we parse the headers.  Since we create the file stream before we parse
-        //the headers this means that for lockergets we download the file to a .tmp location and move the file to the correct
-        //extention once that is done
-        void moveToPermenentLocation()
-        {
-            if (mJob.track.getStatus() == CachedTrack.Status.finished ) {
-                String contentType = mOutputHandler.getContentType();
-                //If we did not know what the file format was when we started the download then we need to see
-                //if we can get it from the contentType
-                if (mJob.track.getPath().endsWith(".tmp")) {
-                    if (contentType != null) {
-                        String oldFile = mJob.track.getPath();
-                        String newFile = copyFileToCorrectExtension(contentType, oldFile);
-                        if (newFile != null) {
-                            mJob.track.setPath(newFile);
-                            mJob.track.setCachedUrl(HttpServer.pathToUrl(newFile));
-                            if (!new File(oldFile).delete()) {
-                                Logger.log("Failed to delete old file: " + oldFile);
-                            }
-                        } else {
-                            fail("Failed to move track");
-                        }
-                    } else {
-                        //This should be a problem with our server so we want to crash here so we know about it
-                        //ASAP.  If we do find that a network error can get us here then we need to make sure 
-                        //that call stream returns false or throws and IOException
-                        assert(false);
-                    }
-                }
-            }
-        }
-        
         boolean setupNextJob()
         {
             if (mCount > 240) mCount = 0;
@@ -379,7 +299,7 @@ public class TrackDownloader
                 Logger.log("setupNextJob(): Priority: " + mJob.priority);
                 if (mCount == 1) Logger.log("handleMessage() giving up lock");
                 
-                //check to make sure we have cache space
+                //check to make sure we have cache space    // 
                 freeCacheSpace();
             }
             return true;
@@ -428,7 +348,8 @@ public class TrackDownloader
                                 e.printStackTrace();
                                 fail(e.getMessage());
                             }
-                            moveToPermenentLocation();
+                            mJob.track.cacheTrack();
+                            //moveToPermenentLocation();
                             
                         }
                         mHandler.post(mPoll);
@@ -444,40 +365,40 @@ public class TrackDownloader
             }
         };
         
-        public String copyFileToCorrectExtension(String contentType, String file)
-        {
-            String extension = null;
-            if (contentType.equals("audio/mpeg")) {
-                extension += ".mp3";
-            } else if (contentType.equals("audio/mp4")) {
-                extension += ".mp4";
-            } else if (contentType.equals("audio/ogg")) {
-                extension += ".ogg";
-            } else if (contentType.equals("audio/vorbis")) {
-                extension += ".ogg";
-            } else if (contentType.equals("application/ogg")) {
-                extension += ".ogg";
-            } else if (contentType.equals("audio/x-ms-wma")) {
-                extension += ".wma";
-            } else if (contentType.equals("video/quicktime")) {
-                Log.w("Mp3Tunes", "inserting a video file video/quicktime");
-                extension += ".mp4";
-            } else if (contentType.equals("video/mp4")) {
-                Log.w("Mp3Tunes", "inserting a video file video/mp4");
-                extension += ".mp4";
-            } else if (contentType.equals("video/x-ms-wmv")) {
-                Log.w("Mp3Tunes", "inserting a video file video/x-ms-wmv");
-                extension += ".wmv";
-            }
-            if (extension == null) return null;
-            String newFile = file.replace(".tmp", extension);
-            try {
-                FileUtils.copyFile(file, newFile);
-            } catch (IOException e) {
-                return null;
-            }
-            return newFile;
-        }
+//        public String copyFileToCorrectExtension(String contentType, String file)
+//        {
+//            String extension = null;
+//            if (contentType.equals("audio/mpeg")) {
+//                extension += ".mp3";
+//            } else if (contentType.equals("audio/mp4")) {
+//                extension += ".mp4";
+//            } else if (contentType.equals("audio/ogg")) {
+//                extension += ".ogg";
+//            } else if (contentType.equals("audio/vorbis")) {
+//                extension += ".ogg";
+//            } else if (contentType.equals("application/ogg")) {
+//                extension += ".ogg";
+//            } else if (contentType.equals("audio/x-ms-wma")) {
+//                extension += ".wma";
+//            } else if (contentType.equals("video/quicktime")) {
+//                Log.w("Mp3Tunes", "inserting a video file video/quicktime");
+//                extension += ".mp4";
+//            } else if (contentType.equals("video/mp4")) {
+//                Log.w("Mp3Tunes", "inserting a video file video/mp4");
+//                extension += ".mp4";
+//            } else if (contentType.equals("video/x-ms-wmv")) {
+//                Log.w("Mp3Tunes", "inserting a video file video/x-ms-wmv");
+//                extension += ".wmv";
+//            }
+//            if (extension == null) return null;
+//            String newFile = file.replace(".tmp", extension);
+//            try {
+//                FileUtils.copyFile(file, newFile);
+//            } catch (IOException e) {
+//                return null;
+//            }
+//            return newFile;
+//        }
     };
     
     
@@ -550,19 +471,6 @@ public class TrackDownloader
         }
     }
     
-    public class AlreadyDownloadedException extends Exception
-    {
-        private String mPath;
-        private static final long serialVersionUID = -7663492585836784742L;
-        public AlreadyDownloadedException(String path)
-        {
-            mPath = path;
-        }
-        public String getPath()
-        {
-            return mPath;
-        }
-    }
     public void clear()
     {
         if (mJob != null)
@@ -580,8 +488,8 @@ public class TrackDownloader
     }
     
     private void freeSomeCacheSpace()
-    {
-        File file = getOldestFile(Music.getMP3tunesCacheDir());
+    {        
+        File file = getOldestFile(Music.getMP3tunesCacheDir(), null);
         if (file == null) {
             Logger.log("Empty cache dir. Nothing to delete");
             return;
@@ -590,14 +498,18 @@ public class TrackDownloader
         file.delete();
     }
     
-    private File getOldestFile(String dir) 
+    private File getOldestFile(String dir, FileFilter filter) 
     {
         File fl = new File(dir);
-        File[] files = fl.listFiles(new FileFilter() {                  
+        if (filter == null) {
+            filter = new FileFilter() {                  
                 public boolean accept(File file) {
-                        return file.isFile();
+                    return file.isFile();
                 }
-        });
+            };
+        }
+        File[] files = fl.listFiles(filter);
+        
         long lastMod = Long.MAX_VALUE;
         File choice = null;
         for (File file : files) {

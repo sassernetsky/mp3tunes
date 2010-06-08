@@ -6,6 +6,7 @@ import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.IPlaybackService;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
+import com.mp3tunes.android.player.util.Timer;
 
 import android.app.Service;
 import android.content.Context;
@@ -33,11 +34,16 @@ public class PlaybackService extends Service
     private Mp3TunesPhoneStateListener mPhoneStateListener;
     private TelephonyManager           mTelephonyManager;
     
+    
+    private Timer mTimer;
+    
     @Override
     public void onCreate()
     {
         super.onCreate();
 
+        mTimer = new Timer("Starting track");
+        Timer timer  = new Timer("Playback Service onCreate");
         //we don't want the service to be killed while playing
         //later we need to determine a persistence strategy so that
         //can only set us in the foreground when we are actually playing
@@ -57,6 +63,7 @@ public class PlaybackService extends Service
         ContextWrapper cw = new ContextWrapper(getBaseContext());
         mTelephonyManager = (TelephonyManager)cw.getSystemService(Context.TELEPHONY_SERVICE);
         mTelephonyManager.listen(mPhoneStateListener, Mp3TunesPhoneStateListener.LISTEN_CALL_STATE);
+        timer.push();
     }
 
     @Override
@@ -217,6 +224,7 @@ public class PlaybackService extends Service
 
         public void next() throws RemoteException
         {
+            Timer timer = new  Timer("Playback service next");
             Logger.log("next() waiting on lock");
             synchronized (mChangingTrackLock) {
                 Logger.log("next() obtained lock");
@@ -232,6 +240,7 @@ public class PlaybackService extends Service
                     Logger.log("next() giving up lock");
                 }
             }
+            timer.push();
         }
 
         public ParcelableTrack nextTrack() throws RemoteException
@@ -275,6 +284,7 @@ public class PlaybackService extends Service
 
         public void startAt(int pos) throws RemoteException
         {
+            Timer timer  = new Timer("Playback Service starting");
             synchronized (mChangingTrackLock) {
                 try {
                     if (!mPlaybackQueue.setPlaybackPosition(pos)) {
@@ -289,6 +299,7 @@ public class PlaybackService extends Service
                     mPlaybackQueue.cleanFailures();
                 }   
             }
+            if (timer != null) timer.push();
         }
 
         public void stop() throws RemoteException
