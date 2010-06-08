@@ -56,6 +56,13 @@ public class HttpServer
             mIp   = "127.0.0.1";
         }
 
+        String getFileKeyFromUrl(String url)
+        {
+            if (url.endsWith("_tmp.mp3"))
+                url = url.replace("_tmp.mp3", "");
+            return url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('_'));
+        }
+        
         public Response serve( String uri, String method, Properties header, Properties parms )
         {
             Logger.log("HttpServer: " +  method + " '" + uri + "' " );
@@ -71,7 +78,8 @@ public class HttpServer
                 Logger.log("HttpServer: " +   "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
             }
 
-            String fileKey = uri.substring(uri.lastIndexOf('/') + 1,uri.lastIndexOf('_'));
+            
+            String fileKey = getFileKeyFromUrl(uri);
             Response r = serveFile( uri, header, new File(mRoot), fileKey);
             Logger.log("HttpServer: " +  "Got response: " + r.status + " " + r.toString());
             if (r.status == NanoHTTPD.HTTP_INTERNALERROR)
@@ -163,8 +171,6 @@ public class HttpServer
 
                 CachedTrack track = mQueue.getTrackByFileKey(fileKey);
                 long length = 0;
-//                Logger.log("HttpServer: waiting for track length");
-//                do {
                     if (track == null) 
                         return new Response(NanoHTTPD.HTTP_INTERNALERROR, NanoHTTPD.MIME_PLAINTEXT, "INTERNAL ERRROR: serveFile(): No current playback track.");
                     
@@ -175,12 +181,9 @@ public class HttpServer
                     
                     if (status == CachedTrack.Status.finished) {
                         length = f.length();
-//                        break;
                     } else {
                         length = track.getContentLength();
                     }
-//                } while (length == 0);
-                //if (startFrom == 0) length += 30000;
 
                 
                 

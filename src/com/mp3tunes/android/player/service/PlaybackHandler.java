@@ -7,6 +7,7 @@ import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.service.PlaybackService.MyOnCompletionListener;
 import com.mp3tunes.android.player.service.PlaybackService.MyOnErrorListener;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
+import com.mp3tunes.android.player.util.Timer;
 
 import android.content.Context;
 import android.media.AudioManager;
@@ -24,6 +25,7 @@ public class PlaybackHandler
     private CachedTrack mTrack;
     private boolean     mPrepared;
     private Context     mContext;
+    private Timer       mTimer;
     
     private PrepareTask mPrepareTask;
     
@@ -56,6 +58,7 @@ public class PlaybackHandler
             mPrepared = false;
         }
         mTrack = t;
+        mTimer = new Timer("Waiting to prepare");
         mPrepareTask = new PrepareTask();
         if (mPrepareTask.runAsync()) {
             Logger.log("Running prepare async");
@@ -69,7 +72,7 @@ public class PlaybackHandler
     {
         if (mPrepared) mMp.pause();
     }
-    
+
     synchronized public void unpause()
     {
         if (mPrepared)
@@ -125,6 +128,8 @@ public class PlaybackHandler
             if (mMp != null)
                 mMp.release();
             mMp = null;
+            if (mTrack != null)
+                mTrack.deleteTmpCopy();
         }
     }
     
@@ -175,6 +180,8 @@ public class PlaybackHandler
                 mMp.setOnPreparedListener(mOnPreparedListener);
 
                 mMp.setDataSource(mUrl);
+                if (mTimer != null) mTimer.push();
+                mTimer = new Timer("preparing");
                 mMp.prepareAsync();
             
                 //make sure volume is up
@@ -190,12 +197,18 @@ public class PlaybackHandler
             return false;
         }
         
-        void waitForDownloadToBegin()
+        boolean waitForDownloadToBegin()
         {
             Logger.log("Waiting on download to begin");
-            while (mTrack.getContentLength() == 0) {}
+            int index = 0;
+            while (mTrack.getContentLength() == 0) {
+                if (((index++ % 100000) == 0) && (mTrack.getStatus() == CachedTrack.Status.failed)) {
+                    return false;
+                }
+            }
             mDuration = mTrack.getContentLength() * 8000 / mTrack.mBitrate;
             Logger.log("Duration set to: " + mDuration);
+            return true;
         }
         
         @Override
@@ -206,8 +219,9 @@ public class PlaybackHandler
         @Override
         protected Boolean doInBackground(Void... params)
         {
-            waitForDownloadToBegin();
-            return prepare();
+            if (waitForDownloadToBegin())
+                return prepare();
+            return false;
         }
         
         @Override
@@ -279,6 +293,8 @@ public class PlaybackHandler
         public void onPrepared(MediaPlayer mp)
         {
             synchronized (PlaybackHandler.this) {
+                if (mTimer != null) mTimer.push();
+                mTimer = null;
                 if (mMp != null) {
                     mMp.start();
                     mPrepared = true;
