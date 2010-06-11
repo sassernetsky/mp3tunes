@@ -48,6 +48,7 @@ import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.service.PlaybackState;
 import com.mp3tunes.android.player.service.PlaybackService.NoCurrentTrackException;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
@@ -59,6 +60,8 @@ public class Player extends LifetimeLoggingActivity
 {
     private static final int REFRESH = 0;
     private static final int BUFFERING_DIALOG = 0;  
+    private static final int CHANGING_DIALOG  = 1;
+    private static final int STARTING_DIALOG  = 2;
 
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
@@ -72,9 +75,8 @@ public class Player extends LifetimeLoggingActivity
     private TextView mTrackName;
     private TextView mNextTrackData;
     private ProgressBar mProgress;
-    private ProgressDialog mBufferingDialog;
+    private ProgressDialog mStatusDialog;
     
-    private long mDuration;
     private boolean paused;
     private boolean mShowingOptions;
     
@@ -243,9 +245,8 @@ public class Player extends LifetimeLoggingActivity
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         mShowingOptions = true;
-        try {
-            dismissDialog(BUFFERING_DIALOG);
-        } catch (IllegalArgumentException e) {}
+        tryDismiss(BUFFERING_DIALOG);
+        tryDismiss(CHANGING_DIALOG);
         try {
             mTrack = Music.sService.getTrack();
             TrackGetter getter = new TrackGetter(Music.getDb(this), getContentResolver());
@@ -336,6 +337,7 @@ public class Player extends LifetimeLoggingActivity
         {
             if (Music.sService == null) return;
             try {
+                tryShow(CHANGING_DIALOG);
                 Music.sService.prev();
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -375,6 +377,8 @@ public class Player extends LifetimeLoggingActivity
             if (Music.sService== null)
                 return;
             try {
+                Log.w("Mp3Tunes", "changing track true");
+                tryShow(CHANGING_DIALOG);
                 Music.sService.next();
             } catch ( RemoteException e ) {
                 e.printStackTrace();
@@ -396,11 +400,21 @@ public class Player extends LifetimeLoggingActivity
         }
     };
     
+    private void tryDismiss(int dialog)
+    {
+        try {dismissDialog(dialog);} catch (Exception e2) {}
+    }
+    
+    private void tryShow(int dialog)
+    {
+        showDialog(dialog);
+    }
+    
     private void handleRemoteException()
     {
         try {
-            dismissDialog(BUFFERING_DIALOG);
-        } catch (Exception e2) {
+            tryDismiss(BUFFERING_DIALOG);
+            tryDismiss(CHANGING_DIALOG);
         } finally {
             finish();
         }
@@ -410,23 +424,16 @@ public class Player extends LifetimeLoggingActivity
 
         public void onReceive(Context context, Intent intent) 
         {
-            try {
-                String action = intent.getAction();
-                if (action.equals(GuiNotifier.META_CHANGED)) {
-                    mImage = null;
-                    updateTrackInfo();
-                } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
-                    dismissDialog(BUFFERING_DIALOG);
-                    finish();
-                } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
-                    dismissDialog(BUFFERING_DIALOG);
-                    finish();
-                } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
-                    setPauseButtonImage();
-                }
-            } catch (IllegalArgumentException e) {
-                Log.e("Mp3Tunes", Log.getStackTraceString(e));
-                finish();
+            String action = intent.getAction();
+            if (action.equals(GuiNotifier.META_CHANGED)) {
+                mImage = null;
+                updateTrackInfo();
+            } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
+                handleRemoteException();
+            } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
+                handleRemoteException();
+            } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
+                setPauseButtonImage();
             }
         }
     };
@@ -470,54 +477,65 @@ public class Player extends LifetimeLoggingActivity
     }
     
     @Override
-    protected Dialog onCreateDialog(int id) {
-        Dialog d = null;
-        if(id == BUFFERING_DIALOG){
-            createBufferingDialog();
-            d = mBufferingDialog;
-        }
-        return d;
+    protected Dialog onCreateDialog(int id) 
+    {
+        createDialog();
+        return mStatusDialog;
     }
     
-    private void createBufferingDialog()
+    @Override
+    protected void onPrepareDialog(int id, Dialog dialog)
     {
-        mBufferingDialog = new ProgressDialog(this);
-        mBufferingDialog.setTitle("");
-        mBufferingDialog.setMessage("Buffering");
-        mBufferingDialog.setIndeterminate(true);
-        mBufferingDialog.setCancelable(true);
+        Log.w("Mp3Tunes", "preparing dialog");
+        if (id == BUFFERING_DIALOG){
+            mStatusDialog.setMessage("Buffering");
+        } else if (id == CHANGING_DIALOG) {
+            mStatusDialog.setMessage("Changing track");
+        } else if (id == STARTING_DIALOG) {
+            mStatusDialog.setMessage("Starting track");
+        }
+    }
+    
+    private void createDialog()
+    {
+        if (mStatusDialog == null) {
+            mStatusDialog = new ProgressDialog(this);
+            mStatusDialog.setTitle("");
+            mStatusDialog.setIndeterminate(true);
+            mStatusDialog.setCancelable(true);
+        }
     }
 
     private long refreshNow() {
         if (Music.sService != null) {
             try {
-                mDuration = Music.sService.getDuration();
-                long pos  = Music.sService.getPosition();
-                int buffpercent = Music.sService.getBufferPercent();
-                long remaining = 1000 - (pos % 1000);
-                
-                //Log.w("Mp3tunes", "pos: " + Long.toString(pos) + " duration: " + Long.toString(mDuration));
-                
-                if (pos > 0 && mDuration > 0 && pos <= mDuration) {
-                    mCurrentTime.setText(Music.makeTimeString(this, pos / 1000));
-                    mTotalTime.setText(Music.makeTimeString(this, mDuration / 1000));    
-                    mProgress.setProgress((int)(1000 * pos / mDuration));
-                    mProgress.setSecondaryProgress(buffpercent * 10);
-                    dismissDialog(BUFFERING_DIALOG);
+                PlaybackState state = Music.sService.getPlaybackState();
+                if (!mShowingOptions) {
+                    switch (state.getState()) {
+                        case PlaybackState.State.PLAYING:
+                            tryDismiss(BUFFERING_DIALOG);
+                            break;
+                        case PlaybackState.State.CHANGING_TRACK:
+                            tryShow(CHANGING_DIALOG);
+                            break;
+                        case PlaybackState.State.BUFFERING:
+                            tryShow(BUFFERING_DIALOG);
+                            break;
+                        case PlaybackState.State.STARTING:
+                            tryShow(CHANGING_DIALOG);
+                            break;
+                        default:
+                            assert(false);
+                    }
                 } else {
-                    mCurrentTime.setText("--:--");
-                    mTotalTime.setText("--:--");
-                    mProgress.setProgress(0);
-                    if(pos < 1 && !mShowingOptions) showDialog(BUFFERING_DIALOG);
-                    else dismissDialog(BUFFERING_DIALOG);
+                    tryDismiss(BUFFERING_DIALOG);
                 }
-                // return the number of milliseconds until the next full second, so
-                // the counter can be updated at just the right time
-                return remaining;
-            } catch (IllegalArgumentException e) {
-                //Log.e("Mp3Tunes", Log.getStackTraceString(e));
-            } catch (NoCurrentTrackException e) {
-                //Log.w("Mp3Tunes", "Do Nothing for now"); 
+                
+                mCurrentTime.setText(Music.makeTimeString(this, state.getCurrentTime()));
+                mTotalTime.setText(Music.makeTimeString(this, state.getTotalTime()));    
+                mProgress.setProgress(state.getCurrentProgress());
+                mProgress.setSecondaryProgress(state.getBufferProgress());
+                return state.getRemainingTime();
             } catch (RemoteException e) {
                 Log.e("Mp3Tunes", Log.getStackTraceString(e));
             }
@@ -646,7 +664,8 @@ public class Player extends LifetimeLoggingActivity
             if (code == KeyEvent.KEYCODE_MENU && event.getAction() == KeyEvent.ACTION_UP) {
                 Log.w("Mp3Tunes", "Opening options menu");
                 mShowingOptions = true;
-                Player.this.dismissDialog(BUFFERING_DIALOG);
+                Player.this.tryDismiss(BUFFERING_DIALOG);
+                Player.this.tryDismiss(CHANGING_DIALOG);
                 Player.this.openOptionsMenu();
                 return true;
             }

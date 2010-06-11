@@ -72,8 +72,10 @@ public class CachedTrack implements Track
     private File createFile(String dir, boolean tmp)
     {
         String name = encode(getFileKey() + "_" + Integer.toString(mBitrate));
-        if (tmp) name += "_tmp";
-        name += "." + mFormat;
+        if (tmp) 
+            name += ".tmp";
+        else
+            name += "." + mFormat;
         File file = new File(dir, name);
         return file;
     }
@@ -191,28 +193,32 @@ public class CachedTrack implements Track
         return mStatus;
     }
     
-    synchronized public void cacheTrack()
+    synchronized public boolean cacheTrack()
     {
         if (mStatus == CachedTrack.Status.finished ) {
-            if (mCachedPath.endsWith("_tmp." + mFormat)) {
-                String newFile = mCachedPath.replaceAll("_tmp." + mFormat, "." + mFormat);
+            if (mCachedPath.endsWith(".tmp")) {
+                String newFile = mCachedPath.replaceAll(".tmp", "." + mFormat);
                 try {
                     FileUtils.copyFile(mCachedPath, newFile);
                     mCachedPath = newFile;
                     setUrlFromCachePath();
+                    return true;
                 } catch (IOException e) {
                     Logger.log(e);
                 }
+            } else {
+                return true;
             }
         }
+        return false;
     }
     
     //For now the caller is responsible for making sure that nothing else is reading the file
     synchronized public boolean deleteTmpCopy()
     {
         String fileName = mCachedPath;
-        if (!mCachedPath.endsWith("_tmp." + mFormat))
-            fileName = mCachedPath.replace("." + mFormat, "_tmp." + mFormat);
+        if (!mCachedPath.endsWith(".tmp"))
+            fileName = mCachedPath.replace("." + mFormat, ".tmp");
         else
             mStatus = Status.failed;
         File file = new File(fileName);
