@@ -58,8 +58,8 @@ public class HttpServer
 
         String getFileKeyFromUrl(String url)
         {
-            if (url.endsWith("_tmp.mp3"))
-                url = url.replace("_tmp.mp3", "");
+            if (url.endsWith(".tmp"))
+                url = url.replace(".tmp", "");
             return url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('_'));
         }
         

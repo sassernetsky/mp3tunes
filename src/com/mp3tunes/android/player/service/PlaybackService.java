@@ -1,8 +1,10 @@
 package com.mp3tunes.android.player.service;
 
+import com.binaryelysium.mp3tunes.api.ConcreteTrack;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
+import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.service.IPlaybackService;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
@@ -13,11 +15,13 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
 import android.media.MediaPlayer;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 
 
 public class PlaybackService extends Service
@@ -34,6 +38,10 @@ public class PlaybackService extends Service
     private Mp3TunesPhoneStateListener mPhoneStateListener;
     private TelephonyManager           mTelephonyManager;
     
+    AsyncTask<Void, Void, Boolean> mChangingTrackAction;
+    boolean                        mIsStarting;
+    
+    MyOnErrorListener mErrorListener;
     
     private Timer mTimer;
     
@@ -50,12 +58,13 @@ public class PlaybackService extends Service
         //music
         setForeground(true);
         
+        mErrorListener     = new MyOnErrorListener();
         mChangingTrackLock = new Object();
         mPlayStateLocker = new MusicPlayStateLocker(getBaseContext());
         mPlayStateLocker.lock();
-        mDownloader      = new TrackDownloader(this, mChangingTrackLock);
+        mDownloader      = new TrackDownloader(this, mChangingTrackLock, mErrorListener);
         mPlaybackQueue   = new PlaybackQueue(this, getBaseContext(), mDownloader);
-        mPlaybackHandler = new PlaybackHandler(getBaseContext(), new MyOnInfoListener(), new MyOnErrorListener(), new MyOnCompletionListener());
+        mPlaybackHandler = new PlaybackHandler(getBaseContext(), new MyOnInfoListener(), mErrorListener, new MyOnCompletionListener());
         mServer          = HttpServer.startServer(mPlaybackQueue);
         mNotifier        = new GuiNotifier(this, getBaseContext());
         
@@ -63,6 +72,8 @@ public class PlaybackService extends Service
         ContextWrapper cw = new ContextWrapper(getBaseContext());
         mTelephonyManager = (TelephonyManager)cw.getSystemService(Context.TELEPHONY_SERVICE);
         mTelephonyManager.listen(mPhoneStateListener, Mp3TunesPhoneStateListener.LISTEN_CALL_STATE);
+        
+        mIsStarting = true;
         timer.push();
     }
 
@@ -141,6 +152,103 @@ public class PlaybackService extends Service
         }
     };
 
+    private abstract class ChangingTrackAction extends AsyncTask<Void, Void, Boolean>
+    {
+        @Override
+        protected void onPostExecute(Boolean ret)
+        {
+            mChangingTrackAction = null;
+            mIsStarting          = false;
+            if (ret == false) {
+                mNotifier.stop(null);
+            }
+        }
+    }
+    
+    private class NextTrackAction extends ChangingTrackAction
+    {
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            Timer timer = new  Timer("Playback service next");
+            Logger.log("next() waiting on lock");
+            synchronized (mChangingTrackLock) {
+                Logger.log("next() obtained lock");
+                try {
+                    CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
+                    Logger.log("next() playing: " + t.getFileKey());
+                    if (!mPlaybackHandler.play(t)) {
+                      //playback failure
+                        return false;
+                    }
+                    mNotifier.nextTrack(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                    Logger.log("next() giving up lock");
+                }
+            }
+            timer.push();
+            return true;
+        }
+    };
+    
+    private class PreviousTrackAction extends ChangingTrackAction
+    {
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            synchronized (mChangingTrackLock) {
+                try {
+                    Logger.log("changing to previous track");
+                    CachedTrack t = mPlaybackQueue.previousPlaybackTrack();
+                    //out of range
+                    if (t == null) return false;
+                    if (!mPlaybackHandler.play(t)) {
+                      //playback failure
+                        return false;
+                    }
+                    mNotifier.prevTrack(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }
+            }
+            return true;
+        }
+    };
+    
+    private class PlayTrackAction extends ChangingTrackAction
+    {
+        int mPos; 
+        public PlayTrackAction(int pos)
+        {
+            mPos = pos;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            
+            Timer timer  = new Timer("Playback Service starting");
+            synchronized (mChangingTrackLock) {
+                try {
+                    if (!mPlaybackQueue.setPlaybackPosition(mPos)) {
+                        //out of range
+                        return false;
+                    }
+                    CachedTrack t = mPlaybackQueue.getPlaybackTrack();
+                    if (!mPlaybackHandler.play(t)) {
+                        //playback failure
+                        return false;
+                    }
+                    mNotifier.play(t);
+                } finally {
+                    mPlaybackQueue.cleanFailures();
+                }   
+            }
+            return true;
+        }
+    };
+    
     private final IPlaybackService.Stub mBinder = new IPlaybackService.Stub() {
 
         public void addToPlaybackList(IdParcel[] trackIds)
@@ -224,23 +332,10 @@ public class PlaybackService extends Service
 
         public void next() throws RemoteException
         {
-            Timer timer = new  Timer("Playback service next");
-            Logger.log("next() waiting on lock");
-            synchronized (mChangingTrackLock) {
-                Logger.log("next() obtained lock");
-                try {
-                    CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
-                    Logger.log("next() playing: " + t.getFileKey());
-                    if (!mPlaybackHandler.play(t)) {
-                        throw new PlaybackFailedExcpetion();
-                    }
-                    mNotifier.nextTrack(t);
-                } finally {
-                    mPlaybackQueue.cleanFailures();
-                    Logger.log("next() giving up lock");
-                }
+            if (mChangingTrackAction == null) {
+                mChangingTrackAction = new NextTrackAction();
+                mChangingTrackAction.execute((Void[])null);
             }
-            timer.push();
         }
 
         public ParcelableTrack nextTrack() throws RemoteException
@@ -256,18 +351,9 @@ public class PlaybackService extends Service
 
         public void prev() throws RemoteException
         {
-            synchronized (mChangingTrackLock) {
-                try {
-                    Logger.log("changing to previous track");
-                    CachedTrack t = mPlaybackQueue.previousPlaybackTrack();
-                    if (t == null) throw new PlaybackOutOfRangeException();
-                    if (!mPlaybackHandler.play(t)) {
-                        throw new PlaybackFailedExcpetion();
-                    }
-                    mNotifier.prevTrack(t);
-                } finally {
-                    mPlaybackQueue.cleanFailures();
-                }
+            if (mChangingTrackAction == null) {
+                mChangingTrackAction = new PreviousTrackAction();
+                mChangingTrackAction.execute((Void[])null);
             }
         }
 
@@ -284,22 +370,10 @@ public class PlaybackService extends Service
 
         public void startAt(int pos) throws RemoteException
         {
-            Timer timer  = new Timer("Playback Service starting");
-            synchronized (mChangingTrackLock) {
-                try {
-                    if (!mPlaybackQueue.setPlaybackPosition(pos)) {
-                        throw new PlaybackOutOfRangeException();
-                    }
-                    CachedTrack t = mPlaybackQueue.getPlaybackTrack();
-                    if (!mPlaybackHandler.play(t)) {
-                        throw new PlaybackFailedExcpetion();
-                    }
-                    mNotifier.play(t);
-                } finally {
-                    mPlaybackQueue.cleanFailures();
-                }   
+            if (mChangingTrackAction == null) {
+                mChangingTrackAction = new PlayTrackAction(pos);
+                mChangingTrackAction.execute((Void[])null);
             }
-            if (timer != null) timer.push();
         }
 
         public void stop() throws RemoteException
@@ -319,7 +393,37 @@ public class PlaybackService extends Service
                 mNotifier.play(t);
             }
         }
+
+        public PlaybackState getPlaybackState() throws RemoteException
+        {
+            long duration       = getDuration();
+            long pos            = getPosition();
+            int state           = getState(pos, duration);
+            int buffpercent     = getBufferPercent();
+            long remaining      = 1000 - (pos % 1000);
+            long currentTime    = pos / 1000;
+            long totalTime      = duration / 1000;
+            int  bufferProgress = buffpercent * 10;
+            
+            int playbackProgress = 0;
+            if (duration != 0)
+                playbackProgress = (int)(1000 * pos / duration);
+            
+            return new PlaybackState(state, playbackProgress, bufferProgress, currentTime, totalTime, remaining);
+        }
     };
+    
+    int getState(long pos, long duration)
+    {
+        if (mIsStarting) {
+            return PlaybackState.State.STARTING;
+        } else if (mChangingTrackAction != null) {
+            return PlaybackState.State.CHANGING_TRACK;
+        } else if (!(pos > 0 && duration > 0 && pos <= duration)) {
+            return PlaybackState.State.BUFFERING;
+        }
+        return PlaybackState.State.PLAYING;
+    }
     
     void finish()
     {
@@ -336,6 +440,7 @@ public class PlaybackService extends Service
     {  
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
+            synchronized (this) {
             Logger.log("In Error handler");
             synchronized (mPlaybackHandler) {
                 CachedTrack track = mPlaybackQueue.getPlaybackTrack();
@@ -372,9 +477,10 @@ public class PlaybackService extends Service
                 //returning false will call OnCompletionHandler
                 return false;
             }
+            }
         }
         
-        public void onTrackFailed(MediaPlayer mp, int percent)
+        synchronized public void onTrackFailed(MediaPlayer mp, int percent)
         {
             Logger.log("Track download failed at: " + percent);
             mPlaybackHandler.finish();
@@ -393,6 +499,19 @@ public class PlaybackService extends Service
                 } finally {
                     mPlaybackQueue.cleanFailures();
                 }
+            }
+        }
+        
+        synchronized public void onTrackDownloadFailed(CachedTrack track)
+        {
+            try {
+                CachedTrack current = mPlaybackQueue.getPlaybackTrack();
+                if (track.getFileKey().equals(current.getFileKey())) {
+                    mNotifier.sendPlaybackError(track, "Downloading track failed at " + track.mProgress.mProgress + " percent complete");
+                    finish();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     };
