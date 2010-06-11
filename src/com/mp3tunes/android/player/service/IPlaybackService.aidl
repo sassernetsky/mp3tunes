@@ -2,8 +2,11 @@ package com.mp3tunes.android.player.service;
 
 import com.mp3tunes.android.player.ParcelableTrack;
 import com.mp3tunes.android.player.IdParcel;
+import com.mp3tunes.android.player.service.PlaybackState;
 
 interface IPlaybackService {  
+
+	PlaybackState getPlaybackState();
 
 	/* Pause playback */
 	void pause(); 

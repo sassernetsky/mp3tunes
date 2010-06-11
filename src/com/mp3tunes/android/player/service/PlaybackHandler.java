@@ -117,7 +117,7 @@ public class PlaybackHandler
     synchronized public boolean isPaused()
     {
         if (mPrepared)
-            return !isPlaying();
+            return !mMp.isPlaying();
         return true;
     }
     
@@ -233,51 +233,6 @@ public class PlaybackHandler
         }
         
     };
-    
-  //This function must only be called by functions that hold both the mState lock and the mPreCaching locks
-    private boolean prepare()
-    {
-        Logger.log("preparing track: " + mTrack.getTitle());
-        Logger.log("Artist:          " + mTrack.getArtistName());
-        Logger.log("Album:           " + mTrack.getArtistName());
-        
-        try {
-            String url = mTrack.getCachedUrl();
-            if (LockerId.class.isInstance(mTrack.getId())) {
-                Logger.log("checking local store");
-                if (AddTrackToMediaStore.isInStore(mTrack, mContext)) {
-                    mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
-                    url = AddTrackToMediaStore.getTrackUrl(mTrack, mContext);
-                }
-                while (mTrack.getContentLength() == 0) {}
-                mDuration = mTrack.getContentLength() * 8000 / mTrack.mBitrate;
-            } else {
-                mOnBufferingUpdateListener.onBufferingUpdate(mMp, 100);
-            }
-            
-            //State Idle
-            mMp = new MediaPlayer();
-            mMp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            
-            setListeners();
-        
-            //State Initialized
-            Logger.log("playing: " + url);
-            mMp.setDataSource(url);
-            mMp.setOnPreparedListener(mOnPreparedListener);
-            mMp.prepareAsync();
-           
-            //make sure volume is up
-            mMp.setVolume(1.0f, 1.0f);
-            
-            return true;
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
     
     private void setListeners()
     {
