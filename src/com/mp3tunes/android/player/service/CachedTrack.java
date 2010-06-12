@@ -196,6 +196,7 @@ public class CachedTrack implements Track
     synchronized public boolean cacheTrack()
     {
         if (mStatus == CachedTrack.Status.finished ) {
+            if (mCachedPath.contains("BYO_")) return false;
             if (mCachedPath.endsWith(".tmp")) {
                 String newFile = mCachedPath.replaceAll(".tmp", "." + mFormat);
                 try {

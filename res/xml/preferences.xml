@@ -16,6 +16,6 @@
             android:entryValues="@array/rate_values"
             android:dialogTitle="Choose a Streaming Rate" 
             android:defaultValue="-1" android:summary="Choose your streaming rate"/>
-    <ListPreference android:title="Cache Size" android:key="cache" android:summary="Choose your cache size" android:dialogTitle="Choose a cache size" android:entries="@array/cache" android:entryValues="@array/cache_values"></ListPreference>
+    <ListPreference android:title="Cache Size" android:key="cache" android:summary="Choose your cache size" android:dialogTitle="Choose a cache size" android:entries="@array/cache" android:entryValues="@array/cache_values" android:defaultValue="-1"></ListPreference>
 </PreferenceCategory>
 </PreferenceScreen>
