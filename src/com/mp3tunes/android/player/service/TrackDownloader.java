@@ -261,8 +261,7 @@ public class TrackDownloader
         
         void fail(String message)
         {
-            Logger.log("Download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "' Failed");
-            Logger.log("At: " + mJob.url);
+            logJobState("Failed download of");
             mJob.track.setErrorMessage(message);
             mJob.track.setStatus(CachedTrack.Status.failed);
             mErrorListener.onTrackDownloadFailed(mJob.track);
@@ -270,20 +269,21 @@ public class TrackDownloader
         
         void succeed()
         {
-            Logger.log("Download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "' successful");
-            Logger.log("At: " + mJob.url);
+            logJobState("Successful download of");
             mJob.track.setStatus(CachedTrack.Status.finished);
+        }
+        
+        void logJobState(String message)
+        {
+            String title  = "'" + mJob.track.getTitle() + "'";
+            String artist = "'" + mJob.track.getArtistName() + "'";
+            String url    = "'" + mJob.url + "'";
+            Logger.log("TrackDownloader: " + message + ": Title: " + title + " Artist: " + artist + " url: " + url + " Priority: " + mJob.priority);
         }
         
         boolean setupNextJob()
         {
-            //if (mCount > 240) mCount = 0;
-            //mCount++;
-            //if (mCount == 1) Logger.log("setupNextJob(): waiting on lock");
-            
             synchronized (mChangingTrackLock) {
-                //if (mCount == 1) Logger.log("setupNextJob(): obtained lock");
-                
                 synchronized (mQueue) {
                 try {
                     if (mJob.track.getStatus() == CachedTrack.Status.failed &&
@@ -295,20 +295,12 @@ public class TrackDownloader
                             mQueue.add(mJob);
                     }
                 } catch (Exception e) {}
-
-//                    for (Job job : mQueue) {
-//                            Logger.log("setupNextJob(): Priority of: " + job.track.getTitle() + " is: " + job.priority);
-//                    }
                     mJob = mQueue.poll();
                 }
                 if (mJob == null) return false;
-                //Logger.log("setupNextJob(): job count: " + mQueue.size());
                 mJob.track.setStatus(CachedTrack.Status.downloading);
                 mOutputHandler = new OutputStreamResponseHandler(mJob);
-                Logger.log("setupNextJob(): Begining download of track: '" + mJob.track.getTitle() + "' by: '" + mJob.track.getArtistName() + "'");
-                Logger.log("setupNextJob(): At: " + mJob.url);
-                Logger.log("setupNextJob(): Priority: " + mJob.priority);
-                //if (mCount == 1) Logger.log("handleMessage() giving up lock");
+                logJobState("Begining download of");
                 
                 //check to make sure we have cache space    // 
                 freeCacheSpace();
@@ -351,7 +343,6 @@ public class TrackDownloader
                             try {
                                 performDownload();
                             } catch (SocketTimeoutException e) {
-                                
                                 handleSocketException("network timeout error");
                             } catch (SocketException e) {
                                 handleSocketException("broken network connection error");
