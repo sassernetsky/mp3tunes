@@ -18,7 +18,7 @@
         <item>128000</item>
         <item>192000</item>
     </string-array>
-<string-array name="cache"><item>Automatic</item>
+<string-array name="cache"><item>Maximum availible</item>
 <item>500 MB</item>
 <item>1 GB</item>
 <item>2 GB</item>
