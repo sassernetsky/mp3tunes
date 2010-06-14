@@ -62,34 +62,42 @@ public class HttpServer
                 url = url.replace(".tmp", "");
             return url.substring(url.lastIndexOf('/') + 1, url.lastIndexOf('_'));
         }
+
+        public void addProperties(String type, StringBuilder builder, Properties props)
+        {
+            Enumeration<?> e = props.propertyNames();
+            while (e.hasMoreElements()) {
+                String value = (String)e.nextElement();
+                builder.append(type).append(": ").append(value).append("' = '").append(props.getProperty(value)).append("' ");
+            }
+        }
+        
+        public void logRequest(String method, String uri, Properties header, Properties parms)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.append("HttpServer: Method: ")
+            .append(method).append(" URI: '").append(uri).append("' ");
+            addProperties("Header", builder, header);
+            addProperties("PRM", builder, parms);
+            Logger.log(builder.toString());
+        }
+        
+        public void logResponse(Response r)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.append("HttpServer: Response status: ").append(r.status);
+            addProperties("Header", builder, r.header);
+            if (r.status == NanoHTTPD.HTTP_INTERNALERROR)
+                builder.append("Error: ").append(r.errorMessage);
+            Logger.log(builder.toString());
+        }
         
         public Response serve( String uri, String method, Properties header, Properties parms )
         {
-            Logger.log("HttpServer: " +  method + " '" + uri + "' " );
-
-            Enumeration<?> e = header.propertyNames();
-            while ( e.hasMoreElements()) {
-                String value = (String)e.nextElement();
-                Logger.log("HttpServer: " +   "  Request Header: '" + value + "' = '" + header.getProperty( value ) + "'" );
-            }
-            e = parms.propertyNames();
-            while ( e.hasMoreElements()) {
-                String value = (String)e.nextElement();
-                Logger.log("HttpServer: " +   "  PRM: '" + value + "' = '" + parms.getProperty( value ) + "'" );
-            }
-
-            
+            logRequest(method, uri, header, parms);
             String fileKey = getFileKeyFromUrl(uri);
             Response r = serveFile( uri, header, new File(mRoot), fileKey);
-            Logger.log("HttpServer: " +  "Got response: " + r.status + " " + r.toString());
-            if (r.status == NanoHTTPD.HTTP_INTERNALERROR)
-                Logger.log("Error: " + r.errorMessage);
-            e = r.header.propertyNames();
-            while ( e.hasMoreElements()) {
-                String value = (String)e.nextElement();
-                Logger.log("HttpServer: " +   "  Response Header: '" + value + "' = '" + r.header.getProperty( value ) + "'" );
-            }
-            
+            logResponse(r);
             if (method.equals("HEAD"))
                     r.data = null;
             return r;
@@ -147,22 +155,18 @@ public class HttpServer
                     String to   = "";
                     if ( range.startsWith( "bytes=" )) {
                         range = range.substring( "bytes=".length());
-                        Logger.log("HttpServer: " +  "range1: " + range);
                         int minus = range.indexOf( '-' );
                         if ( minus > 0 ) {
                             from = range.substring( 0, minus );
                             to   = range.substring(minus + 1);
-                            Logger.log("HttpServer: " +  "range2: " + range);
                         }
                         try {
                             startFrom = Long.parseLong(from);
-                            Logger.log("HttpServer: " +  "range2: " + startFrom);
                         } catch ( NumberFormatException nfe ) {
                             Logger.log("HttpServer: " +  "Range parse error");
                         }
                         try {
                             end = Long.parseLong(to);
-                            Logger.log("HttpServer: " +  "range2: " + end);
                         } catch ( NumberFormatException nfe ) {
                             Logger.log("HttpServer: " +  "Range parse error");
                         }
@@ -176,7 +180,7 @@ public class HttpServer
                     
                     int status = track.getStatus();
                     if (status == CachedTrack.Status.failed) {
-                        return new Response("408 Request Timeout"/*NanoHTTPD.HTTP_RANGE_ERROR*/, NanoHTTPD.MIME_PLAINTEXT, "Download failed");
+                        return new Response("408 Request Timeout", NanoHTTPD.MIME_PLAINTEXT, "Download failed");
                     }
                     
                     if (status == CachedTrack.Status.finished) {

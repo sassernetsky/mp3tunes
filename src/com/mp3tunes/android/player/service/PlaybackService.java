@@ -299,7 +299,13 @@ public class PlaybackService extends Service
 
         public ParcelableTrack getTrack() throws RemoteException
         {
-            return new ParcelableTrack(mPlaybackQueue.getPlaybackTrack());
+            Track t;
+            try {
+                t = mPlaybackQueue.getPlaybackTrack();
+            } catch (Exception e) {
+                throw new NoCurrentTrackException();
+            }
+            return new ParcelableTrack(t);
         }
 
         public IdParcel[] getTrackIds() throws RemoteException
@@ -512,6 +518,8 @@ public class PlaybackService extends Service
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                mNotifier.sendPlaybackError(track, "Downloading track failed: " + track.mProgress.mProgress + " percent complete");
+                finish();
             }
         }
     };
