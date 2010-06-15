@@ -76,13 +76,11 @@ class PlaybackQueue
     synchronized public CachedTrack previousPlaybackTrack()
     {
         mPlaybackPosition--;
-        if (mPlaybackPosition > 0) {
+        if (mPlaybackPosition < 0) mPlaybackPosition = 0;
             mDownloader.setMaxPriority(TrackDownloader.Priority.SKIPPEDTRACK);
             fetchTracks();
             mDownloader.cancelOldDownload(mQueue.get(mPlaybackPosition).mCachedTrack);
             return getPlaybackTrack();
-        }
-        return null;
     }
     
     synchronized public int getBufferPercent()
@@ -250,6 +248,11 @@ class PlaybackQueue
                 }
             }
         }        
+    }
+
+    synchronized public int size()
+    {
+        return mQueue.size();
     }
     
     

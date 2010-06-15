@@ -102,6 +102,9 @@ public class PlaybackHandler
             long duration = mMp.getDuration();
             if (duration > 0)
                 return duration;
+            if (mDuration <= 0) {
+               Logger.log("FIXME: mMp.getDuration() and mDuration both less than 0 this should not happen"); 
+            }
             return mDuration;
         }
         return 0;
