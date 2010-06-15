@@ -176,9 +176,14 @@ public class PlaybackService extends Service
                 Logger.log("next() obtained lock");
                 try {
                     CachedTrack t = mPlaybackQueue.nextPlaybackTrack();
+                    if (t == null) {
+                        mNotifier.playlistFinished();
+                        finish();
+                        return false;
+                    }
                     Logger.log("next() playing: " + t.getFileKey());
                     if (!mPlaybackHandler.play(t)) {
-                      //playback failure
+                        finish();
                         return false;
                     }
                     mNotifier.nextTrack(t);
@@ -202,9 +207,12 @@ public class PlaybackService extends Service
                     Logger.log("changing to previous track");
                     CachedTrack t = mPlaybackQueue.previousPlaybackTrack();
                     //out of range
-                    if (t == null) return false;
+                    if (t == null) {
+                        finish();
+                        return false;
+                    }
                     if (!mPlaybackHandler.play(t)) {
-                      //playback failure
+                        finish();
                         return false;
                     }
                     mNotifier.prevTrack(t);
@@ -232,12 +240,12 @@ public class PlaybackService extends Service
             synchronized (mChangingTrackLock) {
                 try {
                     if (!mPlaybackQueue.setPlaybackPosition(mPos)) {
-                        //out of range
+                        finish();
                         return false;
                     }
                     CachedTrack t = mPlaybackQueue.getPlaybackTrack();
                     if (!mPlaybackHandler.play(t)) {
-                        //playback failure
+                        finish();
                         return false;
                     }
                     mNotifier.play(t);
@@ -510,17 +518,23 @@ public class PlaybackService extends Service
         
         synchronized public void onTrackDownloadFailed(CachedTrack track)
         {
-            try {
-                CachedTrack current = mPlaybackQueue.getPlaybackTrack();
-                if (track.getFileKey().equals(current.getFileKey())) {
-                    mNotifier.sendPlaybackError(track, "Downloading track failed at " + track.mProgress.mProgress + " percent complete");
+                try {
+                    //FIXME: This is not a good way to do this, but if there is nothing in the
+                    //playback queue the this got called by a thread that was winding down
+                    //after playback was already stopped. In this case we do nothing.
+                    if (mPlaybackQueue.size() == 0) {
+                        return;
+                    }
+                    CachedTrack current = mPlaybackQueue.getPlaybackTrack();
+                    if (track.getFileKey().equals(current.getFileKey())) {
+                        mNotifier.sendPlaybackError(track, "Downloading track failed at " + track.mProgress.mProgress + " percent complete");
+                        finish();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    mNotifier.sendPlaybackError(track, "Downloading track failed: " + track.mProgress.mProgress + " percent complete");
                     finish();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                mNotifier.sendPlaybackError(track, "Downloading track failed: " + track.mProgress.mProgress + " percent complete");
-                finish();
-            }
         }
     };
     

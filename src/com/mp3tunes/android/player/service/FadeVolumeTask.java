@@ -2,6 +2,7 @@ package com.mp3tunes.android.player.service;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 
@@ -32,6 +33,8 @@ public abstract class FadeVolumeTask extends TimerTask
     private int mCurrentStep = 0;
     private int mSteps;
     private int mMode;
+    private ReentrantLock mLock;
+    static boolean sDebugLocking = true;
     
     private PlaybackHandler mPlaybackHandler;
 
@@ -46,7 +49,7 @@ public abstract class FadeVolumeTask extends TimerTask
      * @param steps
      *            Number of volume gradations within given fade time
      */
-    public FadeVolumeTask(PlaybackHandler player, int mode, int millis)
+    public FadeVolumeTask(PlaybackHandler player, int mode, int millis, ReentrantLock lock)
     {
         mPlaybackHandler = player;
         this.mMode = mode;
@@ -58,32 +61,53 @@ public abstract class FadeVolumeTask extends TimerTask
     @Override
     public void run()
     {
-        float volumeValue = 1.0f;
+        if (mCurrentStep == 0) lock("run");
 
-        if (mMode == FADE_OUT) {
-            volumeValue *= (float) (mSteps - mCurrentStep) / (float) mSteps;
-        } else {
-            volumeValue *= (float) (mCurrentStep) / (float) mSteps;
-        }
+            float volumeValue = 1.0f;
 
-        mPlaybackHandler.setVolume(volumeValue, volumeValue);
+            if (mMode == FADE_OUT) {
+                volumeValue *= (float) (mSteps - mCurrentStep) / (float) mSteps;
+            } else {
+                volumeValue *= (float) (mCurrentStep) / (float) mSteps;
+            }
 
-        if (mCurrentStep >= mSteps) {
-            this.onPostExecute();
-            this.cancel();
-        }
+            mPlaybackHandler.setVolume(volumeValue, volumeValue);
 
-        mCurrentStep++;
+            if (mCurrentStep >= mSteps) {
+                unlock("run");
+                this.onPostExecute();
+                this.cancel();
+            }
+
+            mCurrentStep++;
     }
 
     /**
      * Task executed before launching timer
      */
-    public abstract void onPreExecute();
+    public void onPreExecute() {}
 
     /**
      * Task executer after timer finished working
      */
-    public abstract void onPostExecute();
+    public void onPostExecute() {}
+    
+    private void lock(String caller)
+    {
+        if (mLock != null) {
+            if (sDebugLocking) Logger.log("FadeVolumeTask: " + caller + ": trying to lock");
+            mLock.lock();
+            if (sDebugLocking) Logger.log("FadeVolumeTask: " + caller + ": locked");
+        }
+    }
+    
+    private void unlock(String caller)
+    {
+        if (mLock != null) {
+            if (sDebugLocking) Logger.log("FadeVolumeTask: " + caller + ": trying to unlock");
+            mLock.unlock();
+            if (sDebugLocking) Logger.log("FadeVolumeTask: " + caller + ": unlocked");
+        }
+    }
 }
 

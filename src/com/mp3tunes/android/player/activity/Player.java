@@ -48,6 +48,7 @@ import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.TrackGetter;
 import com.mp3tunes.android.player.content.LockerCache.RefreshPlaylistTracksTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.service.Logger;
 import com.mp3tunes.android.player.service.PlaybackState;
 import com.mp3tunes.android.player.service.PlaybackService.NoCurrentTrackException;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
@@ -62,6 +63,7 @@ public class Player extends LifetimeLoggingActivity
     private static final int BUFFERING_DIALOG = 0;  
     private static final int CHANGING_DIALOG  = 1;
     private static final int STARTING_DIALOG  = 2;
+    private int mRealDialog = 0;
 
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
@@ -402,12 +404,24 @@ public class Player extends LifetimeLoggingActivity
     
     private void tryDismiss(int dialog)
     {
+        if (mStatusDialog != null) dialog = mRealDialog;
         try {dismissDialog(dialog);} catch (Exception e2) {}
     }
     
+    //All of the wierdness in these functions is to work around incompatible behavior in
+    //Android 1.5.  There are much better ways to deal with this, but the hope is that
+    //we will not have to support Android 1.5 for that long.
     private void tryShow(int dialog)
     {
-        showDialog(dialog);
+        Logger.log("Dialog: " + dialog + " state: " + mStatusDialog);
+        if (mStatusDialog != null) {
+            onPrepareDialog(dialog, mStatusDialog);
+            showDialog(mRealDialog);
+        } else {
+            mRealDialog = dialog;
+            showDialog(dialog);
+        }
+        Logger.log("Dialog done");
     }
     
     private void handleRemoteException()
@@ -479,6 +493,7 @@ public class Player extends LifetimeLoggingActivity
     @Override
     protected Dialog onCreateDialog(int id) 
     {
+        Logger.log("Trying to create");
         createDialog();
         return mStatusDialog;
     }
@@ -486,7 +501,6 @@ public class Player extends LifetimeLoggingActivity
     @Override
     protected void onPrepareDialog(int id, Dialog dialog)
     {
-        Log.w("Mp3Tunes", "preparing dialog");
         if (id == BUFFERING_DIALOG){
             mStatusDialog.setMessage("Buffering");
         } else if (id == CHANGING_DIALOG) {
@@ -499,6 +513,7 @@ public class Player extends LifetimeLoggingActivity
     private void createDialog()
     {
         if (mStatusDialog == null) {
+            Logger.log("creating dialog");
             mStatusDialog = new ProgressDialog(this);
             mStatusDialog.setTitle("");
             mStatusDialog.setIndeterminate(true);
