@@ -116,18 +116,15 @@ class PlaybackQueue
     
     synchronized public CachedTrack getTrackByFileKey(String key)
     {
-        Logger.log("key: " + key);
         for (TrackData data : mQueue) {
             if (data.mCachedTrack != null) {
                 String fileKey = data.mCachedTrack.getFileKey();
-                Logger.log("filekey: " + fileKey);
                 if (fileKey.equals(key))
                     return data.mCachedTrack;
                 
                 fileKey = fileKey.replace("/", "_slash_");
                 fileKey = fileKey.replace(".", "_dot_");
                 fileKey = fileKey.replace("%", "_percent_");
-                Logger.log("filekey: " + fileKey);
                 if (fileKey.equals(key))
                     return data.mCachedTrack;
             }
@@ -155,8 +152,7 @@ class PlaybackQueue
 
     private void fetchTrack(TrackData t, int priority)
     {
-        Logger.log("fetchTrack() Setting priority of track: '" + t.mTrack.getTitle() + "' by: '" + t.mTrack.getArtistName() + "'");
-        Logger.log("fetchTrack() Priority: " + priority);
+        Logger.log("fetchTrack() Setting priority of track: '" + t.mTrack.getTitle() + "' by: '" + t.mTrack.getArtistName() + "'" + " Priority: " + priority);
         //Check to see if this is a local track. If it is then no downloading is needed
         if (LocalId.class.isInstance(t.mTrack.getId())) {
             Logger.log("fetchTrack(): have local track");
@@ -181,9 +177,9 @@ class PlaybackQueue
                 int status = t.mCachedTrack.getStatus();
                 Logger.log("Status == " + status);
                 if (t.mJobId == null)
-                    Logger.log("JobId null");
+                    Logger.log("fetchTrack() JobId null");
                 if (status == CachedTrack.Status.finished || status == CachedTrack.Status.failed || t.mJobId == null) {
-                    Logger.log("No need to fetch track");
+                    Logger.log("fetchTrack() No need to fetch track");
                     return;
                 }
                 if (status == CachedTrack.Status.created || status == CachedTrack.Status.queued) {
