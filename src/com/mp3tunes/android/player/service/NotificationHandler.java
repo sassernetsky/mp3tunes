@@ -84,4 +84,9 @@ public class NotificationHandler
         mNm.cancel(NOTIFY_ID);
     }
 
+    public void playlistFinished()
+    {
+        error(null, "Playlist finished");
+    }
+
 }

@@ -61,6 +61,14 @@ public class GuiNotifier
         send(PLAYBACK_FINISHED, t);
     }
     
+    public void playlistFinished()
+    {
+        mNotifier.playlistFinished();
+        send(PLAYBACK_FINISHED, null);
+    }
+    
+    
+    
     public void sendPlaybackError(Track t, int errorType, int errorCode)
     {
         String errorMessage = "Unknown Error";
