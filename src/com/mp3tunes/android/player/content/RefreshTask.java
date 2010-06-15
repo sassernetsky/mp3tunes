@@ -57,17 +57,17 @@ abstract public class RefreshTask extends AsyncTaskSynchronizedCancel <Void, Voi
                 LockerCache.Progress p = mDb.mCache.getProgress(cacheId);
                 
                 //here we are beginning to enter a critical section 
-                Log.w("Mp3tunes", "Refresh locking...");
+                //Log.w("Mp3tunes", "Refresh locking...");
                 lock();
-                Log.w("Mp3tunes", "Refresh locked...");
+                //Log.w("Mp3tunes", "Refresh locked...");
                 while (dispatch(cacheId, p, id)) {
                     p.mCurrentSet++;
-                    Log.w("Mp3tunes", "Refresh unlocking...");
+                    //Log.w("Mp3tunes", "Refresh unlocking...");
                     unlock();
                     publish();
-                    Log.w("Mp3tunes", "Refresh locking...");
+                    //Log.w("Mp3tunes", "Refresh locking...");
                     lock();
-                    Log.w("Mp3tunes", "Refresh locked...");
+                    //Log.w("Mp3tunes", "Refresh locked...");
                 }
                 Log.w("Mp3Tunes", "Finished Caching: " + cacheId);
                 mDb.mCache.finishCaching(cacheId);

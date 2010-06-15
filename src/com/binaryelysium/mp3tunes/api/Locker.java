@@ -179,7 +179,7 @@ public class Locker
         
             JSONObject json = new JSONObject(text);
             int numResults = json.getJSONObject("summary").getInt("totalResults");
-            Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
+            //Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
             ArrayList<Artist> artists = new ArrayList<Artist>();
             if (numResults == 0) return artists;
         
@@ -253,7 +253,7 @@ public class Locker
 
             JSONObject json = new JSONObject(text);
             int numResults = json.getJSONObject("summary").getInt("totalResults");
-            Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
+            //Log.w("Mp3Tunes", "Get artists call got: " + Integer.toString(numResults) + " results");
             ArrayList<Album> albums = new ArrayList<Album>();
             if (numResults == 0) return albums;
         
@@ -297,7 +297,7 @@ public class Locker
             //int count        = obj.optInt("count");
             double totalSets = obj.optDouble("totalResultSets");
         
-            Log.w("Mp3Tunes", "Get Tracks call got: " + Integer.toString(numResults) + " results");
+            //Log.w("Mp3Tunes", "Get Tracks call got: " + Integer.toString(numResults) + " results");
             ArrayList<Track> tracks = new ArrayList<Track>();
             if (numResults == 0 || set > totalSets) return tracks;
         
@@ -386,7 +386,7 @@ public class Locker
         
             JSONObject json = new JSONObject(text);
             int numResults = json.getJSONObject("summary").getInt("totalResults");
-            Log.w("Mp3Tunes", "Get Playlists call got: " + Integer.toString(numResults) + " results");
+            //Log.w("Mp3Tunes", "Get Playlists call got: " + Integer.toString(numResults) + " results");
             ArrayList<Playlist> playlists = new ArrayList<Playlist>();
             if (numResults == 0) return playlists;
         

@@ -8,19 +8,19 @@
                 <item name="android:shadowRadius">2.0</item>
     </style>
     <style name="playback_info">
-		<item name="android:textSize">5pt</item>
+		<item name="android:textSize">16dip</item>
 		<item name="android:textColor">#fff</item>
 		<item name="android:textStyle">bold</item>
 	
 	</style>
 	<style name="up_next_info">
-		<item name="android:textSize">5pt</item>
+		<item name="android:textSize">12dip</item>
 		<item name="android:textColor">#fff</item>
 		<item name="android:textStyle">bold</item>
 	
 	</style>
 	<style name="playback_time">
-		<item name="android:textSize">5pt</item>
+		<item name="android:textSize">16dip</item>
 		<item name="android:textColor">#fff</item>
 		<item name="android:textStyle">bold</item>
 	</style>

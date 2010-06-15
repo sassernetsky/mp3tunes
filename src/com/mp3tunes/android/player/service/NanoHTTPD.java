@@ -471,6 +471,7 @@ public class NanoHTTPD
                 "jpeg           image/jpeg "+
                 "png            image/png "+
                 "mp3            audio/mpeg "+
+                "tmp            audio/mpeg " +
                 "m3u            audio/mpeg-url " +
                 "pdf            application/pdf "+
                 "doc            application/msword "+
