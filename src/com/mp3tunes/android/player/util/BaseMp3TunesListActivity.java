@@ -153,6 +153,7 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
     
     protected void tryDismissProgress(boolean showing, Cursor c) 
     {
+        try {
         if (showing) {
             if (c != null && c.getCount() > 0) {
                 dismissDialog(PROGRESS_DIALOG);
@@ -160,6 +161,9 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
             if (mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.FINISHED) {
                 dismissDialog(PROGRESS_DIALOG);
             }
+        }
+        } catch (Exception e) {
+            
         }
     }
     
