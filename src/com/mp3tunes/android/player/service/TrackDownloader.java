@@ -460,6 +460,11 @@ public class TrackDownloader
                             return false;   
                         }
                     }
+                    if (total == 0) {
+                        if (buffer[0] != 'I') {
+                            Logger.log("####################################################### file starts with: " + (int)buffer[0] + " byte ########################################");
+                        }
+                    }
                     if (size == -1) break;
                     mJob.stream.write(buffer, 0, size);
                     total += size;
