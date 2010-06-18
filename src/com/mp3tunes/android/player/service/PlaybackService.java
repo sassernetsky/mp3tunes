@@ -423,7 +423,7 @@ public class PlaybackService extends Service
             if (duration != 0)
                 playbackProgress = (int)(1000 * pos / duration);
             
-            return new PlaybackState(state, playbackProgress, bufferProgress, currentTime, totalTime, remaining);
+            return new PlaybackState(state, playbackProgress, bufferProgress, currentTime, totalTime, remaining, isPaused());
         }
     };
     
@@ -454,44 +454,50 @@ public class PlaybackService extends Service
     {  
         public boolean onError(MediaPlayer mp, int what, int extra)
         {
-            synchronized (this) {
-            Logger.log("In Error handler");
-            synchronized (mPlaybackHandler) {
-                CachedTrack track = mPlaybackQueue.getPlaybackTrack();
-                Logger.log("MediaPlayer got error name: " + track.getTitle());
-                if (track.getStatus() == CachedTrack.Status.failed) {
-                    mNotifier.sendPlaybackError(track, track.getErrorMessage());
-                    finish();
-                    return true;
-                } else if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
-                    mPlaybackHandler.finish();
-                    if (extra == -11) {
-                        mNotifier.sendPlaybackError(track, "Timeout downloading track");
-                        finish();
-                        return true;
-                    //} else if (extra == -1004) {
-                    //    mPlaybackHandler.play(track);
-                    //    return true;
-                    } else {
+            try {
+                synchronized (this) {
+                    Logger.log("In Error handler");
+                    synchronized (mPlaybackHandler) {
+                        CachedTrack track = mPlaybackQueue.getPlaybackTrack();
+                        Logger.log("MediaPlayer got error name: " + track.getTitle());
+                        if (track.getStatus() == CachedTrack.Status.failed) {
+                            mNotifier.sendPlaybackError(track, track.getErrorMessage());
+                            finish();
+                            return true;
+                        } else if (what == MediaPlayer.MEDIA_ERROR_UNKNOWN) {
+                            mPlaybackHandler.finish();
+                            if (extra == -11) {
+                                mNotifier.sendPlaybackError(track, "Timeout downloading track");
+                                finish();
+                                return true;
+                                //} else if (extra == -1004) {
+                                //    mPlaybackHandler.play(track);
+                                //    return true;
+                            } else {
                         mNotifier.sendPlaybackError(track, PlaybackErrorCodes.getError(extra));
                         finish();
                         return true;
-                    }
-                } else if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
-                    mPlaybackHandler.finish();
-                    if (mErrorCount > 5) {
-                        mNotifier.sendPlaybackError(track, "Unable to restart failed media server");
-                        finish();
-                        return true;
-                    }
-                    mPlaybackHandler.play(track);
-                }
+                            }
+                        } else if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
+                            mPlaybackHandler.finish();
+                            if (mErrorCount > 5) {
+                                mNotifier.sendPlaybackError(track, "Unable to restart failed media server");
+                                finish();
+                                return true;
+                            }
+                            mPlaybackHandler.play(track);
+                        }
         
-                mPlaybackHandler.finish();
-                //returning false will call OnCompletionHandler
-                return false;
+                            mPlaybackHandler.finish();
+                            //returning false will call OnCompletionHandler
+                            return false;
+                    }
+                }
+            //Do not crash in an error handler
+            } catch (Exception e) {
+                Logger.log(e);
             }
-            }
+            return false;
         }
         
         synchronized public void onTrackFailed(MediaPlayer mp, int percent)
