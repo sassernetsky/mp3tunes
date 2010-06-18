@@ -53,6 +53,7 @@ import com.mp3tunes.android.player.service.PlaybackState;
 import com.mp3tunes.android.player.service.PlaybackService.NoCurrentTrackException;
 import com.mp3tunes.android.player.util.AddTrackToLocker;
 import com.mp3tunes.android.player.util.AddTrackToMediaStore;
+import com.mp3tunes.android.player.util.DialogHandler;
 import com.mp3tunes.android.player.util.LifetimeLoggingActivity;
 import com.mp3tunes.android.player.util.Worker;
 
@@ -60,10 +61,7 @@ import com.mp3tunes.android.player.util.Worker;
 public class Player extends LifetimeLoggingActivity
 {
     private static final int REFRESH = 0;
-    private static final int BUFFERING_DIALOG = 0;  
-    private static final int CHANGING_DIALOG  = 1;
-    private static final int STARTING_DIALOG  = 2;
-    private int mRealDialog = 0;
+    private DialogHandler mDialogHandler;
 
     private ImageButton mPrevButton;
     private ImageButton mPlayButton;
@@ -93,6 +91,18 @@ public class Player extends LifetimeLoggingActivity
     private TrackPutter mTrackPutter;
     
     private Track       mTrack;
+    
+    private static final class Dialogs {
+        public static final int BUFFERING_DIALOG = 0;  
+        public static final int CHANGING_DIALOG  = 1;
+        public static final int STARTING_DIALOG  = 2;
+        
+        public static final String[] sDialogs = new String[] {
+            "Buffering",
+            "Changing track",
+            "Starting track"
+        };
+    }
     
     @Override
     public void onCreate(Bundle icicle)
@@ -126,6 +136,8 @@ public class Player extends LifetimeLoggingActivity
         mStopButton.setOnClickListener(mStopListener);
         
         mPlayButton.requestFocus();
+        
+        mDialogHandler = new DialogHandler(this, Dialogs.sDialogs);
         
         mAlbumArtWorker  = new Worker("album art worker");
         if (icicle != null) {
@@ -194,10 +206,11 @@ public class Player extends LifetimeLoggingActivity
     }
     
     @Override
-    public void onStop() {
+    public void onStop() 
+    {
         paused = true;
         mHandler.removeMessages(REFRESH);
-
+        mDialogHandler.dismissAll();
         super.onStop();
     }
     
@@ -208,6 +221,7 @@ public class Player extends LifetimeLoggingActivity
             outState.putParcelable("artwork", mImage);
         if (mTrack != null)
             outState.putParcelable("track", new ParcelableTrack(mTrack));
+        mDialogHandler.dismissAll();
         
         super.onSaveInstanceState(outState);
     }
@@ -247,8 +261,7 @@ public class Player extends LifetimeLoggingActivity
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         mShowingOptions = true;
-        tryDismiss(BUFFERING_DIALOG);
-        tryDismiss(CHANGING_DIALOG);
+        mDialogHandler.dismissAll();
         try {
             mTrack = Music.sService.getTrack();
             TrackGetter getter = new TrackGetter(Music.getDb(this), getContentResolver());
@@ -339,7 +352,7 @@ public class Player extends LifetimeLoggingActivity
         {
             if (Music.sService == null) return;
             try {
-                tryShow(CHANGING_DIALOG);
+                mDialogHandler.show(Dialogs.CHANGING_DIALOG);
                 Music.sService.prev();
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -380,7 +393,7 @@ public class Player extends LifetimeLoggingActivity
                 return;
             try {
                 Log.w("Mp3Tunes", "changing track true");
-                tryShow(CHANGING_DIALOG);
+                mDialogHandler.show(Dialogs.CHANGING_DIALOG);
                 Music.sService.next();
             } catch ( RemoteException e ) {
                 e.printStackTrace();
@@ -402,33 +415,32 @@ public class Player extends LifetimeLoggingActivity
         }
     };
     
-    private void tryDismiss(int dialog)
-    {
-        if (mStatusDialog != null) dialog = mRealDialog;
-        try {dismissDialog(dialog);} catch (Exception e2) {}
-    }
+//    private void tryDismiss(int dialog)
+//    {
+//        if (mStatusDialog != null) dialog = mRealDialog;
+//        try {dismissDialog(dialog);} catch (Exception e2) {}
+//    }
     
     //All of the wierdness in these functions is to work around incompatible behavior in
     //Android 1.5.  There are much better ways to deal with this, but the hope is that
     //we will not have to support Android 1.5 for that long.
-    private void tryShow(int dialog)
-    {
-        Logger.log("Dialog: " + dialog + " state: " + mStatusDialog);
-        if (mStatusDialog != null) {
-            onPrepareDialog(dialog, mStatusDialog);
-            showDialog(mRealDialog);
-        } else {
-            mRealDialog = dialog;
-            showDialog(dialog);
-        }
-        Logger.log("Dialog done");
-    }
+//    private void tryShow(int dialog)
+//    {
+//        Logger.log("Dialog: " + dialog + " state: " + mStatusDialog);
+//        if (mStatusDialog != null) {
+//            onPrepareDialog(dialog, mStatusDialog);
+//            showDialog(mRealDialog);
+//        } else {
+//            mRealDialog = dialog;
+//            showDialog(dialog);
+//        }
+//        Logger.log("Dialog done");
+//    }
     
     private void handleRemoteException()
     {
         try {
-            tryDismiss(BUFFERING_DIALOG);
-            tryDismiss(CHANGING_DIALOG);
+            mDialogHandler.dismissAll();
         } finally {
             finish();
         }
@@ -493,32 +505,13 @@ public class Player extends LifetimeLoggingActivity
     @Override
     protected Dialog onCreateDialog(int id) 
     {
-        Logger.log("Trying to create");
-        createDialog();
-        return mStatusDialog;
+        return mDialogHandler.createDialog(id);
     }
     
     @Override
     protected void onPrepareDialog(int id, Dialog dialog)
     {
-        if (id == BUFFERING_DIALOG){
-            mStatusDialog.setMessage("Buffering");
-        } else if (id == CHANGING_DIALOG) {
-            mStatusDialog.setMessage("Changing track");
-        } else if (id == STARTING_DIALOG) {
-            mStatusDialog.setMessage("Starting track");
-        }
-    }
-    
-    private void createDialog()
-    {
-        if (mStatusDialog == null) {
-            Logger.log("creating dialog");
-            mStatusDialog = new ProgressDialog(this);
-            mStatusDialog.setTitle("");
-            mStatusDialog.setIndeterminate(true);
-            mStatusDialog.setCancelable(true);
-        }
+        mDialogHandler.prepareDialog(id);
     }
 
     private long refreshNow() {
@@ -528,24 +521,30 @@ public class Player extends LifetimeLoggingActivity
                 if (!mShowingOptions) {
                     switch (state.getState()) {
                         case PlaybackState.State.PLAYING:
-                            tryDismiss(BUFFERING_DIALOG);
+                            mDialogHandler.dismiss(Dialogs.BUFFERING_DIALOG);
+                            mDialogHandler.dismiss(Dialogs.CHANGING_DIALOG);
                             break;
                         case PlaybackState.State.CHANGING_TRACK:
-                            tryShow(CHANGING_DIALOG);
+                            mDialogHandler.show(Dialogs.CHANGING_DIALOG);
                             break;
                         case PlaybackState.State.BUFFERING:
-                            tryShow(BUFFERING_DIALOG);
+                            mDialogHandler.show(Dialogs.BUFFERING_DIALOG);
                             break;
                         case PlaybackState.State.STARTING:
-                            tryShow(CHANGING_DIALOG);
+                            mDialogHandler.dismiss(Dialogs.CHANGING_DIALOG);
                             break;
                         default:
                             assert(false);
                     }
                 } else {
-                    tryDismiss(BUFFERING_DIALOG);
+                    mDialogHandler.dismiss(Dialogs.BUFFERING_DIALOG);
                 }
                 
+                if (state.isPaused()) {
+                    mPlayButton.setImageResource(R.drawable.play_button);
+                } else {
+                    mPlayButton.setImageResource(R.drawable.pause_button);
+                }
                 mCurrentTime.setText(Music.makeTimeString(this, state.getCurrentTime()));
                 mTotalTime.setText(Music.makeTimeString(this, state.getTotalTime()));    
                 mProgress.setProgress(state.getCurrentProgress());
@@ -679,8 +678,7 @@ public class Player extends LifetimeLoggingActivity
             if (code == KeyEvent.KEYCODE_MENU && event.getAction() == KeyEvent.ACTION_UP) {
                 Log.w("Mp3Tunes", "Opening options menu");
                 mShowingOptions = true;
-                Player.this.tryDismiss(BUFFERING_DIALOG);
-                Player.this.tryDismiss(CHANGING_DIALOG);
+                mDialogHandler.dismissAll();
                 Player.this.openOptionsMenu();
                 return true;
             }

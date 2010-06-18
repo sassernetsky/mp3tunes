@@ -54,4 +54,6 @@ public class LifetimeLoggingActivity extends Activity
         Log.w("Mp3Tunes", "onDestroy called for " + getLocalClassName());
         super.onDestroy();
     }
+    
+    
 }
