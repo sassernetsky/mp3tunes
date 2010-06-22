@@ -172,11 +172,18 @@ public class RemoteAlbumArtHandler extends Handler
     
     private String getArtUrl(Track t) 
     {
-        if (LocalId.class.isInstance(t.getId())) {
-            return getRemoteArtworkForLocalTrack(t);
-        } 
-        
         String fileKey = t.getFileKey();
+        String cacheDir = Music.getMP3tunesCacheDir();
+        if (!cacheDir.endsWith("/")) cacheDir += "/";
+        if (fileKey == null || !fileKey.startsWith(cacheDir)) {
+            if (LocalId.class.isInstance(t.getId())) {
+                return getRemoteArtworkForLocalTrack(t);
+            }
+        } else {
+            fileKey = fileKey.replace(cacheDir, "");
+            fileKey = fileKey.replaceFirst("_.*", "");
+        }
+        
         if (fileKey == null) return null;
         try {
             return new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
