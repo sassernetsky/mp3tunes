@@ -585,9 +585,19 @@ public class Player extends LifetimeLoggingActivity
         String artUrl;
 
         private void setArtUrl(Track t) throws InvalidSessionException {
+            String filekey  = t.getFileKey();
+            
+            //FIXME: This is dirty.  It works, but it is dirty
+            String cacheDir = Music.getMP3tunesCacheDir();
+            if (!cacheDir.endsWith("/")) cacheDir += "/";
+            if (filekey.startsWith(cacheDir)) {
+                filekey = filekey.replace(cacheDir, "");
+                filekey = filekey.replaceFirst("_.*", "");
+            }
+            Log.w("Mp3tunes LoadAlbumArtTask.setArtUrl", "fileKey: " + filekey);
             RemoteMethod method 
             = new RemoteMethod.Builder(RemoteMethod.METHODS.ALBUM_ART_GET)
-                    .addFileKey(t.getFileKey())
+                    .addFileKey(filekey)
                     .create();
             artUrl = method.getCall();
         }
