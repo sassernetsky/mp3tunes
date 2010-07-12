@@ -55,7 +55,7 @@ public class RefreshSessionTask extends AsyncTask<Void, Void, Boolean>
             String user = settings.getString("mp3tunes_user", "");
             String pass = settings.getString("mp3tunes_pass", "");
             if (!user.equals("") && !pass.equals("")) {
-                mLocker.refreshSession(user, pass);
+                mLocker.refreshSession(user, pass/*, new DevHttpClient(mCw)*/);
                 success = true;
             }
         } catch (LockerException e) {

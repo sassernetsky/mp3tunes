@@ -3,7 +3,6 @@ package com.binaryelysium.mp3tunes.api;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,8 +27,6 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
-
-
 import android.util.Log;
 
 public class HttpClientCaller
@@ -233,19 +230,13 @@ public class HttpClientCaller
 
     public String call(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 
     {
+        HttpClient client = new DefaultHttpClient();
+        return call(method, client);
+    }
+    
+    public String call(RemoteMethod method, HttpClient client) throws IOException, InvalidSessionException, LockerException, LoginException 
+    {
         try {
-            HttpClient client = new DefaultHttpClient();
-            
-            
-            
-            
-//            KeyStore trustStore  = KeyStore.getInstance(KeyStore.getDefaultType());
-//            SSLSocketFactory socketFactory = new SSLSocketFactory(trustStore);
-//            socketFactory.setHostnameVerifier(new AllowAllHostnameVerifier());
-//            Scheme sch = new Scheme("https", socketFactory, 443);
-//            client.getConnectionManager().getSchemeRegistry().register(sch);
-            
-            
             String url = method.getCall();
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
@@ -274,16 +265,6 @@ public class HttpClientCaller
             Log.e("Mp3Tunes", Log.getStackTraceString(e));
             throw e;
         }
-//        } catch (KeyStoreException e) {
-//            e.printStackTrace();
-//        } catch (KeyManagementException e) {
-//            e.printStackTrace();
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//        } catch (UnrecoverableKeyException e) {
-//            e.printStackTrace();
-//        }
-//        throw new RuntimeException();
     }
     
     public byte[] callBytes(RemoteMethod method) throws IOException, InvalidSessionException, LockerException, LoginException 

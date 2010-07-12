@@ -22,6 +22,8 @@ package com.binaryelysium.mp3tunes.api;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpResponseException;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,8 +46,14 @@ public class Locker
     public Locker()
     {}
     
+//    public Locker(String username, String password, HttpClient client)
+//            throws LockerException, LoginException
+//    {
+//        refreshSession(username, password, client);
+//    }
+    
     public Locker(String username, String password)
-            throws LockerException, LoginException
+    throws LockerException, LoginException
     {
         refreshSession(username, password);
     }
@@ -95,17 +103,32 @@ public class Locker
         return false;
     }
     
+//    public void refreshSession(String username, String password, HttpClient client) throws LockerException, LoginException
+//    {
+//        refreshSessionImpl(username, password, client);
+//    }
+    
     public void refreshSession(String username, String password) throws LockerException, LoginException
+    {
+        refreshSessionImpl(username, password, null);
+    }
+    
+    private void refreshSessionImpl(String username, String password, HttpClient client) throws LockerException, LoginException
     {
         Log.w("Mp3Tunes", "Called refresh session");
         
         try {
             HttpClientCaller caller = HttpClientCaller.getInstance();
-            String response = 
-                caller.call(new RemoteMethod.Builder(RemoteMethod.METHODS.LOGIN)
-                            .addParam("username", username)
-                            .addParam("password", password)
-                            .create());
+            RemoteMethod method = new RemoteMethod.Builder(RemoteMethod.METHODS.LOGIN)
+                                                          .addParam("username", username)
+                                                          .addParam("password", password)
+                                                          .create();
+            String response;
+            if (client != null) {
+                response = caller.call(method, client);
+            } else {
+                response = caller.call(method);
+            }
             try {
                 LockerContext.instance().setSession(Session.sessionFromJson(response));
             } catch (JSONException e) {
