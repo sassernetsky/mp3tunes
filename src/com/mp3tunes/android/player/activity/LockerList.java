@@ -29,6 +29,7 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.content.PreCacheTask;
 import com.mp3tunes.android.player.service.GuiNotifier;
+import com.mp3tunes.android.player.service.Logger;
 import com.mp3tunes.android.player.util.LifetimeLoggingListActivity;
 
 import android.app.AlertDialog;
@@ -42,6 +43,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -160,6 +162,17 @@ public class LockerList extends LifetimeLoggingListActivity
         }
         return d;
     }
+    
+//    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+//        Logger.log("Keycode: " + keyCode);
+//        if (keyCode == KeyEvent.KEYCODE_SEARCH && event.getRepeatCount() == 0) {
+//            onSearchRequested();
+//            return true;
+//        }
+//
+//        return super.onKeyDown(keyCode, event);
+//    }
     
     private BroadcastReceiver mStatusListener = new BroadcastReceiver()
     {

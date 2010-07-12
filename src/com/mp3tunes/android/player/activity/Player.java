@@ -331,6 +331,17 @@ public class Player extends LifetimeLoggingActivity
         return super.onOptionsItemSelected(item);
     }
     
+//    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+//        Logger.log("Keycode: " + keyCode);
+//        if (keyCode == KeyEvent.KEYCODE_SEARCH && event.getRepeatCount() == 0) {
+//            onSearchRequested();
+//            return true;
+//        }
+//
+//        return super.onKeyDown(keyCode, event);
+//    }
+    
     @Override
     public void onOptionsMenuClosed(Menu menu)
     {

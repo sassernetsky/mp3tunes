@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="com.mp3tunes.android.player" android:versionName="3.0.14" android:versionCode="75">
+      package="com.mp3tunes.android.player" android:versionName="3.0.15" android:versionCode="76">
     <uses-sdk android:minSdkVersion="3" />
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
 	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
@@ -35,6 +35,10 @@
 				<action android:name="com.mp3tunes.android.player.PLAYER" />
 				<category android:name="android.intent.category.DEFAULT"/>
 			</intent-filter>
+			<meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser2"
+             />
 		</activity>
         <activity android:name=".activity.Preferences">
               <intent-filter>
@@ -48,6 +52,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.mp3tunes.android.dir/artist"/>
             </intent-filter>
+            <meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser2"
+             />
         </activity>
         <activity android:name=".activity.AlbumBrowser">
             <intent-filter>
@@ -55,6 +63,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.mp3tunes.android.dir/album"/>
             </intent-filter>
+            <meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser2"
+             />
         </activity>
           <activity android:name=".activity.QueueBrowser">
             <intent-filter>
@@ -63,6 +75,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.mp3tunes.android.dir/track"/>
             </intent-filter>
+            <meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser2"
+             />
         </activity>
         <activity android:name=".activity.PlaylistBrowser">
             <intent-filter>
@@ -85,6 +101,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.mp3tunes.android.dir/radio"/>
             </intent-filter>
+            <meta-data
+                android:name="android.app.default_searchable"
+                android:value=".activity.QueryBrowser2"
+             />
         </activity>
         <activity android:name=".activity.QueryBrowser2"
                 android:theme="@android:style/Theme.NoTitleBar">
