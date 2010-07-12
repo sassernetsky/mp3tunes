@@ -7,6 +7,7 @@ import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.content.DbKeys;
 import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.content.RefreshTask;
+import com.mp3tunes.android.player.service.Logger;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -16,6 +17,7 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.KeyEvent;
 
 public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
 {
@@ -41,6 +43,17 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
         
         super.onStop();
     }
+    
+//    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+//        Logger.log("Keycode: " + keyCode);
+//        if (keyCode == KeyEvent.KEYCODE_SEARCH && event.getRepeatCount() == 0) {
+//            onSearchRequested();
+//            return true;
+//        }
+//
+//        return super.onKeyDown(keyCode, event);
+//    }
     
     public void init(Cursor cursor)
     {

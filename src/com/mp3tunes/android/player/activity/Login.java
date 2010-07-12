@@ -27,6 +27,7 @@ import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.mp3tunes.android.player.MP3tunesApplication;
 import com.mp3tunes.android.player.R;
+import com.mp3tunes.android.player.util.DevHttpClient;
 import com.mp3tunes.android.player.util.LifetimeLoggingActivity;
 
 import android.app.AlertDialog;
@@ -201,7 +202,8 @@ public class Login extends LifetimeLoggingActivity
             }
             try 
             {
-                locker = new com.binaryelysium.mp3tunes.api.Locker(user, pass);
+                locker = new com.binaryelysium.mp3tunes.api.Locker(user, pass /*, new DevHttpClient(Login.this)*/);
+                
                 return "";
             } catch (LockerException e) {
                 Log.w("mp3tunes", Log.getStackTraceString(e));
