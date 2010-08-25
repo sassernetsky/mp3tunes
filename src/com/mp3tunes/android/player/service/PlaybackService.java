@@ -354,7 +354,11 @@ public class PlaybackService extends Service
 
         public ParcelableTrack nextTrack() throws RemoteException
         {
-            return new ParcelableTrack(mPlaybackQueue.peekNextPlaybackTrack());
+            try {
+                return new ParcelableTrack(mPlaybackQueue.peekNextPlaybackTrack());
+            } catch (Exception e) {
+                throw new NoCurrentTrackException();
+            }
         }
 
         public void pause() throws RemoteException
@@ -398,13 +402,17 @@ public class PlaybackService extends Service
 
         public void togglePlayback() throws RemoteException
         {
-            CachedTrack t = mPlaybackQueue.getPlaybackTrack();
-            if (mPlaybackHandler.isPlaying()) {
-                mPlaybackHandler.pause();
-                mNotifier.pause(t);
-            } else {
-                mPlaybackHandler.unpause();
-                mNotifier.play(t);
+            try {
+                CachedTrack t = mPlaybackQueue.getPlaybackTrack();
+                if (mPlaybackHandler.isPlaying()) {
+                    mPlaybackHandler.pause();
+                    mNotifier.pause(t);
+                } else {
+                    mPlaybackHandler.unpause();
+                    mNotifier.play(t);
+                }
+            } catch (ArrayIndexOutOfBoundsException e) {
+                throw new ArrayIndexOutOfBoundsException();
             }
         }
 
@@ -596,7 +604,7 @@ public class PlaybackService extends Service
         private static final long serialVersionUID = -3122092055316684884L;
     }
     
-    public class PlaybackOutOfRangeException extends RemoteException
+    static public class PlaybackOutOfRangeException extends RemoteException
     {
         private static final long serialVersionUID = 5219878088325741490L;
     }
