@@ -76,6 +76,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     private boolean             mAdapterSent;
     
     private boolean mShowingDialog;
+
     
     //private AsyncTask<Void, Void, Boolean> mPlayTracksTask;
     
@@ -241,7 +242,7 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         unregisterReceiver(mTrackListListener);
         super.onPause();
     }
-
+    
     public void init(Cursor c, int refreshNext) 
     {
         tryDismissProgress(mShowingDialog, c);
