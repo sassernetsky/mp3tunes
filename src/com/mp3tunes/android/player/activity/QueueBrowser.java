@@ -49,6 +49,7 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
+import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.LocalId;
@@ -85,6 +86,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     private String mTrackName;
     private Id    mTrackId;
     private boolean mShowingDialog;
+    private boolean mHaveNewPlaylistData;
     
     
     private TrackAdder  mTrackAdder;
@@ -128,7 +130,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         } else {
             mList = getTrackList(getIntent());
         }
-
         setContentView(R.layout.media_picker_activity);
         mTrackList = getListView();
         mTrackList.setOnCreateContextMenuListener(this);
@@ -156,6 +157,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             getTrackCursor(null);
             showDialog(PROGRESS_DIALOG);
             mShowingDialog = true;
+            mHaveNewPlaylistData = false;
         } else {
             mTrackCursor = mAdapter.getCursor();
             // If mTrackCursor is null, this can be because it doesn't have
@@ -170,8 +172,10 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                 getTrackCursor(null);
                 showDialog(PROGRESS_DIALOG);
                 mShowingDialog = true;
+                mHaveNewPlaylistData = false;
             } else {
                 mShowingDialog = false;
+                mHaveNewPlaylistData = true;
             }
         }
         init(mTrackCursor, 100);
@@ -187,7 +191,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
 //    public Object onRetainNonConfigurationInstance()
 //    {
 //        SimpleCursorAdapter a = mAdapter;
-//        mAdapterSent = true;
+//        mAdapterSent = true;http://i150.photobucket.com/albums/s86/Blue-Bolt/Gameday%20pics/clary-doesnt-suck.jpg
 //        return a;
 //    }
 
@@ -273,17 +277,24 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         super.onSaveInstanceState(outcicle);
     }
 
+    private boolean showTracks()
+    {
+        return mHaveNewPlaylistData || !mList.isDynamicPlaylist();
+    }
+    
     public void init(Cursor newCursor, int nextRefresh)
     {
-        Log.w("Mp3Tunes", "init called");
-        tryDismissProgress(mShowingDialog, newCursor);
-        if (newCursor != null) {
-            Log.w("Mp3Tunes", "cursor count: "
+        if (showTracks()) {
+            Log.w("Mp3Tunes", "init called");
+            tryDismissProgress(mShowingDialog, newCursor);
+            if (newCursor != null) {
+                Log.w("Mp3Tunes", "cursor count: "
                     + Integer.toString(newCursor.getCount()));
-        }
-        mAdapter.changeCursor(newCursor);
+            }
+            mAdapter.changeCursor(newCursor);
 
-        mTrackCursor = newCursor;
+            mTrackCursor = newCursor;
+        }
         setTitle();
         super.init(newCursor, nextRefresh);
     }
@@ -485,12 +496,20 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         }
         
         @Override
+        protected void onProgressUpdate(Void... val)
+        {
+            Log.w("Mp3Tunes", "have progress data");
+            mHaveNewPlaylistData = true;
+        }
+        
+        @Override
         protected  void onPostExecute(Boolean result)
         {
             mLoadingCursor = false;
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Playlist Tracks");
             } else {
+                mHaveNewPlaylistData = true;
                 cleanUp();
                 mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
                 mTracksTask.execute((Void[])null);
@@ -651,6 +670,11 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             return mFrom;
         }
         
+        public boolean isDynamicPlaylist()
+        {
+            return false;
+        }
+
         public String getName()
         {
             if (mName == null)
@@ -739,6 +763,12 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override protected void makeLockerId() {}
         @Override protected void makeName() {}
 
+        @Override
+        public boolean isDynamicPlaylist()
+        {
+            return Playlist.isDynamicPlaylist(mLockerId.asString());
+        }
+        
         @Override
         public String key()
         {
