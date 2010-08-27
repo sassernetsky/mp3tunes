@@ -127,8 +127,10 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         if (icicle != null) {
             mList = getTrackList(icicle);
             mSelectedId = icicle.getLong("selectedtrack");
+            mHaveNewPlaylistData = icicle.getBoolean("havenewplaylistdata");
         } else {
             mList = getTrackList(getIntent());
+            mHaveNewPlaylistData = false;
         }
         setContentView(R.layout.media_picker_activity);
         mTrackList = getListView();
@@ -146,7 +148,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     
     public void onServiceConnected(ComponentName name, IBinder service)
     {
-
+        Log.w("Mp3tunes", "service connected");
         if (mAdapter == null) {
             // need to use application context to avoid leaks
             mAdapter = new SimpleCursorAdapter(this, R.layout.track_list_item, null, mList.getFrom(), mTo);
@@ -157,7 +159,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             getTrackCursor(null);
             showDialog(PROGRESS_DIALOG);
             mShowingDialog = true;
-            mHaveNewPlaylistData = false;
         } else {
             mTrackCursor = mAdapter.getCursor();
             // If mTrackCursor is null, this can be because it doesn't have
@@ -172,7 +173,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                 getTrackCursor(null);
                 showDialog(PROGRESS_DIALOG);
                 mShowingDialog = true;
-                mHaveNewPlaylistData = false;
             } else {
                 mShowingDialog = false;
                 mHaveNewPlaylistData = true;
@@ -187,13 +187,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         finish();
     }
 
-//    @Override
-//    public Object onRetainNonConfigurationInstance()
-//    {
-//        SimpleCursorAdapter a = mAdapter;
-//        mAdapterSent = true;http://i150.photobucket.com/albums/s86/Blue-Bolt/Gameday%20pics/clary-doesnt-suck.jpg
-//        return a;
-//    }
 
     @Override
     public void onStop()
@@ -207,42 +200,10 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     {
         killTasks();
         Music.unbindFromService(this);
-//        try {
-//            if ("nowplaying".equals(mPlaylist)) {
-//                unregisterReceiverSafe(mNowPlayingListener);
-//            } else {
-//                unregisterReceiverSafe(mTrackListListener);
-//            }
-//        } catch (IllegalArgumentException ex) {
-//            // we end up here in case we never registered the listeners
-//        }
-
-        // if we didn't send the adapter off to another activity, we should
-        // close the cursor
-//        if (!mAdapterSent) {
-//            Cursor c = mAdapter.getCursor();
-//            if (c != null) {
-//                c.close();
-//            }
-//        }
         Music.unconnectFromDb(this);
         super.onDestroy();
     }
 
-    /**
-     * Unregister a receiver, but eat the exception that is thrown if the
-     * receiver was never registered to begin with. This is a little easier than
-     * keeping track of whether the receivers have actually been registered by
-     * the time onDestroy() is called.
-     */
-//    private void unregisterReceiverSafe(BroadcastReceiver receiver)
-//    {
-//        try {
-//            unregisterReceiver(receiver);
-//        } catch (IllegalArgumentException e) {
-//            // ignore
-//        }
-//    }
 
     @Override
     public void onResume()
@@ -274,6 +235,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             outcicle.putString("playlist_name", mList.getName());
         }
         outcicle.putLong("selectedtrack", mSelectedId);
+        outcicle.putBoolean("havenewplaylistdata", mHaveNewPlaylistData);
         super.onSaveInstanceState(outcicle);
     }
 
@@ -284,8 +246,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     
     public void init(Cursor newCursor, int nextRefresh)
     {
+        Log.w("Mp3Tunes", "init called");
         if (showTracks()) {
-            Log.w("Mp3Tunes", "init called");
+            Log.w("Mp3Tunes", "init called showing tracks");
             tryDismissProgress(mShowingDialog, newCursor);
             if (newCursor != null) {
                 Log.w("Mp3Tunes", "cursor count: "
