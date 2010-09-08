@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
 	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" ></uses-permission>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" ></uses-permission>
     <supports-screens android:smallScreens="true" android:normalScreens="true" android:largeScreens="true"/>
     <application android:icon="@drawable/mp3logo" android:label="@string/app_name" 
     	android:name="MP3tunesApplication">
@@ -120,4 +121,5 @@
         </activity>
 		<service android:name=".service.PlaybackService"  />
 </application>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
 </manifest> 
