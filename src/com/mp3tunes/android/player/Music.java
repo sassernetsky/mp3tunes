@@ -455,7 +455,7 @@ public class Music
                 position = 0;
             }
             sService.createPlaybackList(idArrayToIdParcelArray(list));
-            sService.startAt(position); // +1 because the dbase queue is 1-indexed
+            sService.startAt(position); 
         } catch (RemoteException ex) {
         } finally {
             Intent intent = new Intent("com.mp3tunes.android.player.PLAYER")
@@ -640,9 +640,11 @@ public class Music
             if (mp3tunesDir.isDirectory()) {
                 return mp3tunesDir.getAbsolutePath();
             } else {
+                Log.w("Mp3Tunes", "making: " + mp3tunesDir.getAbsolutePath());
                 if (mp3tunesDir.mkdirs()) {
                     return mp3tunesDir.getAbsolutePath();
                 }
+                Log.w("Mp3Tunes", "making: " + mp3tunesDir.getAbsolutePath() + " failed");
             }
         }
         Log.w("Mp3Tunes", "Make Mp3Tunes directory failed");

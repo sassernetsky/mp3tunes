@@ -463,14 +463,20 @@ public class Player extends LifetimeLoggingActivity
         {
             String action = intent.getAction();
             if (action.equals(GuiNotifier.META_CHANGED)) {
+                Log.w("Mp3tunes", "Player got GuiNotifier.META_CHANGED");
                 mImage = null;
                 updateTrackInfo();
             } else if (action.equals(GuiNotifier.PLAYBACK_FINISHED)) {
+                Log.w("Mp3tunes", "Player got GuiNotifier.PLAYBACK_FINISHED");
                 handleRemoteException();
             } else if (action.equals(GuiNotifier.PLAYBACK_ERROR)) {
+                Log.w("Mp3tunes", "Player got GuiNotifier.PLAYBACK_ERROR");
                 handleRemoteException();
             } else if(action.equals( GuiNotifier.PLAYBACK_STATE_CHANGED )) {
+                Log.w("Mp3tunes", "Player got GuiNotifier.PLAYBACK_STATE_CHANGED");
                 setPauseButtonImage();
+            } else {
+                Log.w("Mp3tunes", "Player got unknown broadcast");
             }
         }
     };
