@@ -437,13 +437,22 @@ public class PlaybackService extends Service
     
     int getState(long pos, long duration)
     {
+        try {
+            if (!mIsStarting && mChangingTrackAction == null && mPlaybackQueue.getPlaybackTrack() == null) {
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            return PlaybackState.State.DONE;
+        }
+        
         if (mIsStarting) {
             return PlaybackState.State.STARTING;
         } else if (mChangingTrackAction != null) {
             return PlaybackState.State.CHANGING_TRACK;
         } else if (!(pos > 0 && duration > 0 && pos <= duration)) {
             return PlaybackState.State.BUFFERING;
-        }
+        } 
+            
         return PlaybackState.State.PLAYING;
     }
     

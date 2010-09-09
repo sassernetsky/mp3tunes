@@ -542,14 +542,21 @@ public class Player extends LifetimeLoggingActivity
                             mDialogHandler.dismiss(Dialogs.CHANGING_DIALOG);
                             break;
                         case PlaybackState.State.CHANGING_TRACK:
+                            Log.w("Mp3tunes", "got playstate CHANGING_TRACK");
                             mDialogHandler.show(Dialogs.CHANGING_DIALOG);
                             break;
                         case PlaybackState.State.BUFFERING:
+                            Log.w("Mp3tunes", "got playstate BUFFERING");
                             mDialogHandler.show(Dialogs.BUFFERING_DIALOG);
                             break;
                         case PlaybackState.State.STARTING:
+                            Log.w("Mp3tunes", "got playstate STARTING");
                             mDialogHandler.dismiss(Dialogs.CHANGING_DIALOG);
                             break;
+                        case PlaybackState.State.DONE:
+                            Log.w("Mp3tunes", "got playstate DONE");
+                            handleRemoteException();
+                            return 500;  
                         default:
                             assert(false);
                     }
