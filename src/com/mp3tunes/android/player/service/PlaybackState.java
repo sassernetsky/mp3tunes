@@ -38,6 +38,7 @@ public class PlaybackState implements Parcelable
         public static final int CHANGING_TRACK = 1;
         public static final int BUFFERING      = 2;
         public static final int PLAYING        = 3;
+        public static final int DONE           = 4;
     };
     
     public int getState()
