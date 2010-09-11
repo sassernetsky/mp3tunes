@@ -385,8 +385,8 @@ public class HttpClientCaller
             if (retry != null)
                 client.setHttpRequestRetryHandler(retry);
             HttpParams params = client.getParams();
-            HttpConnectionParams.setConnectionTimeout(params, 10000);
-            HttpConnectionParams.setSoTimeout(params, 7000);
+            HttpConnectionParams.setConnectionTimeout(params, 15000);
+            HttpConnectionParams.setSoTimeout(params, 15000);
             Log.w("Mp3tunes", "Calling: " + url);
             HttpGet get = new HttpGet(url);
             handler.setRequest(get);
