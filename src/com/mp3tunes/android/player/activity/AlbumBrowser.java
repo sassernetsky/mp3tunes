@@ -352,8 +352,8 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
             mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancelSafe();
+      //removed at MR request: if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+      //removed at MR request:     mTracksTask.cancelSafe();
         if( mArtFetcher != null && mArtFetcher.getStatus() == AsyncTask.Status.RUNNING) {
             mArtFetcher.cancel(true);
             if (state != null)
@@ -384,8 +384,8 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
                     Log.w("Mp3Tunes", "Got Error Fetching Albums");
             } else {
                 cleanUp();
-                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request:  mTracksTask.execute((Void[])null);
             }
         }
     };

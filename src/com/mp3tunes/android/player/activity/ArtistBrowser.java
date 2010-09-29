@@ -348,8 +348,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
             mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancelSafe();
+      //removed at MR request: if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+      //removed at MR request:      mTracksTask.cancelSafe();
     }
     
     private String mArtistId;
@@ -376,8 +376,8 @@ public class ArtistBrowser extends BaseMp3TunesListActivity
                     Log.w("Mp3Tunes", "Got Error Fetching Artists");
             } else {
                 cleanUp();
-                mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request: mTracksTask.execute((Void[])null);
             }
         }
     };

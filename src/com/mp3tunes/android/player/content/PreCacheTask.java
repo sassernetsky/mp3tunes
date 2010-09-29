@@ -37,9 +37,9 @@ public class PreCacheTask extends RefreshTask
     {
         Log.w("Mp3Tunes", "Starting PreCache");
         try {
-            cacheData(LockerCache.CACHES.ARTIST);
-            cacheData(LockerCache.CACHES.ALBUM);
             cacheData(LockerCache.CACHES.PLAYLIST);
+            //cacheData(LockerCache.CACHES.ARTIST);
+            //cacheData(LockerCache.CACHES.ALBUM);
             Log.w("Mp3Tunes", "PreCache done");
             return true;
         } catch (SQLiteException e) {

@@ -446,8 +446,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             mCursorTask.cancelSafe();
             mLoadingCursor = false;
         }
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
-            mTracksTask.cancelSafe();
+      //removed at MR request: if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING)
+      //removed at MR request:      mTracksTask.cancelSafe();
     }
     
     private class FetchPlaylistTracksTask extends RefreshPlaylistTracksTask
@@ -474,8 +474,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             } else {
                 mHaveNewPlaylistData = true;
                 cleanUp();
-                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request: mTracksTask.execute((Void[])null);
             }
         }
     };
@@ -496,8 +496,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                     Log.w("Mp3Tunes", "Got Error Fetching Artist Tracks");
             } else {
                 cleanUp();
-                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request: mTracksTask.execute((Void[])null);
             }
         }
     };
@@ -518,8 +518,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                     Log.w("Mp3Tunes", "Got Error Fetching Album Tracks");
             } else {
                 cleanUp();
-                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request: mTracksTask.execute((Void[])null);
             }
         }
     };
@@ -742,8 +742,8 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         public RefreshTask getTask()
         {
             if (mLockerId.asString().equals(PlaylistBrowser.DOWNLOADED_TRACKS_ID)) {
-                mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-                mTracksTask.execute((Void[])null);
+              //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+              //removed at MR request: mTracksTask.execute((Void[])null);
                 return null;
             }
             return new FetchPlaylistTracksTask(Music.getDb(getBaseContext()), mLockerId);
