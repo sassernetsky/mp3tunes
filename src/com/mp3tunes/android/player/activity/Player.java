@@ -79,6 +79,7 @@ public class Player extends LifetimeLoggingActivity
     
     private boolean paused;
     private boolean mShowingOptions;
+    private boolean mStarting;  //This is a bad idea but MR is making me do it this way.
     
     private Worker mAlbumArtWorker;
     private RemoteAlbumArtHandler mAlbumArtHandler;
@@ -155,6 +156,7 @@ public class Player extends LifetimeLoggingActivity
             Intent intent = getIntent();
             IdParcel idParcel = intent.getParcelableExtra("playlist");
             if (idParcel != null) {
+                mStarting = true;
                 tryToStopPlayingTrack();
                 //intent.removeExtra("playlist");
                 Id id = idParcel.getId();
@@ -181,6 +183,7 @@ public class Player extends LifetimeLoggingActivity
         Log.w("Mp3Tunes", "onNewIntent");
         IdParcel idParcel = intent.getParcelableExtra("playlist");
         if (idParcel != null) {
+            mStarting = true;
             tryToStopPlayingTrack();
             Id id = idParcel.getId();
             Log.w("Mp3Tunes", "playing playlist: " + id.asString());
@@ -452,7 +455,13 @@ public class Player extends LifetimeLoggingActivity
     {
         try {
             mDialogHandler.dismissAll();
+            Log.w("Mp3Tunes",  "Called by: " + getCallingActivity());
         } finally {
+            //Intent intent = new Intent(Intent.ACTION_PICK);
+            //intent.setDataAndType(Uri.EMPTY, "vnd.mp3tunes.android.dir/track");
+            //intent.putExtra("playlist_name", QueueBrowser.NOW_PLAYING);
+            //intent.setFlags( Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP );
+            //startActivity(intent);
             finish();
         }
     }
@@ -555,7 +564,8 @@ public class Player extends LifetimeLoggingActivity
                             break;
                         case PlaybackState.State.DONE:
                             Log.w("Mp3tunes", "got playstate DONE");
-                            handleRemoteException();
+                            //This is a hack requested by MR.  Code that does this belongs in the playback service
+                            if (!mStarting) handleRemoteException();
                             return 500;  
                         default:
                             assert(false);
@@ -925,6 +935,7 @@ public class Player extends LifetimeLoggingActivity
             synchronized (mRefreshing) {
                 mRefreshing    = false;
                 mRefreshedSome = true;
+                mStarting      = false;
             }
             if (!result) {
                     Log.w("Mp3Tunes", "Got Error Fetching Playlist Tracks");

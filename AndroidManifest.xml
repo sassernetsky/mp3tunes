@@ -30,9 +30,8 @@
 		<activity android:name=".activity.Player" android:label="MP3tunes Locker Player" 
         android:configChanges="keyboardHidden"
         android:taskAffinity=""
-        android:launchMode="singleTask"
         android:clearTaskOnLaunch="true"
-        android:excludeFromRecents="true" >
+        android:excludeFromRecents="true" android:launchMode="singleTop" android:allowTaskReparenting="true">
 			<intent-filter>
 				<action android:name="com.mp3tunes.android.player.PLAYER" />
 				<category android:name="android.intent.category.DEFAULT"/>

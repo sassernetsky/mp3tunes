@@ -31,7 +31,7 @@ public class BaseMp3TunesListActivity extends LifetimeLoggingListActivity
     
     protected FetchBrowserCursor mFetchBrowserCursorTask; 
     protected RefreshTask mCursorTask;
-    protected RefreshTask mTracksTask;
+    //removed at MR request: protected RefreshTask mTracksTask;
     protected Cursor mCursor;
     protected boolean mLoadingCursor;
     
