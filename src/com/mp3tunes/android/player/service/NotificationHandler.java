@@ -29,6 +29,7 @@ public class NotificationHandler
     {
         Notification  notification  = new Notification(R.drawable.logo_statusbar, text, System.currentTimeMillis());
         Intent        intent        = new Intent(sService, Player.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP );
         PendingIntent contentIntent = PendingIntent.getActivity(sService, 0, intent, 0);
         notification.setLatestEventInfo(sService, name, title, contentIntent);
         return notification;

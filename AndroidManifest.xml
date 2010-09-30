@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-      package="com.mp3tunes.android.player" android:versionName="3.0.22" android:versionCode="83">
+      package="com.mp3tunes.android.player" android:versionName="3.0.23" android:versionCode="84">
     <uses-sdk android:minSdkVersion="3" android:targetSdkVersion="4"/>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
 	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
@@ -30,9 +30,8 @@
 		<activity android:name=".activity.Player" android:label="MP3tunes Locker Player" 
         android:configChanges="keyboardHidden"
         android:taskAffinity=""
-        android:launchMode="singleTask"
         android:clearTaskOnLaunch="true"
-        android:excludeFromRecents="true" >
+        android:excludeFromRecents="true" android:launchMode="singleTop" android:allowTaskReparenting="true">
 			<intent-filter>
 				<action android:name="com.mp3tunes.android.player.PLAYER" />
 				<category android:name="android.intent.category.DEFAULT"/>
