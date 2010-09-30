@@ -412,10 +412,10 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
     private void killTasks()
     {
         Log.w("Mp3Tunes", "Trying to kill tasks");
-        if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING) {
-            Log.w("Mp3Tunes", "Killing tracks task");
-            mTracksTask.cancelSafe();
-        }
+      //removed at MR request: if( mTracksTask != null && mTracksTask.getStatus() == AsyncTask.Status.RUNNING) {
+      //removed at MR request:       Log.w("Mp3Tunes", "Killing tracks task");
+      //removed at MR request:       mTracksTask.cancelSafe();
+      //removed at MR request:   }
         if( mCursorTask != null && mCursorTask.getStatus() == AsyncTask.Status.RUNNING) {
             Log.w("Mp3Tunes", "Killing playlist task");
             mCursorTask.cancelSafe();
@@ -450,8 +450,8 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
                 return;
             }
             cleanUp();
-            mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
-            mTracksTask.execute((Void[])null);
+          //removed at MR request: mTracksTask = new LockerCache.RefreshTracksTask(Music.getDb(getBaseContext()));
+          //removed at MR request: mTracksTask.execute((Void[])null);
             
         }
     };
