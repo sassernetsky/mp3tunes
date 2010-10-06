@@ -1,11 +1,14 @@
 package com.mp3tunes.android.player.service;
 
 import com.binaryelysium.mp3tunes.api.ConcreteTrack;
+import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.Locker;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.ParcelableTrack;
+import com.mp3tunes.android.player.content.LockerDb;
+import com.mp3tunes.android.player.content.MediaStore;
 import com.mp3tunes.android.player.service.IPlaybackService;
 import com.mp3tunes.android.player.util.RefreshSessionTask;
 import com.mp3tunes.android.player.util.Timer;
@@ -152,6 +155,35 @@ public class PlaybackService extends Service
         }
     };
 
+    private void generateMoreTracksLike(Id id)
+    {
+        try {
+            LockerDb   db       = Music.getDb(this);
+            Id[]       ids      = db.getSimilarTracks(id, 20);
+            IdParcel[] trackIds = Music.idArrayToIdParcelArray(ids);
+            mBinder.addToPlaybackList(trackIds);
+        } catch (Exception e) {
+            Logger.log(e);
+        }
+    }
+
+    private class GenerateTracksAction extends AsyncTask<Void, Void, Boolean>
+    {
+        Id mId;
+        
+        GenerateTracksAction(Id id)
+        {
+            mId = id;
+        }
+        
+        @Override
+        protected Boolean doInBackground(Void... params)
+        {
+            generateMoreTracksLike(mId);
+            return true;
+        }
+    }
+    
     private abstract class ChangingTrackAction extends AsyncTask<Void, Void, Boolean>
     {
         @Override
@@ -187,6 +219,10 @@ public class PlaybackService extends Service
                         return false;
                     }
                     mNotifier.nextTrack(t);
+                    if (mPlaybackQueue.peekNextPlaybackTrack() == null) {
+                        mGenerateTracksAction = new GenerateTracksAction(t.getId());
+                        mGenerateTracksAction.execute((Void[])null);
+                    }
                 } finally {
                     mPlaybackQueue.cleanFailures();
                     Logger.log("next() giving up lock");
@@ -249,6 +285,10 @@ public class PlaybackService extends Service
                         return false;
                     }
                     mNotifier.play(t);
+                    if (mPlaybackQueue.peekNextPlaybackTrack() == null) {
+                        mGenerateTracksAction = new GenerateTracksAction(t.getId());
+                        mGenerateTracksAction.execute((Void[])null);
+                    }
                 } finally {
                     mPlaybackQueue.cleanFailures();
                 }   
@@ -573,8 +613,11 @@ public class PlaybackService extends Service
         }
     };
     
+    GenerateTracksAction mGenerateTracksAction;
+    
     class MyOnCompletionListener implements MediaPlayer.OnCompletionListener 
-    {    
+    {
+        
         public void onCompletion(MediaPlayer mp)
         {
             Logger.log("Track complete");
@@ -590,6 +633,10 @@ public class PlaybackService extends Service
                     if (!mPlaybackHandler.play(t)) {
                         mNotifier.sendPlaybackError(t, "Unable to play: " + t.getAlbumTitle() + " by: " + t.getArtistName());
                         return;
+                    }
+                    if (mPlaybackQueue.peekNextPlaybackTrack() == null) {
+                        mGenerateTracksAction = new GenerateTracksAction(t.getId());
+                        mGenerateTracksAction.execute((Void[])null);
                     }
                 } finally {
                     mPlaybackQueue.cleanFailures();

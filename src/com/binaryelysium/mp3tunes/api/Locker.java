@@ -550,4 +550,19 @@ public class Locker
             throw new LockerException("download failed");
         }
     }
+
+    public List<Track> getSimilarTracks(LockerId id, int count, int set) throws LockerException
+    {
+        try {
+            return getTrackList(new RemoteMethod.Builder(RemoteMethod.METHODS.LOCKER_DATA)
+                .addParam("type", "track")
+                .addParam("playlist_id", "PLAYMIX_TRACK_" + id.asString())
+                .addParam("playmix_map", "")
+                //.addParam("count", Integer.toString(count)) You cannot seem to set the count and set with this call.  Ask Breneden to investigate.
+                //.addParam("set", Integer.toString(set))
+                .create());
+        } catch (InvalidSessionException e) {
+                    throw new LockerException("Bad Session Data");
+        }
+    }
 }

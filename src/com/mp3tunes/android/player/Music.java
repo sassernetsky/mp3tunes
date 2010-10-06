@@ -22,6 +22,7 @@ package com.mp3tunes.android.player;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Formatter;
 
@@ -49,6 +50,7 @@ import android.widget.Toast;
 
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerContext;
+import com.binaryelysium.mp3tunes.api.LockerData;
 import com.mp3tunes.android.player.R;
 import com.mp3tunes.android.player.activity.Login;
 import com.mp3tunes.android.player.content.DbKeys;
@@ -464,13 +466,20 @@ public class Music
         }
     }
     
-    //private final static int [] sEmptyList = new int[0];
-    
-    private static IdParcel[] idArrayToIdParcelArray(Id[] ids)
+    public static IdParcel[] idArrayToIdParcelArray(Id[] ids)
     {
         IdParcel[] output = new IdParcel[ids.length];
         for (int i = 0; i < ids.length; i++) {
             output[i] = new IdParcel(ids[i]);
+        }
+        return output;
+    }
+    
+    public static Id[] lockerDataToIdArray(LockerData[] data)
+    {
+        Id[] output = new Id[data.length];
+        for (int i = 0; i < data.length; i++) {
+            output[i] = data[i].getId();
         }
         return output;
     }

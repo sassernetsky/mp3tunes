@@ -21,8 +21,8 @@ class PlaybackQueue
     WeakReference<Context> mContext;
     WeakReference<Service> mService;
     TrackDownloader        mDownloader;
-    int                    mForwardCacheSize  = 2;
-    int                    mPreviousCacheSize = 1;
+    static final int       mForwardCacheSize  = 2;
+    static final int       mPreviousCacheSize = 1;
     
     PlaybackQueue(Service service, Context context, TrackDownloader downloader)
     {
