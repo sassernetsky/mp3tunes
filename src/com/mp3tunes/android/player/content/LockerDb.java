@@ -44,6 +44,7 @@ import com.binaryelysium.mp3tunes.api.Playlist;
 import com.binaryelysium.mp3tunes.api.Track;
 import com.binaryelysium.mp3tunes.api.Session.LoginException;
 import com.binaryelysium.mp3tunes.api.results.SearchResult;
+import com.mp3tunes.android.player.IdParcel;
 import com.mp3tunes.android.player.Music;
 import com.mp3tunes.android.player.content.LockerCache.Progress;
 import com.mp3tunes.android.player.content.Queries.MakeQueryException;
@@ -183,7 +184,7 @@ public class LockerDb
                 null, null, null, DbKeys.TITLE);
     }
     
-    //replace big query with view
+    //TODO: replace big query with view
     public Cursor getTrackDataByPlaylist(String[] from, LockerId mId) throws SQLiteException, IOException, LockerException
     {
         System.out.println("querying for tracks on playlist: " + mId.asString());
@@ -210,8 +211,26 @@ public class LockerDb
         return mDb.rawQuery(query.toString(), null);
     }
 
-    
 
+    public Id[] getSimilarTracks(Id id, int count) throws SQLiteException, MakeQueryException, IOException, LockerException
+    {
+        TrackGetter getter = new TrackGetter(this, mContext.getContentResolver());
+        LockerId lockerId  = null;
+        try {
+            lockerId  = getter.getLockerId(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        List<Track> tracks = null;
+        if (lockerId == null) {
+            tracks = mLocker.getTracksForPlaylist(Playlist.RANDOM_TRACKS, count, 0);
+        } else {
+            tracks = mLocker.getSimilarTracks(lockerId, count, 0);
+        }
+        multiInsert(tracks, null);
+        return Music.lockerDataToIdArray(tracks.toArray(new Track[0]));
+    }
     
     
     class DataInserter
