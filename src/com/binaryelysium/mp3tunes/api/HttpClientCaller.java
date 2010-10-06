@@ -394,7 +394,7 @@ public class HttpClientCaller
             client.getConnectionManager().shutdown();
             return response;
         }catch (HttpResponseException e) {
-            //TODO: add this kind of code to a HttpRequestRetryHandler
+            //TODO: RonW: add this kind of code to a HttpRequestRetryHandler
             Log.e("Mp3Tunes", "Status code: " + Integer.toString(e.getStatusCode()));
             if (e.getStatusCode() == 401) {
                 try {
