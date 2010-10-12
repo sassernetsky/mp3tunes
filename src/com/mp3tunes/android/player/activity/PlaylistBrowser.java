@@ -116,11 +116,18 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         Music.ensureSession(this);
 
         setContentView(R.layout.media_picker_activity);
+        
+        // TODO: RONW: might be able to get rid of this local ListView 
+        // It doesn't seem to be used anywhere else.
+        //
         ListView lv = getListView();
         lv.setFastScrollEnabled(true);
         lv.setOnCreateContextMenuListener(this);
         lv.setTextFilterEnabled(true);
-
+        
+        Log.w("Mp3Tunes", "RONW: ListView count = " + lv.getCount());
+        Log.w("Mp3Tunes", "RONW: ListView child coount = " + lv.getChildCount());
+        
         Intent intent = getIntent();
         String mimeType = intent.getType();
         if (mimeType.equals("vnd.mp3tunes.android.dir/playlist"))
@@ -249,6 +256,13 @@ public class PlaylistBrowser extends BaseMp3TunesListActivity
         mAdapter.changeCursor(c);
 
         mCursor = c;
+        
+        Log.w("Mp3Tunes", "RONW: Cursor column count = " + c.getColumnCount());
+        for (int ii = 0; ii < c.getColumnCount(); ii++) {
+            Log.w("Mp3Tunes", "RONW: Cursor column " + ii + ": " + c.getColumnName(ii));            
+        }
+        Log.w("Mp3Tunes", "RONW: Cursor count = " + c.getCount());
+        
         setTitle();
         super.init(c, refreshNext);
     }

@@ -7,6 +7,8 @@ import android.database.CursorJoiner;
 import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
+import android.util.Log;
+
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
@@ -112,9 +114,11 @@ public class MediaStore
             String[] args = new String[] {name};
             store = mCr.query(sTracksUri, projection, android.provider.MediaStore.Audio.Media.ALBUM + "=?", args, 
                               lockerDbToMediaStoreKey(DbKeys.TITLE));
+            Log.w("ronw", "query1");
         }
         if (lockerId != null) {
             locker = mLockerDb.getTrackDataByAlbum(cols, lockerId);
+            Log.w("ronw", "query2");
         }
         return merge(locker, store, columns, joinBy);
     }
@@ -189,6 +193,7 @@ public class MediaStore
         
         MatrixCursor output = new MatrixCursor(columns);
         int len = cols.length;
+        
         if (c.moveToLast()) {
             do {
                 MatrixCursor.RowBuilder builder = output.newRow();
