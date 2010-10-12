@@ -166,7 +166,7 @@ public class Queries
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
         mInsertTrack.bindString(2,  t.getPlayUrl(null, 0));
-        mInsertTrack.bindString(4,  "x" + t.getTitle());
+        mInsertTrack.bindString(4,  "x"  + t.getTitle());
         mInsertTrack.bindLong(  5,  1000 + trackNumber);  // Adding 1000 is cheaper than creating a DecimalFormatter to zero-pad on the left...
         mInsertTrack.bindString(6,  t.getArtistName());
         mInsertTrack.bindString(7,  t.getAlbumTitle());
