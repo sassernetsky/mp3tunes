@@ -109,7 +109,8 @@ public class Music
         							DbKeys.PLAY_URL, 
         							DbKeys.DOWNLOAD_URL, 
         							DbKeys.TRACK_LENGTH, 
-        							DbKeys.COVER_URL};
+        							DbKeys.COVER_URL,
+        							DbKeys.ORDINAL};
     
     public static String[] TRACK_FOR_BROWSER = {
         DbKeys.ID, 
