@@ -249,6 +249,9 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         Log.w("Mp3Tunes", "init called");
         if (showTracks()) {
             Log.w("Mp3Tunes", "init called showing tracks");
+            
+           
+            
             tryDismissProgress(mShowingDialog, newCursor);
             if (newCursor != null) {
                 Log.w("Mp3Tunes", "cursor count: "
@@ -528,7 +531,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
     protected void updateCursor()
     {
         try {
-            Log.w("Mp3Tunes", "Updating cursor");
+            Log.w("Mp3Tunes", "Updating cursor2");
             Cursor c = mList.getCursor();
             startManagingCursor(c);
             stopManagingCursor(mCursor);
@@ -820,6 +823,7 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
                     DbKeys.ID,
                     DbKeys.TITLE,
                     DbKeys.ARTIST_NAME,
+                    DbKeys.ORDINAL,
                     MediaStore.KEY_LOCAL
               };
         }
@@ -843,9 +847,33 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
         @Override
         public Cursor getCursor() throws SQLiteException, IOException, LockerException
         {
-            return new ReindexingCursorWrapper(getStore().getTrackDataByAlbum(mFrom, mId), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
+            int orderColumnNumber = orderByColumn(mFrom, FROM_MAPPING.NAME);
+            return new ReindexingCursorWrapper(getStore().getTrackDataByAlbum(mFrom, mId),
+                                               new AlphabeticalTheRemovedIndexer(),
+                                               orderColumnNumber);
         }
 
+        // Look for a column with the name "ordinal".  If there is such a column, return its index because it is the sorting column.
+        // Otherwise, default to (probably) the NAME ("title") column.
+        //
+        private int orderByColumn(String[] columns, int defaultOrderByColumn)
+        {
+            if (columns == null) {
+                return defaultOrderByColumn;
+            }
+            
+            int result = defaultOrderByColumn;
+            
+            for (int cc = 0; cc < columns.length; cc++) {
+                if (DbKeys.ORDINAL.equals(columns[cc])) {
+                    result = cc;
+                    break;
+                }
+            }
+            
+            return result;
+        }
+        
         @Override
         protected MergeHelper getMergeHelper()
         {

@@ -170,7 +170,7 @@ public class LockerDb
     
     public Cursor getTrackDataByAlbum(String[] from, LockerId id) throws SQLiteException, IOException, LockerException
     {
-        System.out.println("querying for tracks on album: " + id.asString());
+        Log.w("MP3tunes", "querying for tracks on album: " + id.asString());
         if (id == null) return null;
         return mDb.query(DbTables.TRACK, from, DbKeys.ALBUM_ID + "=" + id.asString(), 
                 null, null, null, DbKeys.TITLE);
@@ -274,7 +274,7 @@ public class LockerDb
 
             // Insert track info
             if (!mQueries.trackExists(track.getId().asInt())) {
-                mQueries.insertTrack(track);
+                mQueries.insertTrack(track, index);
             }
         } catch (SQLiteException e) {
             throw e;

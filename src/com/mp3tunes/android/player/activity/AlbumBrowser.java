@@ -394,7 +394,7 @@ public class AlbumBrowser extends BaseMp3TunesListActivity
     protected void updateCursor()
     {
         try {
-            Log.w("Mp3Tunes", "Updating cursor");
+            Log.w("Mp3Tunes", "Updating cursor1");
             MediaStore ms = new MediaStore(Music.getDb(getBaseContext()), getContentResolver());
             if (mArtistId == null) {
                 mCursor = new ReindexingCursorWrapper(ms.getAlbumData(mFrom), new AlphabeticalTheRemovedIndexer(), FROM_MAPPING.NAME);
