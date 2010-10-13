@@ -160,13 +160,14 @@ public class Queries
         return false;
     }
     
-    public boolean insertTrack(Track t) throws MakeQueryException
+    public boolean insertTrack(Track t, int trackNumber) throws MakeQueryException
     {
         assertLockerId(t.getId());
         
         mInsertTrack.bindLong(  1,  t.getId().asInt());
         mInsertTrack.bindString(2,  t.getPlayUrl(null, 0));
         mInsertTrack.bindString(4,  t.getTitle());
+        mInsertTrack.bindLong(  5,  1000 + trackNumber);  // Adding 1000 is cheaper than creating a DecimalFormatter to zero-pad on the left...
         mInsertTrack.bindString(6,  t.getArtistName());
         mInsertTrack.bindString(7,  t.getAlbumTitle());
         mInsertTrack.bindLong(  8,  t.getArtistId());
@@ -349,7 +350,7 @@ public class Queries
                             DbKeys.PLAY_URL     + ", " +
                             DbKeys.DOWNLOAD_URL + ", " +
                             DbKeys.TITLE        + ", " +
-                            DbKeys.TRACK        + ", " +
+                            DbKeys.ORDINAL      + ", " +
                             DbKeys.ARTIST_NAME  + ", " +
                             DbKeys.ALBUM_NAME   + ", " +
                             DbKeys.ARTIST_ID    + ", " +

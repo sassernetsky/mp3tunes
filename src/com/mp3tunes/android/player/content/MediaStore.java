@@ -7,6 +7,7 @@ import android.database.CursorJoiner;
 import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
+
 import com.binaryelysium.mp3tunes.api.Id;
 import com.binaryelysium.mp3tunes.api.LockerException;
 import com.binaryelysium.mp3tunes.api.LockerId;
@@ -189,6 +190,7 @@ public class MediaStore
         
         MatrixCursor output = new MatrixCursor(columns);
         int len = cols.length;
+        
         if (c.moveToLast()) {
             do {
                 MatrixCursor.RowBuilder builder = output.newRow();

@@ -22,7 +22,7 @@ public class DbKeys
     public static final String FILE_COUNT         = "file_count";
     public static final String FILE_NAME          = "file_name";
     public static final String PLAYLIST_ORDER     = "playlist_order";
-    public static final String POS                = "pos";
+    public static final String ORDINAL            = "ordinal";           // For sorting.  1 means "top of the list".  2 means "second item", etc.
     public static final String TRACK_ID           = "track_id";
     public static final String PLAYLIST_ID        = "playlist_id";
     public static final String PLAYLIST_INDEX     = "playlist_index";
