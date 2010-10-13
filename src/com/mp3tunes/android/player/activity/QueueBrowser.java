@@ -256,11 +256,6 @@ public class QueueBrowser extends BaseMp3TunesListActivity implements
             if (newCursor != null) {
                 Log.w("Mp3Tunes", "cursor count: "
                     + Integer.toString(newCursor.getCount()));
-                Log.w("Mp3Tunes", "RONW: Cursor column count = " + newCursor.getColumnCount());
-                for (int ii = 0; ii < newCursor.getColumnCount(); ii++) {
-                    Log.w("Mp3Tunes", "RONW: Cursor column " + ii + ": " + newCursor.getColumnName(ii));            
-                }
-                Log.w("Mp3Tunes", "RONW: Cursor count = " + newCursor.getCount());            
             }
             mAdapter.changeCursor(newCursor);
 
